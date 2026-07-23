@@ -6,6 +6,11 @@ import {
   pourStep,
   vesselHas,
 } from "./goalSteps";
+import { getPerfumeGoal } from "../perfume/perfumeGoalFactory";
+import {
+  difficultyFromSteps,
+  type GoalDifficulty,
+} from "@/domains/chemistry/perfume/types";
 
 export type HintTier = "nudge" | "clue" | "almost";
 
@@ -27,7 +32,10 @@ export interface GoalStep {
   check: (snap: GoalDeskSnapshot) => boolean;
 }
 
-export type GoalCategory = "product" | "classic";
+export type GoalCategory = "product" | "classic" | "perfume";
+
+export type { GoalDifficulty };
+export { difficultyFromSteps };
 
 export type GoalVisualKind =
   | "soap"
@@ -54,6 +62,14 @@ export interface ProductGoal {
   successBlurb: string;
   badgeId: string;
   steps: GoalStep[];
+  /** Set by perfume factory; products derive via difficultyFromSteps */
+  difficulty?: import("@/domains/chemistry/perfume/types").GoalDifficulty;
+}
+
+export function goalDifficulty(
+  g: ProductGoal,
+): import("@/domains/chemistry/perfume/types").GoalDifficulty {
+  return g.difficulty ?? difficultyFromSteps(g.steps.length);
 }
 
 const okKey =
@@ -80,14 +96,14 @@ export const PRODUCT_GOALS: ProductGoal[] = [
   // ——— Existing products ———
   {
     id: "perfume",
-    title: "Make a perfume",
-    tagline: "Citrus cologne",
+    title: "Make citrus cologne",
+    tagline: "Starter cologne (limonene)",
     icon: "🍋",
     category: "product",
     visualKind: "bottle",
     rewardCaption: "Bottled. Spritz-ready.",
     productBlurb:
-      "Real cologne is fragrant oils dissolved in alcohol so the scent spreads, then the alcohol evaporates. You’ll build a simplified citrus cologne on the desk.",
+      "A quick teaching cologne: ethanol + citrus oil. For famous-style perfumes, open Perfume Atelier from the top bar.",
     highlightItemIds: ["beaker", "c2h5oh", "limonene", "ethyl-acetate"],
     successBlurb:
       "You made a citrus cologne — alcohol + scent oil, the same idea as perfume.",
@@ -125,10 +141,15 @@ export const PRODUCT_GOALS: ProductGoal[] = [
       mixUntilStep("perfume-mix", {
         title: "Blend the cologne",
         instruction: "Stir, then Mix — no burner needed for this blend.",
-        pred: okKey("product-perfume"),
+        pred: (r) =>
+          Boolean(
+            r.ok &&
+              (r.explanationKey === "product-perfume" ||
+                r.explanationKey?.startsWith("product-perfume")),
+          ),
         nudge: "Blend gently; heat would drive off alcohol.",
         clue: "Click the liquid to stir, then press Mix.",
-        almost: "Stir once, then Mix. You should see “citrus cologne”.",
+        almost: "Stir once, then Mix. You should see a cologne / perfume result.",
       }),
     ],
   },
@@ -1039,5 +1060,5 @@ export const GOAL_BY_ID: Record<string, ProductGoal> = Object.fromEntries(
 );
 
 export function getGoal(id: string): ProductGoal | undefined {
-  return GOAL_BY_ID[id];
+  return GOAL_BY_ID[id] ?? getPerfumeGoal(id);
 }

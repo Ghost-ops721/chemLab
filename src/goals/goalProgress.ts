@@ -17,12 +17,14 @@ export function newlyCompletedSteps(
   const done = new Set(completedStepIds);
   const fresh: string[] = [];
 
-  // Only advance in order — one frontier at a time
+  // Advance in order, cascading through every consecutive step that already passes
+  // (so dumping all ingredients + Mix doesn't leave the user stuck on Formula check).
   for (const step of goal.steps) {
     if (done.has(step.id)) continue;
     if (step.check(snap)) {
       fresh.push(step.id);
       done.add(step.id);
+      continue;
     }
     break;
   }

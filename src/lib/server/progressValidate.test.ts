@@ -35,9 +35,31 @@ describe("progressValidate", () => {
   it("caps xp delta on merge", () => {
     const merged = mergeProgress(
       { xp: 100, discoveredIds: [], badgeIds: [] },
-      { xp: 9000, discoveredIds: [], badgeIds: ["first-gas"] },
+      {
+        xp: 9000,
+        discoveredIds: [],
+        badgeIds: ["first-gas"],
+        completedPerfumeIds: [],
+        starsDelta: 0,
+      },
     );
     expect(merged.xp).toBe(300);
     expect(merged.badgeIds).toEqual(["first-gas"]);
+  });
+
+  it("grants perfume first-clear stars capped by delta", () => {
+    const merged = mergeProgress(
+      { xp: 0, discoveredIds: [], badgeIds: [], stars: 2, completedPerfumeIds: [] },
+      {
+        xp: 100,
+        discoveredIds: [],
+        badgeIds: ["perfume-havas"],
+        completedPerfumeIds: ["inspired-havas"],
+        starsDelta: 1,
+      },
+    );
+    expect(merged.stars).toBe(3);
+    expect(merged.starsGranted).toBe(1);
+    expect(merged.completedPerfumeIds).toContain("inspired-havas");
   });
 });

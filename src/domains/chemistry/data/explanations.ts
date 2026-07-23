@@ -23,7 +23,9 @@ export const FALLBACK_EXPLANATIONS: Record<string, string> = {
   "hazard-chlorine":
     "Chlorine gas is highly toxic. Mixing it carelessly is blocked; treat halogen gases with extreme caution in a real lab.",
   "product-perfume":
-    "You dissolved a fragrant oil in ethanol — the same idea behind cologne: alcohol carries scent, then evaporates on skin leaving the aroma behind. Real perfume houses blend dozens of notes; this is a simplified lab stand-in.",
+    "You dissolved fragrant oils in ethanol — the same idea behind cologne and perfume: alcohol carries scent, then evaporates on skin leaving the aroma behind. Real perfume houses blend dozens of notes across a pyramid (top, heart, base); this is an educational lab stand-in.",
+  "product-perfume:custom":
+    "You built a freeform perfume: ethanol carrier plus top, heart, and base notes. In real perfumery this pyramid is refined over months; here you just bottled the chemistry of a scent.",
   "product-soap":
     "Heat drove saponification: fat (triglyceride) reacted with NaOH to form soap (a carboxylate salt) and glycerol. Real soap-making uses the same chemistry at kitchen or factory scale.",
   "product-soap-needs-heat":
@@ -58,5 +60,15 @@ export const FALLBACK_EXPLANATIONS: Record<string, string> = {
 
 export function getFallbackExplanation(key?: string): string {
   if (!key) return FALLBACK_EXPLANATIONS.default;
-  return FALLBACK_EXPLANATIONS[key] ?? FALLBACK_EXPLANATIONS.default;
+  if (FALLBACK_EXPLANATIONS[key]) return FALLBACK_EXPLANATIONS[key];
+  if (key === "product-perfume:custom") {
+    return FALLBACK_EXPLANATIONS["product-perfume:custom"];
+  }
+  if (key.startsWith("product-perfume:")) {
+    return FALLBACK_EXPLANATIONS["product-perfume"];
+  }
+  if (key.startsWith("product-perfume")) {
+    return FALLBACK_EXPLANATIONS["product-perfume"];
+  }
+  return FALLBACK_EXPLANATIONS.default;
 }

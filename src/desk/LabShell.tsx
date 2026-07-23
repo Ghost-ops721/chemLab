@@ -35,6 +35,14 @@ import { useAuthStore } from "@/store/authStore";
 import { labCopy } from "@/lab/labCopy";
 import { VESSEL_CARD } from "@/desk/vesselLayout";
 import { track } from "@/lib/analytics/track";
+import { PerfumeAtelier } from "@/perfume/PerfumeAtelier";
+import { StarShopModal } from "@/perfume/StarShopModal";
+import { FreeformPerfumeBuilder } from "@/perfume/FreeformPerfumeBuilder";
+import { getPerfumeRecipe } from "@/domains/chemistry/perfume";
+import { InventionShelf } from "@/invention/InventionShelf";
+import { InventionRemixWatcher } from "@/invention/InventionRemixWatcher";
+import { useInventionStore } from "@/store/inventionStore";
+import type { User } from "firebase/auth";
 
 const ScanWorkbench = dynamic(
   () => import("@/scan/ScanWorkbench").then((m) => m.ScanWorkbench),
@@ -63,6 +71,9 @@ export function LabShell() {
   const [mode, setMode] = useState<LabMode>("desk");
   const [activeDrag, setActiveDrag] = useState<DragPayload | null>(null);
   const [hydrated, setHydrated] = useState(false);
+  const [atelierOpen, setAtelierOpen] = useState(false);
+  const [shopOpen, setShopOpen] = useState(false);
+  const [freeformOpen, setFreeformOpen] = useState(false);
   const lastRecorded = useRef<string | null>(null);
   const deskPointer = useRef<{ x: number; y: number } | null>(null);
 
@@ -100,11 +111,66 @@ export function LabShell() {
             b: string,
             heat?: boolean,
           ) => unknown;
+          /** Dev-only: unlock desk actions without Firebase (QA / dogfood). */
+          unlockLab: () => void;
+          loadPerfume: (recipeId: string) => string | null;
         };
       }
     ).__chemlab = {
       runPair: (equipmentId, a, b, heat) =>
         useDeskStore.getState().runPair(equipmentId, a, b, heat),
+      unlockLab: () => {
+        useAuthStore.setState({
+          guestChemicalAdds: 0,
+          authGateOpen: false,
+          user: {
+            uid: "dev-qa",
+            email: "qa@localhost",
+          } as User,
+          profile: {
+            email: "qa@localhost",
+            displayName: "QA Tester",
+            phone: "9999999999",
+            gender: "prefer_not_to_say",
+            dob: "2000-01-01",
+            address: "",
+            pincode: "",
+            xp: useProgressStore.getState().xp,
+            discoveredIds: useProgressStore.getState().discoveredIds,
+            badgeIds: useProgressStore
+              .getState()
+              .badges.filter((b) => b.earnedAt)
+              .map((b) => b.id),
+            stars: useProgressStore.getState().stars,
+            lastDailyStarAt: useProgressStore.getState().lastDailyStarAt,
+            unlockedShopItemIds:
+              useProgressStore.getState().unlockedShopItemIds,
+            completedPerfumeIds:
+              useProgressStore.getState().completedPerfumeIds,
+            createdAt: Date.now(),
+            updatedAt: Date.now(),
+          },
+        });
+      },
+      loadPerfume: (recipeId) => {
+        const recipe = getPerfumeRecipe(recipeId);
+        if (!recipe) return null;
+        useDeskStore.setState({
+          vessels: [],
+          activeVesselId: null,
+          lastExplanationVesselId: null,
+        });
+        const id = useDeskStore
+          .getState()
+          .placeEquipment("beaker", { x: 140, y: 90 });
+        if (!id) return null;
+        for (const chemId of recipe.requiredChemicalIds) {
+          useDeskStore.getState().addChemicalToVessel(id, chemId);
+        }
+        useDeskStore.getState().stirVessel(id);
+        useDeskStore.getState().mixVessel(id);
+        return id;
+      },
     };
     return () => {
       delete (window as unknown as { __chemlab?: unknown }).__chemlab;
@@ -313,7 +379,27 @@ export function LabShell() {
           </div>
         </header>
 
-        <GamificationBar />
+        <GamificationBar
+          onOpenAtelier={() => {
+            setShopOpen(false);
+            setFreeformOpen(false);
+            useInventionStore.getState().setShelfOpen(false);
+            setAtelierOpen(true);
+          }}
+          onOpenShop={() => {
+            setAtelierOpen(false);
+            setFreeformOpen(false);
+            useInventionStore.getState().setShelfOpen(false);
+            setShopOpen(true);
+          }}
+          onOpenShelf={() => {
+            setAtelierOpen(false);
+            setShopOpen(false);
+            setFreeformOpen(false);
+            useInventionStore.getState().setShelfOpen(true);
+            track("shelf_open", { from: "bar" });
+          }}
+        />
 
         {mode === "scan" ? (
           <div className="min-h-0 flex-1 overflow-hidden bg-lab-panel/40">
@@ -386,7 +472,14 @@ export function LabShell() {
           <div className="relative flex min-h-0 flex-1 flex-col md:flex-row">
             <ItemPanel />
             <div className="relative flex min-h-0 min-w-0 flex-1 flex-col gap-1 p-1.5 md:p-2">
-              <DeskWorkspace />
+              <DeskWorkspace
+                onOpenAtelier={() => {
+                  setShopOpen(false);
+                  setFreeformOpen(false);
+                  useInventionStore.getState().setShelfOpen(false);
+                  setAtelierOpen(true);
+                }}
+              />
               <div className="pointer-events-none absolute bottom-14 left-2 z-30 flex justify-start md:bottom-3 md:left-3 md:right-auto">
                 <div className="pointer-events-auto w-[min(100%,17rem)] max-w-sm">
                   <GoalGuidePanel />
@@ -401,9 +494,31 @@ export function LabShell() {
 
         <RecipeJournal />
         <ToastHost />
-        <GoalPicker />
+        <GoalPicker
+          onOpenAtelier={() => {
+            setShopOpen(false);
+            setFreeformOpen(false);
+            useInventionStore.getState().setShelfOpen(false);
+            setAtelierOpen(true);
+          }}
+        />
+        <PerfumeAtelier
+          open={atelierOpen}
+          onClose={() => setAtelierOpen(false)}
+          onOpenFreeform={() => {
+            setAtelierOpen(false);
+            setFreeformOpen(true);
+          }}
+        />
+        <FreeformPerfumeBuilder
+          open={freeformOpen}
+          onClose={() => setFreeformOpen(false)}
+        />
+        <StarShopModal open={shopOpen} onClose={() => setShopOpen(false)} />
+        <InventionShelf />
         <GoalRewardOverlay />
         <GoalProgressWatcher />
+        <InventionRemixWatcher />
         <AuthGateModal />
       </div>
 

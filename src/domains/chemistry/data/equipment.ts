@@ -17,7 +17,7 @@ export const EQUIPMENT: Equipment[] = [
     category: "equipment",
     subcategory: "glassware",
     icon: "🥼",
-    capacity: 3,
+    capacity: 6,
     function: "container",
   }),
   eq({
@@ -35,7 +35,7 @@ export const EQUIPMENT: Equipment[] = [
     category: "equipment",
     subcategory: "glassware",
     icon: "⚗️",
-    capacity: 3,
+    capacity: 6,
     function: "container",
   }),
   eq({

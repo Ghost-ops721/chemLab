@@ -50,6 +50,14 @@ interface DeskState {
     b: string,
     heat?: boolean,
   ) => EngineResult | null;
+  /** Clear desk and restore a saved formula for remix. */
+  loadFormula: (input: {
+    equipmentId: string;
+    contentIds: string[];
+    heatAttached?: boolean;
+    stirLevel?: number;
+    autoMix?: boolean;
+  }) => string | null;
 }
 
 function uid(): string {
@@ -428,6 +436,32 @@ export const useDeskStore = create<DeskState>()(
     if (heat) get().attachHeat(id);
     get().stirVessel(id);
     return get().mixVessel(id);
+  },
+
+  loadFormula: ({
+    equipmentId,
+    contentIds,
+    heatAttached = false,
+    stirLevel = 0,
+    autoMix = false,
+  }) => {
+    if (!assertLabActionAllowed()) return null;
+    set({ vessels: [], activeVesselId: null, lastExplanationVesselId: null });
+    const id = get().placeEquipment(equipmentId || "beaker", {
+      x: 140,
+      y: 100,
+    });
+    if (!id) return null;
+    for (const chemId of contentIds) {
+      get().addChemicalToVessel(id, chemId);
+    }
+    if (heatAttached) get().attachHeat(id);
+    const stirTimes = Math.max(0, Math.min(3, stirLevel));
+    for (let i = 0; i < stirTimes; i += 1) {
+      get().stirVessel(id, false);
+    }
+    if (autoMix) get().mixVessel(id);
+    return id;
   },
     }),
     {

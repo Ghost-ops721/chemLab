@@ -1,4 +1,5 @@
 import type { Chemical } from "../types";
+import { FRAGRANCE_CHEMICALS } from "../perfume/fragranceChemicals";
 
 function chem(
   partial: Omit<Chemical, "domain" | "tags"> & { tags?: string[] },
@@ -10,7 +11,7 @@ function chem(
   };
 }
 
-/** Full seed set (~50 chemicals). Engine verified on core subset via tests. */
+/** Full seed set (~50 chemicals + fragrance atelier oils). Engine verified on core subset via tests. */
 export const CHEMICALS: Chemical[] = [
   // --- Acids ---
   chem({
@@ -717,7 +718,7 @@ export const CHEMICALS: Chemical[] = [
     name: "Ethanol",
     category: "organic",
     subcategory: "alcohol",
-    icon: "🔥",
+    icon: "💧",
     formula: "C2H5OH",
     state: "liquid",
     color: "#fff8e1",
@@ -1123,6 +1124,7 @@ export const CHEMICALS: Chemical[] = [
     anion: "CO3 2-",
     tags: ["salt", "chalk", "limewater"],
   }),
+  ...FRAGRANCE_CHEMICALS,
 ];
 
 export const CHEMICAL_BY_ID: Record<string, Chemical> = Object.fromEntries(

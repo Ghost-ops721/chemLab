@@ -33,9 +33,11 @@ interface GoalState {
   rewardGoalId: string | null;
   /** XP shown on the reward card for the latest completion */
   rewardXp: number;
+  /** Stars shown on the reward card */
+  rewardStars: number;
   setPickerOpen: (open: boolean) => void;
   setGuideOpen: (open: boolean) => void;
-  showReward: (goalId: string, xpGained: number) => void;
+  showReward: (goalId: string, xpGained: number, starsGained?: number) => void;
   dismissReward: () => void;
   startGoal: (goalId: string) => void;
   abandonGoal: () => void;
@@ -61,14 +63,21 @@ export const useGoalStore = create<GoalState>()(
       guideOpen: false,
       rewardGoalId: null,
       rewardXp: 0,
+      rewardStars: 0,
 
       setPickerOpen: (open) => set({ pickerOpen: open }),
       setGuideOpen: (open) => set({ guideOpen: open }),
 
-      showReward: (goalId, xpGained) =>
-        set({ rewardGoalId: goalId, rewardXp: xpGained, guideOpen: true }),
+      showReward: (goalId, xpGained, starsGained = 0) =>
+        set({
+          rewardGoalId: goalId,
+          rewardXp: xpGained,
+          rewardStars: starsGained,
+          guideOpen: true,
+        }),
 
-      dismissReward: () => set({ rewardGoalId: null, rewardXp: 0 }),
+      dismissReward: () =>
+        set({ rewardGoalId: null, rewardXp: 0, rewardStars: 0 }),
 
       startGoal: (goalId) => {
         if (!getGoal(goalId)) return;
@@ -80,6 +89,7 @@ export const useGoalStore = create<GoalState>()(
           guideOpen: true,
           rewardGoalId: null,
           rewardXp: 0,
+          rewardStars: 0,
         });
         track("goal_start", { goalId });
       },
@@ -91,6 +101,7 @@ export const useGoalStore = create<GoalState>()(
           guideOpen: false,
           rewardGoalId: null,
           rewardXp: 0,
+          rewardStars: 0,
         }),
 
       openHint: (goalId, stepId, tier) => {
@@ -121,16 +132,18 @@ export const useGoalStore = create<GoalState>()(
           return { newSteps: [], goalJustCompleted: false, goalId };
         }
 
-        const nextCompleted = [...get().completedStepIds, ...fresh];
-        const justDone =
-          isGoalComplete(goal, nextCompleted) &&
-          !get().completedGoalIds.includes(goalId);
+        const prevCompleted = get().completedStepIds;
+        const nextCompleted = [...prevCompleted, ...fresh];
+        const wasComplete = isGoalComplete(goal, prevCompleted);
+        const nowComplete = isGoalComplete(goal, nextCompleted);
+        const justDone = nowComplete && !wasComplete;
 
         set((s) => ({
           completedStepIds: nextCompleted,
-          completedGoalIds: justDone
-            ? [...s.completedGoalIds, goalId]
-            : s.completedGoalIds,
+          completedGoalIds:
+            nowComplete && !s.completedGoalIds.includes(goalId)
+              ? [...s.completedGoalIds, goalId]
+              : s.completedGoalIds,
         }));
 
         if (justDone) {

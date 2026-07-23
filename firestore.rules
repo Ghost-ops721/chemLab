@@ -19,6 +19,10 @@ service cloud.firestore {
           'xp',
           'discoveredIds',
           'badgeIds',
+          'stars',
+          'lastDailyStarAt',
+          'unlockedShopItemIds',
+          'completedPerfumeIds',
           'createdAt',
           'updatedAt',
           'lastSeenAt'
@@ -32,13 +36,20 @@ service cloud.firestore {
       function progressEmpty() {
         return request.resource.data.xp == 0
           && request.resource.data.discoveredIds.size() == 0
-          && request.resource.data.badgeIds.size() == 0;
+          && request.resource.data.badgeIds.size() == 0
+          && request.resource.data.get('stars', 0) == 0
+          && request.resource.data.get('unlockedShopItemIds', []).size() == 0
+          && request.resource.data.get('completedPerfumeIds', []).size() == 0;
       }
 
       function progressUnchanged() {
         return request.resource.data.xp == resource.data.xp
           && request.resource.data.discoveredIds == resource.data.discoveredIds
-          && request.resource.data.badgeIds == resource.data.badgeIds;
+          && request.resource.data.badgeIds == resource.data.badgeIds
+          && request.resource.data.get('stars', 0) == resource.data.get('stars', 0)
+          && request.resource.data.get('lastDailyStarAt', 0) == resource.data.get('lastDailyStarAt', 0)
+          && request.resource.data.get('unlockedShopItemIds', []) == resource.data.get('unlockedShopItemIds', [])
+          && request.resource.data.get('completedPerfumeIds', []) == resource.data.get('completedPerfumeIds', []);
       }
 
       allow read: if isOwner();

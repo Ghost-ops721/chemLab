@@ -2,10 +2,13 @@
 
 import { useEffect } from "react";
 import { getGoal } from "@/domains/chemistry/data/goals";
+import { getPerfumeRecipe } from "@/domains/chemistry/perfume";
 import { useDeskStore } from "@/store/deskStore";
 import { useGoalStore } from "@/store/goalStore";
 import { useProgressStore } from "@/store/progressStore";
+import { useInventionStore } from "@/store/inventionStore";
 import { showToast } from "@/gamification/ToastHost";
+import { track } from "@/lib/analytics/track";
 
 /**
  * Watches the desk and advances the active product goal.
@@ -17,6 +20,9 @@ export function GoalProgressWatcher() {
   const syncFromDesk = useGoalStore((s) => s.syncFromDesk);
   const showReward = useGoalStore((s) => s.showReward);
   const awardGoalXp = useProgressStore((s) => s.awardGoalXp);
+  const awardPerfumeComplete = useProgressStore((s) => s.awardPerfumeComplete);
+  const beginNamingFromGoal = useInventionStore((s) => s.beginNamingFromGoal);
+  const remixInventionId = useInventionStore((s) => s.remixInventionId);
 
   useEffect(() => {
     const { newSteps, goalJustCompleted, goalId } = syncFromDesk({
@@ -36,14 +42,57 @@ export function GoalProgressWatcher() {
     }
 
     if (goalJustCompleted) {
-      const { xpGained } = awardGoalXp(goal.badgeId, goal.title);
-      showReward(goal.id, xpGained);
-      showToast({
-        title: `+${xpGained} XP · Goal complete`,
-        detail: goal.title,
-      });
+      const vessel =
+        vessels.find((v) => v.instanceId === activeVesselId) ??
+        vessels.find((v) => v.contentIds.length > 0) ??
+        vessels[0];
+
+      const perfume = getPerfumeRecipe(goalId);
+      if (perfume) {
+        const { xpGained, starsGained } = awardPerfumeComplete(goalId);
+        showReward(goal.id, xpGained, starsGained);
+        track("perfume_complete", {
+          recipeId: goalId,
+          xpGained,
+          starsGained,
+        });
+        showToast({
+          title: `+${xpGained} XP${starsGained ? ` · +${starsGained}★` : ""}`,
+          detail: goal.title,
+        });
+      } else {
+        const { xpGained } = awardGoalXp(goal.badgeId, goal.title);
+        showReward(goal.id, xpGained, 0);
+        showToast({
+          title: `+${xpGained} XP · Goal complete`,
+          detail: goal.title,
+        });
+      }
+
+      // New authorship path — skip naming when already remixing a shelf item
+      // (InventionRemixWatcher appends the improved version).
+      if (vessel && !remixInventionId) {
+        beginNamingFromGoal({
+          goalId: goal.id,
+          suggestedName: goal.title
+            .replace(/^Make (a |an )?/i, "")
+            .slice(0, 40),
+          coverVisualKind: goal.visualKind,
+          perfumeRecipeId: perfume?.id,
+          vessel,
+        });
+      }
     }
-  }, [vessels, activeVesselId, syncFromDesk, awardGoalXp, showReward]);
+  }, [
+    vessels,
+    activeVesselId,
+    syncFromDesk,
+    awardGoalXp,
+    awardPerfumeComplete,
+    showReward,
+    beginNamingFromGoal,
+    remixInventionId,
+  ]);
 
   return null;
 }

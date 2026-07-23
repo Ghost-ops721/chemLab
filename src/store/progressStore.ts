@@ -4,6 +4,7 @@ import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import type { EngineResult } from "@/types";
 import { PRODUCT_GOALS } from "@/domains/chemistry/data/goals";
+import { PERFUME_RECIPES, getPerfumeRecipe } from "@/domains/chemistry/perfume";
 import { useAuthStore } from "@/store/authStore";
 import { syncProgressToFirestore } from "@/lib/firebase/profile";
 
@@ -57,9 +58,16 @@ const GOAL_BADGES: Omit<Badge, "earnedAt">[] = PRODUCT_GOALS.map((g) => ({
   description: g.tagline,
 }));
 
+const PERFUME_BADGES: Omit<Badge, "earnedAt">[] = PERFUME_RECIPES.map((p) => ({
+  id: p.badgeId,
+  title: p.displayName,
+  description: p.brandLabel,
+}));
+
 export const BADGE_DEFS: Omit<Badge, "earnedAt">[] = [
   ...DISCOVERY_BADGES,
   ...GOAL_BADGES,
+  ...PERFUME_BADGES,
 ];
 
 function mergeBadges(saved?: Badge[]): Badge[] {
@@ -98,6 +106,10 @@ export const QUESTS = [
 
 interface ProgressState {
   xp: number;
+  stars: number;
+  lastDailyStarAt: number;
+  unlockedShopItemIds: string[];
+  completedPerfumeIds: string[];
   discoveredIds: string[];
   journal: JournalEntry[];
   badges: Badge[];
@@ -117,11 +129,25 @@ interface ProgressState {
     prompt?: string;
   };
   awardGoalXp: (badgeId: string, goalTitle?: string) => { xpGained: number };
+  awardPerfumeComplete: (recipeId: string) => {
+    xpGained: number;
+    starsGained: number;
+    firstClear: boolean;
+  };
+  setStarsFromServer: (data: {
+    stars: number;
+    lastDailyStarAt?: number;
+    unlockedShopItemIds?: string[];
+  }) => void;
   xpLevel: () => { level: number; intoLevel: number; toNext: number };
   hydrateFromCloud: (data: {
     xp: number;
     discoveredIds: string[];
     badgeIds: string[];
+    stars?: number;
+    lastDailyStarAt?: number;
+    unlockedShopItemIds?: string[];
+    completedPerfumeIds?: string[];
   }) => void;
 }
 
@@ -134,7 +160,7 @@ function badgeForResult(result: EngineResult): string | null {
   return null;
 }
 
-function pushProgressToCloud() {
+function pushProgressToCloud(starsDelta = 0) {
   const uid = useAuthStore.getState().user?.uid;
   if (!uid) return;
   const s = useProgressStore.getState();
@@ -143,6 +169,8 @@ function pushProgressToCloud() {
     xp: s.xp,
     discoveredIds: s.discoveredIds,
     badgeIds,
+    completedPerfumeIds: s.completedPerfumeIds,
+    starsDelta,
   }).catch(() => {
     /* best-effort sync */
   });
@@ -152,6 +180,10 @@ export const useProgressStore = create<ProgressState>()(
   persist(
     (set, get) => ({
       xp: 0,
+      stars: 0,
+      lastDailyStarAt: 0,
+      unlockedShopItemIds: [],
+      completedPerfumeIds: [],
       discoveredIds: [],
       journal: [],
       badges: mergeBadges(),
@@ -159,9 +191,31 @@ export const useProgressStore = create<ProgressState>()(
       completedQuests: [],
       explanationCache: {},
 
-      hydrateFromCloud: ({ xp, discoveredIds, badgeIds }) => {
+      hydrateFromCloud: ({
+        xp,
+        discoveredIds,
+        badgeIds,
+        stars,
+        lastDailyStarAt,
+        unlockedShopItemIds,
+        completedPerfumeIds,
+      }) => {
         set((s) => ({
           xp: Math.max(s.xp, xp),
+          stars: Math.max(s.stars, stars ?? 0),
+          lastDailyStarAt: Math.max(s.lastDailyStarAt, lastDailyStarAt ?? 0),
+          unlockedShopItemIds: Array.from(
+            new Set([
+              ...s.unlockedShopItemIds,
+              ...(unlockedShopItemIds ?? []),
+            ]),
+          ),
+          completedPerfumeIds: Array.from(
+            new Set([
+              ...s.completedPerfumeIds,
+              ...(completedPerfumeIds ?? []),
+            ]),
+          ),
           discoveredIds: Array.from(
             new Set([...s.discoveredIds, ...discoveredIds]),
           ),
@@ -172,6 +226,25 @@ export const useProgressStore = create<ProgressState>()(
                 : b,
             ),
           ),
+        }));
+      },
+
+      setStarsFromServer: ({ stars, lastDailyStarAt, unlockedShopItemIds }) => {
+        set((s) => ({
+          stars,
+          ...(lastDailyStarAt !== undefined
+            ? { lastDailyStarAt }
+            : {}),
+          ...(unlockedShopItemIds
+            ? {
+                unlockedShopItemIds: Array.from(
+                  new Set([
+                    ...s.unlockedShopItemIds,
+                    ...unlockedShopItemIds,
+                  ]),
+                ),
+              }
+            : {}),
         }));
       },
 
@@ -271,13 +344,14 @@ export const useProgressStore = create<ProgressState>()(
               return b;
             }),
           );
-          // Ensure unknown badge ids from older data still mark earned
           if (!badges.some((b) => b.id === badgeId)) {
             const goal = PRODUCT_GOALS.find((g) => g.badgeId === badgeId);
+            const perfume = PERFUME_RECIPES.find((p) => p.badgeId === badgeId);
             badges.push({
               id: badgeId,
-              title: goal?.title ?? badgeId,
-              description: goal?.tagline ?? "Goal complete",
+              title: goal?.title ?? perfume?.displayName ?? badgeId,
+              description:
+                goal?.tagline ?? perfume?.brandLabel ?? "Goal complete",
               earnedAt: Date.now(),
             });
           }
@@ -286,20 +360,74 @@ export const useProgressStore = create<ProgressState>()(
         pushProgressToCloud();
         return { xpGained };
       },
+
+      awardPerfumeComplete: (recipeId) => {
+        const recipe = getPerfumeRecipe(recipeId);
+        if (!recipe) {
+          return { xpGained: 0, starsGained: 0, firstClear: false };
+        }
+        const firstClear = !get().completedPerfumeIds.includes(recipeId);
+        const xpGained = firstClear ? recipe.xpReward : 10;
+        const starsGained = firstClear ? recipe.starReward : 0;
+
+        set((s) => {
+          const badges = mergeBadges(
+            s.badges.map((b) => {
+              if (b.id === recipe.badgeId && !b.earnedAt) {
+                return { ...b, earnedAt: Date.now() };
+              }
+              return b;
+            }),
+          );
+          return {
+            xp: s.xp + xpGained,
+            stars: s.stars + starsGained,
+            completedPerfumeIds: firstClear
+              ? [...s.completedPerfumeIds, recipeId]
+              : s.completedPerfumeIds,
+            badges,
+            journal: [
+              {
+                discoveryId: `perfume::${recipeId}`,
+                label: `Bottled ${recipe.displayName}`,
+                explanationKey: `product-perfume:${recipeId}`,
+                ok: true,
+                at: Date.now(),
+              },
+              ...s.journal,
+            ].slice(0, 100),
+          };
+        });
+        pushProgressToCloud(starsGained);
+        return { xpGained, starsGained, firstClear };
+      },
     }),
     {
       name: "chemlab-progress",
-      version: 2,
+      version: 3,
       merge: (persisted, current) => {
         const p = (persisted ?? {}) as Partial<ProgressState>;
         return {
           ...current,
           ...p,
           badges: mergeBadges(p.badges),
+          stars: typeof p.stars === "number" ? p.stars : 0,
+          lastDailyStarAt:
+            typeof p.lastDailyStarAt === "number" ? p.lastDailyStarAt : 0,
+          unlockedShopItemIds: Array.isArray(p.unlockedShopItemIds)
+            ? p.unlockedShopItemIds
+            : [],
+          completedPerfumeIds: Array.isArray(p.completedPerfumeIds)
+            ? p.completedPerfumeIds
+            : [],
         };
       },
       partialize: (s) => ({
         xp: s.xp,
+        stars: s.stars,
+        lastDailyStarAt: s.lastDailyStarAt,
+        unlockedShopItemIds: s.unlockedShopItemIds,
+        completedPerfumeIds: s.completedPerfumeIds,
         discoveredIds: s.discoveredIds,
         journal: s.journal,
         badges: s.badges,

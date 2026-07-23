@@ -1,9 +1,15 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import type { EngineResult } from "@/types";
 import { getFallbackExplanation } from "@/domains/chemistry/data/explanations";
+import {
+  isPerfumeExplanationKey,
+  recipeIdFromExplanationKey,
+} from "@/domains/chemistry/engine/perfumeCraft";
+import { resolveScentProfile } from "@/domains/chemistry/perfume";
+import { ScentProfileDetails } from "@/perfume/ScentProfileDetails";
 import { useDeskStore } from "@/store/deskStore";
 import { useProgressStore } from "@/store/progressStore";
 import { useAuthStore } from "@/store/authStore";
@@ -78,6 +84,21 @@ export function ExplanationPanel() {
   const [expanded, setExpanded] = useState(false);
   const [retrying, setRetrying] = useState(false);
   const [banner, setBanner] = useState<string | null>(null);
+
+  const scentProfile = useMemo(() => {
+    if (!result?.ok || !isPerfumeExplanationKey(result.explanationKey)) {
+      return null;
+    }
+    const recipeId = recipeIdFromExplanationKey(result.explanationKey);
+    const productId = result.products[0]?.id;
+    return resolveScentProfile({
+      perfumeRecipeId: recipeId,
+      productChemicalId: productId,
+      goalId: productId === "cologne" ? "perfume" : undefined,
+      contentIds: vessel?.contentIds,
+      displayName: result.products[0]?.name,
+    });
+  }, [result, vessel?.contentIds]);
 
   useEffect(() => {
     if (!discoveryId || !result || !authReady) return;
@@ -175,10 +196,16 @@ export function ExplanationPanel() {
         },
       );
       if (error === "auth") {
+        const next = getFallbackExplanation(result.explanationKey);
+        setLive({ id: discoveryId, text: next, source: "fallback" });
+        setCache(discoveryId, next);
         setBanner(labCopy.tutorSignIn);
         return;
       }
       if (error === "rate") {
+        const next = getFallbackExplanation(result.explanationKey);
+        setLive({ id: discoveryId, text: next, source: "fallback" });
+        setCache(discoveryId, next);
         setBanner(labCopy.tutorRateLimited);
         return;
       }
@@ -281,6 +308,11 @@ export function ExplanationPanel() {
                   {result.products.map((p) => p.name).join(", ")}
                 </span>
               </p>
+            ) : null}
+            {scentProfile ? (
+              <div className="mb-2">
+                <ScentProfileDetails profile={scentProfile} compact />
+              </div>
             ) : null}
             <p className="whitespace-pre-wrap">{text}</p>
             <div className="mt-3 flex items-center gap-2">

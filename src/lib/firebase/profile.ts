@@ -21,6 +21,10 @@ export interface UserProfile {
   xp: number;
   discoveredIds: string[];
   badgeIds: string[];
+  stars: number;
+  lastDailyStarAt: number;
+  unlockedShopItemIds: string[];
+  completedPerfumeIds: string[];
   createdAt: number;
   updatedAt: number;
 }
@@ -79,6 +83,15 @@ function fromDoc(data: DocumentData, emailFallback: string): UserProfile {
     xp: typeof data.xp === "number" ? data.xp : 0,
     discoveredIds: Array.isArray(data.discoveredIds) ? data.discoveredIds : [],
     badgeIds: Array.isArray(data.badgeIds) ? data.badgeIds : [],
+    stars: typeof data.stars === "number" ? data.stars : 0,
+    lastDailyStarAt:
+      typeof data.lastDailyStarAt === "number" ? data.lastDailyStarAt : 0,
+    unlockedShopItemIds: Array.isArray(data.unlockedShopItemIds)
+      ? data.unlockedShopItemIds
+      : [],
+    completedPerfumeIds: Array.isArray(data.completedPerfumeIds)
+      ? data.completedPerfumeIds
+      : [],
     createdAt: typeof data.createdAt === "number" ? data.createdAt : Date.now(),
     updatedAt: typeof data.updatedAt === "number" ? data.updatedAt : Date.now(),
   };
@@ -136,6 +149,10 @@ export async function ensureUserProfile(
     xp: 0,
     discoveredIds: [],
     badgeIds: [],
+    stars: 0,
+    lastDailyStarAt: 0,
+    unlockedShopItemIds: [],
+    completedPerfumeIds: [],
     createdAt: now,
     updatedAt: now,
   };
@@ -167,7 +184,13 @@ export async function updateUserProfile(
 
 export async function syncProgressToFirestore(
   uid: string,
-  progress: { xp: number; discoveredIds: string[]; badgeIds: string[] },
+  progress: {
+    xp: number;
+    discoveredIds: string[];
+    badgeIds: string[];
+    completedPerfumeIds?: string[];
+    starsDelta?: number;
+  },
 ): Promise<void> {
   // Prefer server Admin path when running in the browser.
   if (typeof window !== "undefined") {

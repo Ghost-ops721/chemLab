@@ -38,6 +38,40 @@ export function hasEquipment(snap: GoalDeskSnapshot, equipmentId: string) {
   return snap.vessels.some((v) => v.equipmentId === equipmentId);
 }
 
+export function vesselCount(
+  snap: GoalDeskSnapshot,
+  equipmentId?: string,
+): number {
+  return snap.vessels.filter((v) =>
+    equipmentId ? v.equipmentId === equipmentId : true,
+  ).length;
+}
+
+/** Max stirLevel across vessels that contain all of chemicalIds (or any vessel). */
+export function maxStirLevel(
+  snap: GoalDeskSnapshot,
+  chemicalIds?: string[],
+): number {
+  const vessels = chemicalIds?.length
+    ? snap.vessels.filter((v) =>
+        chemicalIds.every((id) => v.contentIds.includes(id)),
+      )
+    : snap.vessels;
+  return vessels.reduce((m, v) => Math.max(m, v.stirLevel), 0);
+}
+
+export function hasShaken(
+  snap: GoalDeskSnapshot,
+  chemicalIds?: string[],
+): boolean {
+  return snap.vessels.some((v) => {
+    if (chemicalIds?.length) {
+      if (!chemicalIds.every((id) => v.contentIds.includes(id))) return false;
+    }
+    return Boolean(v.fx.shakeAt);
+  });
+}
+
 export function lastResultMatches(
   snap: GoalDeskSnapshot,
   pred: (r: EngineResult) => boolean,
@@ -62,6 +96,29 @@ export function placeBeakerStep(
   };
 }
 
+export function placeEquipmentStep(
+  id: string,
+  opts: {
+    equipmentId: string;
+    title: string;
+    instruction: string;
+    nudge: string;
+    clue: string;
+    almost: string;
+    /** Require at least this many vessels of that type (default 1). */
+    minCount?: number;
+  },
+): GoalStep {
+  const min = opts.minCount ?? 1;
+  return {
+    id,
+    title: opts.title,
+    instruction: opts.instruction,
+    hints: hints(opts.nudge, opts.clue, opts.almost),
+    check: (s) => vesselCount(s, opts.equipmentId) >= min,
+  };
+}
+
 export function pourStep(
   id: string,
   opts: {
@@ -81,6 +138,62 @@ export function pourStep(
     hints: hints(opts.nudge, opts.clue, opts.almost),
     check: (s) =>
       vesselHas(s, opts.chemicalIds, opts.heat ? { heat: true } : undefined),
+  };
+}
+
+export function stirStep(
+  id: string,
+  opts: {
+    title?: string;
+    instruction?: string;
+    /** Chemicals that must be in the stirred vessel */
+    chemicalIds?: string[];
+    /** Minimum stirLevel (1–3). Escalating levels block one-stir skips. */
+    minLevel?: number;
+    nudge?: string;
+    clue?: string;
+    almost?: string;
+  },
+): GoalStep {
+  const min = opts.minLevel ?? 1;
+  return {
+    id,
+    title: opts.title ?? "Stir the blend",
+    instruction:
+      opts.instruction ??
+      "Click Stir on the vessel — perfume accords need gentle mixing.",
+    hints: hints(
+      opts.nudge ?? "Oils and alcohol need a stir to marry.",
+      opts.clue ?? "Select the vessel, then tap Stir (repeat if needed).",
+      opts.almost ?? `Stir until the rod has worked the liquid (level ${min}+).`,
+    ),
+    check: (s) => maxStirLevel(s, opts.chemicalIds) >= min,
+  };
+}
+
+export function shakeStep(
+  id: string,
+  opts: {
+    title?: string;
+    instruction?: string;
+    chemicalIds?: string[];
+    nudge?: string;
+    clue?: string;
+    almost?: string;
+  },
+): GoalStep {
+  return {
+    id,
+    title: opts.title ?? "Shake to emulsify",
+    instruction:
+      opts.instruction ??
+      "Shake the vessel — a short shake helps disperse the oils.",
+    hints: hints(
+      opts.nudge ?? "Perfumers swirl and shake concentrates carefully.",
+      opts.clue ?? "Select the vessel, then tap Shake.",
+      opts.almost ?? "Use Shake once on the working beaker.",
+    ),
+    check: (s) => hasShaken(s, opts.chemicalIds),
   };
 }
 

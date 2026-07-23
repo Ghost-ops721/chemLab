@@ -31,11 +31,15 @@ test.describe("Chem Lab smoke", () => {
     await expect(page.getByRole("button", { name: /^Log in$/i })).toBeVisible();
   });
 
-  test("signup page renders", async ({ page }) => {
-    await page.goto("/signup");
-    await expect(page.getByRole("heading", { name: /sign up/i })).toBeVisible();
+  test("perfume atelier button opens catalog", async ({ page }) => {
+    await page.goto("/");
+    await expect(page.getByRole("button", { name: "Perfume" })).toBeVisible({
+      timeout: 45_000,
+    });
+    await page.getByRole("button", { name: "Perfume" }).click();
     await expect(
-      page.getByRole("button", { name: /create account|sign up/i }),
+      page.getByRole("heading", { name: /inspired scents/i }),
     ).toBeVisible();
+    await expect(page.getByText(/educational recreations/i)).toBeVisible();
   });
 });

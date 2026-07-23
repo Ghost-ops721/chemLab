@@ -6,6 +6,7 @@ import { tryRedox } from "./redox";
 import { trySingleDisplacement } from "./singleDisplacement";
 import { tryDoubleDisplacement } from "./doubleDisplacement";
 import { tryProductCraft } from "./productCraft";
+import { tryPerfumeCraft } from "./perfumeCraft";
 
 export function resolveChemistry(
   chemicals: Chemical[],
@@ -23,6 +24,10 @@ export function resolveChemistry(
 
   const hazard = tryHazard(chemicals);
   if (hazard) return hazard;
+
+  // Perfume atelier crafts before generic product crafts
+  const perfume = tryPerfumeCraft(chemicals);
+  if (perfume?.ok) return perfume;
 
   // Product crafts (Goals) before generic “no reaction”
   const craft = tryProductCraft(chemicals, opts);

@@ -1,11 +1,15 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   getGoal,
   type GoalVisualKind,
 } from "@/domains/chemistry/data/goals";
+import { resolveScentProfile } from "@/domains/chemistry/perfume";
+import { ScentProfileDetails } from "@/perfume/ScentProfileDetails";
 import { useGoalStore } from "@/store/goalStore";
+import { useInventionStore } from "@/store/inventionStore";
+import { track } from "@/lib/analytics/track";
 
 function SoapVisual({ caption }: { caption: string }) {
   return (
@@ -248,24 +252,87 @@ function ProductVisual({
 export function GoalRewardOverlay() {
   const rewardGoalId = useGoalStore((s) => s.rewardGoalId);
   const rewardXp = useGoalStore((s) => s.rewardXp);
+  const rewardStars = useGoalStore((s) => s.rewardStars);
   const dismissReward = useGoalStore((s) => s.dismissReward);
   const setPickerOpen = useGoalStore((s) => s.setPickerOpen);
   const abandonGoal = useGoalStore((s) => s.abandonGoal);
 
+  const namingPending = useInventionStore((s) => s.namingPending);
+  const confirmName = useInventionStore((s) => s.confirmName);
+  const skipNaming = useInventionStore((s) => s.skipNaming);
+  const setShelfOpen = useInventionStore((s) => s.setShelfOpen);
+  const setRemixInventionId = useInventionStore((s) => s.setRemixInventionId);
+
+  const [name, setName] = useState("");
+  const [savedId, setSavedId] = useState<string | null>(null);
+  const [phase, setPhase] = useState<"celebrate" | "named">("celebrate");
+
+  const goal = rewardGoalId ? getGoal(rewardGoalId) : undefined;
+
+  const scentProfile = useMemo(() => {
+    if (!rewardGoalId) return null;
+    return resolveScentProfile({
+      goalId: rewardGoalId,
+      perfumeRecipeId: namingPending?.perfumeRecipeId,
+      contentIds: namingPending?.snapshot.contentIds,
+      displayName: namingPending?.suggestedName,
+    });
+  }, [rewardGoalId, namingPending]);
+
+  const suggested = useMemo(() => {
+    if (namingPending?.suggestedName) return namingPending.suggestedName;
+    if (!goal) return "My creation";
+    return goal.title.replace(/^Make (a |an )?/i, "").slice(0, 40);
+  }, [namingPending, goal]);
+
+  useEffect(() => {
+    if (!rewardGoalId) {
+      setPhase("celebrate");
+      setSavedId(null);
+      setName("");
+      return;
+    }
+    setName(suggested);
+    setPhase("celebrate");
+    setSavedId(null);
+  }, [rewardGoalId, suggested]);
+
   useEffect(() => {
     if (!rewardGoalId) return;
     function onKey(e: KeyboardEvent) {
-      if (e.key === "Escape") dismissReward();
+      if (e.key === "Escape") {
+        skipNaming();
+        dismissReward();
+      }
     }
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [rewardGoalId, dismissReward]);
+  }, [rewardGoalId, dismissReward, skipNaming]);
 
-  if (!rewardGoalId) return null;
-  const goal = getGoal(rewardGoalId);
-  if (!goal) return null;
+  if (!rewardGoalId || !goal) return null;
+
+  function saveToShelf() {
+    const inv = confirmName(name.trim() || suggested);
+    if (inv) {
+      setSavedId(inv.id);
+      setPhase("named");
+    }
+  }
+
+  function openShelf() {
+    dismissReward();
+    setShelfOpen(true);
+    track("shelf_open", { from: "reward" });
+  }
+
+  function tryImprove() {
+    if (savedId) setRemixInventionId(savedId);
+    dismissReward();
+    setShelfOpen(false);
+  }
 
   function makeMore() {
+    skipNaming();
     dismissReward();
     abandonGoal();
     setPickerOpen(true);
@@ -277,31 +344,60 @@ export function GoalRewardOverlay() {
       role="dialog"
       aria-modal="true"
       aria-label="Goal reward"
-      onClick={() => dismissReward()}
+      onClick={() => {
+        skipNaming();
+        dismissReward();
+      }}
     >
       <div
-        className="reward-card w-full max-w-sm overflow-hidden rounded-2xl border border-lab-teal/30 bg-lab-panel shadow-2xl"
+        className="reward-card flex max-h-[90vh] w-full max-w-md flex-col overflow-hidden rounded-2xl border border-lab-teal/30 bg-lab-panel shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="border-b border-lab-line/50 bg-gradient-to-br from-lab-teal/15 via-lab-panel to-lab-amber/10 px-4 pb-3 pt-4 text-center">
+        <div className="shrink-0 border-b border-lab-line/50 bg-gradient-to-br from-lab-teal/15 via-lab-panel to-lab-amber/10 px-4 pb-3 pt-4 text-center">
           <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-lab-teal">
-            Reward unlocked
+            {phase === "named" ? "On your Shelf" : "You made it"}
           </p>
           <h2 className="mt-1 font-display text-2xl tracking-tight text-lab-ink">
-            {goal.icon} You made it!
+            {phase === "named"
+              ? `“${name.trim() || suggested}”`
+              : `${goal.icon} You made it!`}
           </h2>
           <p className="mt-1 text-sm font-semibold text-lab-ink/90">
-            {goal.title.replace(/^Make /i, "")} — the real deal
+            {phase === "named"
+              ? "This is yours — remix it anytime."
+              : `${goal.title.replace(/^Make /i, "")} — the real deal`}
           </p>
-          <div className="mt-2 inline-flex items-baseline gap-1.5 rounded-full bg-lab-ink px-3 py-1 text-lab-foam">
-            <span className="text-[10px] uppercase tracking-wider text-lab-glass">
-              XP
-            </span>
-            <span className="font-display text-lg leading-none">+{rewardXp}</span>
+          <div className="mt-2 flex flex-wrap items-center justify-center gap-2">
+            <div className="inline-flex items-baseline gap-1.5 rounded-full bg-lab-ink px-3 py-1 text-lab-foam">
+              <span className="text-[10px] uppercase tracking-wider text-lab-glass">
+                XP
+              </span>
+              <span className="font-display text-lg leading-none">
+                +{rewardXp}
+              </span>
+            </div>
+            {rewardStars > 0 ? (
+              <div className="inline-flex items-baseline gap-1.5 rounded-full bg-lab-amber px-3 py-1 text-lab-ink">
+                <span className="text-[10px] uppercase tracking-wider">★</span>
+                <span className="font-display text-lg leading-none">
+                  +{rewardStars}
+                </span>
+              </div>
+            ) : null}
+            {namingPending ? (
+              <div className="inline-flex items-baseline gap-1.5 rounded-full border border-lab-teal/40 bg-white px-3 py-1 text-lab-teal">
+                <span className="text-[10px] uppercase tracking-wider">
+                  Score
+                </span>
+                <span className="font-display text-lg leading-none">
+                  {namingPending.score}
+                </span>
+              </div>
+            ) : null}
           </div>
         </div>
 
-        <div className="px-4 py-4">
+        <div className="scroll-thin min-h-0 flex-1 overflow-y-auto px-4 py-4">
           <ProductVisual
             kind={goal.visualKind}
             caption={goal.rewardCaption}
@@ -310,28 +406,103 @@ export function GoalRewardOverlay() {
           <p className="mt-3 text-center text-[12px] leading-snug text-lab-ink/85">
             {goal.successBlurb}
           </p>
-          <p className="mt-2 text-center font-display text-base text-lab-teal">
-            Make more like this
-          </p>
-          <p className="mt-0.5 text-center text-[11px] text-lab-muted">
-            Pick another product goal and keep crafting.
-          </p>
+
+          {scentProfile ? (
+            <div className="mt-3">
+              <p className="mb-1.5 text-center text-[10px] font-semibold uppercase tracking-[0.18em] text-lab-muted">
+                Perfume dossier
+              </p>
+              <ScentProfileDetails profile={scentProfile} />
+            </div>
+          ) : null}
+
+          {phase === "celebrate" ? (
+            <div className="mt-3">
+              <label className="block text-center">
+                <span className="text-[10px] font-semibold uppercase tracking-wider text-lab-muted">
+                  Name your creation
+                </span>
+                <input
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  maxLength={48}
+                  placeholder={suggested}
+                  className="mt-1 w-full rounded-lg border border-lab-line bg-white px-3 py-2 text-center font-display text-base text-lab-ink outline-none focus:border-lab-teal"
+                  autoFocus
+                />
+              </label>
+              {namingPending?.tier ? (
+                <p className="mt-1.5 text-center text-[11px] text-lab-muted">
+                  Mastery:{" "}
+                  <span className="font-semibold text-lab-teal">
+                    {namingPending.tier}
+                  </span>
+                  {" · "}
+                  Name it to put it on your Shelf.
+                </p>
+              ) : (
+                <p className="mt-1.5 text-center text-[11px] text-lab-muted">
+                  Naming seals ownership — this becomes yours to improve.
+                </p>
+              )}
+            </div>
+          ) : (
+            <div className="mt-3 text-center">
+              <p className="font-display text-base text-lab-teal">
+                Can you beat your own formula?
+              </p>
+              <p className="mt-0.5 text-[11px] text-lab-muted">
+                Remix from your Shelf and raise the score.
+              </p>
+            </div>
+          )}
         </div>
 
-        <div className="flex gap-2 border-t border-lab-line/50 bg-lab-wash/40 px-4 py-3">
+        <div className="flex shrink-0 flex-col gap-2 border-t border-lab-line/50 bg-lab-wash/40 px-4 py-3">
+          {phase === "celebrate" ? (
+            <div className="flex gap-2">
+              <button
+                type="button"
+                className="flex-1 rounded-lg border border-lab-line bg-white px-3 py-2 text-xs font-semibold text-lab-ink hover:bg-lab-panel"
+                onClick={() => {
+                  skipNaming();
+                  dismissReward();
+                }}
+              >
+                Skip for now
+              </button>
+              <button
+                type="button"
+                className="flex-[1.4] rounded-lg bg-lab-teal px-3 py-2 text-xs font-semibold text-white shadow-sm hover:bg-lab-teal/90"
+                onClick={saveToShelf}
+              >
+                Save to My Shelf
+              </button>
+            </div>
+          ) : (
+            <div className="flex gap-2">
+              <button
+                type="button"
+                className="flex-1 rounded-lg border border-lab-line bg-white px-3 py-2 text-xs font-semibold text-lab-ink hover:bg-lab-panel"
+                onClick={openShelf}
+              >
+                Open My Shelf
+              </button>
+              <button
+                type="button"
+                className="flex-[1.4] rounded-lg bg-lab-amber px-3 py-2 text-xs font-semibold text-lab-ink shadow-sm hover:bg-lab-amber/90"
+                onClick={tryImprove}
+              >
+                Try to improve it
+              </button>
+            </div>
+          )}
           <button
             type="button"
-            className="flex-1 rounded-lg border border-lab-line bg-white px-3 py-2 text-xs font-semibold text-lab-ink hover:bg-lab-panel"
-            onClick={() => dismissReward()}
-          >
-            Keep looking
-          </button>
-          <button
-            type="button"
-            className="flex-[1.4] rounded-lg bg-lab-teal px-3 py-2 text-xs font-semibold text-white shadow-sm hover:bg-lab-teal/90"
+            className="text-[11px] font-medium text-lab-muted hover:text-lab-ink"
             onClick={makeMore}
           >
-            Make more like this
+            Make more like this →
           </button>
         </div>
       </div>

@@ -77,7 +77,19 @@ Never inflate chrome with `text-3xl+` titles or `py-3+` list paddings outside mo
 
 ## Goals
 
-Product goals (perfume, soap, ink, antacid, rust remover) live in the top bar **Goals** picker. The desk stays free-play; the guide panel is a floating coach with openable hints — not a HUD on the wood.
+Lab goals (soap, ink, antacid, citrus cologne starter, classics) live in the top bar **Goals** picker.
+
+**Perfume is different:** inspired scents are selected in **Perfume Atelier** (top bar **Perfume**, empty-desk **Browse Perfume Atelier**, or Goals hero **Browse full Atelier**). Users must see a bottle selection + family filters before committing to a make. Never route “Perfume” intent into the legacy citrus cologne product goal.
+
+Perfume recipes are marked **Easy / Medium / Hard / Very hard** from guided step count (roughly 6–9 / 10–14 / 15–20 / 21–30). Harder tiers use multi-vessel pours, stir/shake gates, and transfers — not more than 6 chemicals in one beaker.
+
+Memorable flow for perfume:
+1. Open Atelier → browse / search / family / difficulty
+2. Select a scent → see pyramid + bottle + step count
+3. **Make this on the desk →** starts the guided goal
+4. Mix → pack / XP / ★
+
+The desk stays free-play; the guide panel is a floating coach with openable hints — not a HUD on the wood.
 
 ## Production UI states (tutor + OCR)
 

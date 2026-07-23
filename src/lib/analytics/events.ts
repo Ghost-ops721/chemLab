@@ -8,7 +8,17 @@ export type AnalyticsEventName =
   | "auth_gate_shown"
   | "signup_complete"
   | "scan_upload"
-  | "tutor_open";
+  | "tutor_open"
+  | "perfume_start"
+  | "perfume_complete"
+  | "perfume_atelier_open"
+  | "daily_star_claim"
+  | "star_unlock"
+  | "invention_named"
+  | "invention_improved"
+  | "invention_shared"
+  | "shelf_open"
+  | "shelf_remix";
 
 export const ANALYTICS_EVENT_NAMES = new Set<string>([
   "page_view",
@@ -21,4 +31,14 @@ export const ANALYTICS_EVENT_NAMES = new Set<string>([
   "signup_complete",
   "scan_upload",
   "tutor_open",
+  "perfume_start",
+  "perfume_complete",
+  "perfume_atelier_open",
+  "daily_star_claim",
+  "star_unlock",
+  "invention_named",
+  "invention_improved",
+  "invention_shared",
+  "shelf_open",
+  "shelf_remix",
 ]);

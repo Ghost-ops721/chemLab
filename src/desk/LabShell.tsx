@@ -28,6 +28,7 @@ import { getChemical } from "@/domains/chemistry/data/chemicals";
 import { GoalPicker } from "@/goals/GoalPicker";
 import { GoalGuidePanel } from "@/goals/GoalGuidePanel";
 import { GoalProgressWatcher } from "@/goals/GoalProgressWatcher";
+import { AlyraMark } from "@/components/brand/AlyraMark";
 import { GoalRewardOverlay } from "@/goals/GoalRewardOverlay";
 import { AuthGateModal } from "@/components/auth/AuthGateModal";
 import { NavChrome } from "@/components/auth/NavChrome";
@@ -77,6 +78,7 @@ export function LabShell() {
   const [shopOpen, setShopOpen] = useState(false);
   const [marketOpen, setMarketOpen] = useState(false);
   const [freeformOpen, setFreeformOpen] = useState(false);
+  const [tutorOpen, setTutorOpen] = useState(false);
   const lastRecorded = useRef<string | null>(null);
   const deskPointer = useRef<{ x: number; y: number } | null>(null);
 
@@ -339,7 +341,7 @@ export function LabShell() {
   if (!hydrated) {
     return (
       <div className="flex h-dvh items-center justify-center bg-lab-wash">
-        <p className="font-display text-2xl text-lab-ink">Chem Lab</p>
+        <p className="font-display text-2xl text-lab-ink">Alyra Labs</p>
       </div>
     );
   }
@@ -351,21 +353,21 @@ export function LabShell() {
       onDragMove={onDragMove}
       onDragEnd={onDragEnd}
     >
-      <div className="flex h-dvh flex-col overflow-hidden bg-lab-wash">
-        <header className="flex items-center justify-between gap-3 border-b border-lab-line/40 bg-lab-panel/90 px-3 py-1.5 backdrop-blur md:px-4">
+      <div className="lab-app flex h-dvh flex-col overflow-hidden bg-lab-wash">
+        <header className="flex shrink-0 items-center justify-between gap-2 border-b border-white/10 bg-lab-ink px-3 py-1.5 md:gap-3 md:px-4">
           <div className="min-w-0">
-            <h1 className="font-display text-2xl leading-none tracking-tight text-lab-ink">
-              Chem Lab
+            <h1 className="leading-none">
+              <AlyraMark size="md" href={null} onDark />
             </h1>
-            <p className="mt-0.5 max-w-md truncate text-[11px] text-lab-muted">
+            <p className="mt-0.5 hidden max-w-md truncate text-[11px] text-lab-foam/55 md:block">
               {mode === "desk"
-                ? "Pour, stir, heat, shake — the desk reacts to every move."
+                ? "Compose notes on the desk — press, warm, wear."
                 : "Scan notes into editable formulas — hover each piece to learn."}
             </p>
           </div>
-          <div className="flex items-center gap-2">
-            <NavChrome />
-            <div className="flex rounded-lg bg-lab-desk/15 p-0.5">
+          <div className="flex items-center gap-1.5 md:gap-2">
+            <NavChrome onDark />
+            <div className="flex rounded-lg bg-white/10 p-0.5">
               {(
                 [
                   ["desk", "Desk"],
@@ -377,10 +379,10 @@ export function LabShell() {
                   type="button"
                   onClick={() => setMode(id)}
                   aria-pressed={mode === id}
-                  className={`rounded-md px-2.5 py-1 text-[11px] font-semibold transition ${
+                  className={`min-h-9 rounded-md px-2.5 py-1.5 text-[11px] font-semibold transition md:min-h-0 md:py-1 ${
                     mode === id
-                      ? "bg-white text-lab-ink shadow-sm"
-                      : "text-lab-muted hover:text-lab-ink"
+                      ? "bg-lab-foam text-lab-ink shadow-sm"
+                      : "text-lab-foam/65 hover:text-lab-foam"
                   }`}
                 >
                   {label}
@@ -491,9 +493,14 @@ export function LabShell() {
             />
           </div>
         ) : (
-          <div className="relative flex min-h-0 flex-1 flex-col md:flex-row">
-            <ItemPanel />
-            <div className="relative flex min-h-0 min-w-0 flex-1 flex-col gap-1 p-1.5 md:p-2">
+          <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden md:flex-row">
+            <ItemPanel
+              onOpenTutor={() => {
+                setTutorOpen(true);
+                track("tutor_open");
+              }}
+            />
+            <div className="relative flex min-h-0 min-w-0 flex-1 flex-col gap-0 overflow-hidden p-0 md:gap-1 md:p-2">
               <DeskWorkspace
                 onOpenAtelier={() => {
                   setShopOpen(false);
@@ -503,19 +510,22 @@ export function LabShell() {
                   setAtelierOpen(true);
                 }}
               />
-              <div className="pointer-events-none absolute bottom-14 left-2 z-30 flex justify-start md:bottom-3 md:left-3 md:right-auto">
+              <div className="pointer-events-none absolute bottom-[calc(4.5rem+env(safe-area-inset-bottom,0px))] left-3 z-30 flex justify-start md:bottom-3 md:left-3 md:right-auto">
                 <div className="pointer-events-auto w-[min(100%,17rem)] max-w-sm">
                   <GoalGuidePanel />
                 </div>
               </div>
             </div>
-            <div className="shrink-0 border-t border-lab-line/50 md:border-t-0">
-              <ExplanationPanel />
-            </div>
+            <ExplanationPanel
+              mobileOpen={tutorOpen}
+              onMobileOpenChange={setTutorOpen}
+            />
           </div>
         )}
 
-        <RecipeJournal />
+        <div className="hidden md:block">
+          <RecipeJournal />
+        </div>
         <ToastHost />
         <GoalPicker
           onOpenAtelier={() => {

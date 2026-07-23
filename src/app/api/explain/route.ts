@@ -57,7 +57,7 @@ export async function POST(req: Request) {
   const groq = createGroq({ apiKey: process.env.GROQ_API_KEY });
   const started = Date.now();
 
-  const system = `You are a friendly high-school chemistry lab tutor for Chem Lab.
+  const system = `You are a friendly high-school chemistry lab tutor for Alyra Labs.
 You MUST stay faithful to the structured reaction data provided.
 Never invent different products, equations, or reaction types.
 If ok is false, explain only the hazard / why the mix was blocked.

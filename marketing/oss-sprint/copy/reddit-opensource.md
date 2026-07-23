@@ -8,7 +8,7 @@ Chem Lab is a virtual chemistry desk you can actually use: pour, stir, heat, sha
 
 MIT licensed. Looking for contributors (good first issues labeled) and people who'd try it with a class or study group.
 
-- Demo: https://chemistry-nu-five.vercel.app
+- Demo: https://alyra-labs.vercel.app
 - Repo: https://github.com/Ghost-ops721/chemLab
 
 Happy to answer questions about the reaction engine or how we structured the OSS bits.

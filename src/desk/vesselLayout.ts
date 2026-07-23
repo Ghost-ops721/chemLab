@@ -3,8 +3,8 @@
 export const VESSEL_CARD = {
   /** Matches `w-[11.5rem]` on VesselSlot (11.5 * 16 = 184). */
   width: 184,
-  /** Approximate card height including chrome + glass + actions. */
-  height: 280,
+  /** Approximate card height including chrome + glass (actions live in bottom bar). */
+  height: 240,
   /** Horizontal padding inside card before the SVG glass. */
   glassInsetX: 10,
   /** Offset from card top to the glass SVG. */

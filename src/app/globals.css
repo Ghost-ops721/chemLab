@@ -1,16 +1,17 @@
 @import "tailwindcss";
 
 :root {
-  --lab-wash: #d8e4df;
-  --lab-panel: #f2f7f4;
-  --lab-desk: #4a3428;
-  --lab-ink: #14241f;
-  --lab-muted: #5a6f67;
-  --lab-teal: #1a6b5c;
-  --lab-line: #b4c5bd;
-  --lab-foam: #eaf4ef;
-  --lab-glass: #8fc0b5;
-  --lab-amber: #c4783a;
+  /* Alyra Labs — ink / stone / champagne (alyra.in monochrome luxury) */
+  --lab-wash: #ebe8e2;
+  --lab-panel: #f7f5f1;
+  --lab-desk: #2a221c;
+  --lab-ink: #0c0c0c;
+  --lab-muted: #5c5750;
+  --lab-teal: #1a1a1a; /* primary CTA — ink black */
+  --lab-line: #d2cdc4;
+  --lab-foam: #f5f4f1;
+  --lab-glass: #c4b49a; /* champagne glass tint */
+  --lab-amber: #b8956c; /* warm gold heat / reward */
   --lab-hazard: #b42318;
 }
 
@@ -37,23 +38,36 @@ body {
   background: var(--lab-wash);
 }
 
+/* Lab shell: never show scrollbars (scroll still works). Desktop + phone. */
+.lab-app,
+.lab-app * {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.lab-app *::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
+}
+
 .font-display {
   font-family: var(--font-display), Georgia, serif;
 }
 
 .lab-desk-surface {
   background:
-    radial-gradient(ellipse at 18% 8%, rgba(255, 240, 210, 0.12), transparent 42%),
-    radial-gradient(ellipse at 85% 95%, rgba(0, 0, 0, 0.28), transparent 55%),
+    radial-gradient(ellipse at 18% 8%, rgba(255, 240, 210, 0.1), transparent 42%),
+    radial-gradient(ellipse at 85% 95%, rgba(0, 0, 0, 0.35), transparent 55%),
     repeating-linear-gradient(
       90deg,
       transparent,
       transparent 48px,
-      rgba(0, 0, 0, 0.04) 48px,
-      rgba(0, 0, 0, 0.04) 49px
+      rgba(0, 0, 0, 0.05) 48px,
+      rgba(0, 0, 0, 0.05) 49px
     ),
-    linear-gradient(165deg, #6e4d3c 0%, #4a3428 42%, #342419 100%);
-  box-shadow: inset 0 0 100px rgba(0, 0, 0, 0.28);
+    linear-gradient(165deg, #3d3228 0%, #2a221c 42%, #1a1510 100%);
+  box-shadow: inset 0 0 100px rgba(0, 0, 0, 0.35);
 }
 
 /* Landing — soft entrance + glass silhouettes on the wood plane */

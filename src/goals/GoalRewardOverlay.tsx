@@ -34,7 +34,7 @@ function SoapVisual({ caption }: { caption: string }) {
               REACTO
             </p>
             <p className="text-[7px] font-semibold uppercase tracking-[0.22em] text-[#8a6a2f]/90">
-              Chem Lab
+              Alyra Labs
             </p>
           </div>
           <div className="absolute -right-1 top-3 h-3 w-3 rounded-full bg-white/70 blur-[1px]" />

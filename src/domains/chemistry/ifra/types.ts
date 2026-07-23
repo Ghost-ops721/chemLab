@@ -19,7 +19,7 @@ export interface IfraProductCategory {
 }
 
 export interface IfraStandardEntry {
-  /** Prefer chemicalId for Chem Lab oils; CAS used as secondary key. */
+  /** Prefer chemicalId for Alyra Labs oils; CAS used as secondary key. */
   chemicalId?: string;
   casNumber?: string;
   name: string;

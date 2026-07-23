@@ -24,7 +24,11 @@ type BrowseKind = "equipment" | "chemicals" | "oils";
 /** Keep the left rail scannable; full catalog lives in the Show more modal. */
 const SIDEBAR_PREVIEW_LIMIT = 8;
 
-export function ItemPanel() {
+export function ItemPanel({
+  onOpenTutor,
+}: {
+  onOpenTutor?: () => void;
+} = {}) {
   const [browse, setBrowse] = useState<BrowseKind>("equipment");
   const [expanded, setExpanded] = useState(false);
   const [query, setQuery] = useState("");
@@ -427,17 +431,27 @@ export function ItemPanel() {
             role="dialog"
             aria-modal="true"
             aria-labelledby="inventory-modal-title"
-            className="fixed inset-0 z-[300] flex h-dvh w-screen flex-col"
-            style={{
-              background:
-                "radial-gradient(ellipse at 12% 0%, rgba(143, 192, 181, 0.22), transparent 42%), radial-gradient(ellipse at 88% 100%, rgba(196, 120, 58, 0.08), transparent 40%), var(--lab-wash)",
-            }}
+            className="fixed inset-0 z-[300] flex flex-col justify-end md:items-stretch md:justify-stretch"
           >
-            <header className="shrink-0 border-b border-lab-line/50 bg-lab-panel/90 px-3 py-1.5 backdrop-blur-md sm:px-4">
+            <button
+              type="button"
+              className="absolute inset-0 bg-lab-ink/45 md:bg-lab-ink/30"
+              aria-label="Close inventory"
+              onClick={() => setExpanded(false)}
+            />
+            <div
+              className="relative flex max-h-[85dvh] w-full flex-col rounded-t-2xl border border-lab-line bg-lab-panel pb-[env(safe-area-inset-bottom,0px)] shadow-2xl md:max-h-none md:h-dvh md:rounded-none md:border-0 md:pb-0"
+              style={{
+                background:
+                  "radial-gradient(ellipse at 12% 0%, rgba(196, 180, 154, 0.12), transparent 42%), var(--lab-panel)",
+              }}
+            >
+            <div className="mx-auto mt-2 h-1 w-9 shrink-0 rounded-full bg-lab-line md:hidden" />
+            <header className="shrink-0 border-b border-lab-line/50 bg-lab-panel/90 px-3 py-2 backdrop-blur-md sm:px-4">
               <div className="mx-auto flex w-full max-w-5xl items-center justify-between gap-2">
                 <div className="min-w-0">
                   <div className="flex items-baseline gap-2">
-                    <p className="font-display text-[9px] uppercase tracking-[0.18em] text-lab-teal">
+                    <p className="font-display text-[9px] uppercase tracking-[0.18em] text-lab-muted">
                       Inventory
                     </p>
                     <h2
@@ -454,14 +468,14 @@ export function ItemPanel() {
                 <button
                   type="button"
                   onClick={() => setExpanded(false)}
-                  className="shrink-0 rounded-md bg-lab-ink px-2.5 py-1 text-[11px] font-medium text-lab-foam transition hover:bg-lab-teal"
+                  className="min-h-11 shrink-0 rounded-lg bg-lab-ink px-3 text-xs font-semibold text-lab-foam transition hover:bg-lab-ink/90 md:min-h-0 md:rounded-md md:px-2.5 md:py-1 md:text-[11px] md:font-medium"
                 >
                   Done
                 </button>
               </div>
             </header>
 
-            <div className="shrink-0 border-b border-lab-line/40 bg-lab-panel/55 px-3 py-1.5 sm:px-4">
+            <div className="shrink-0 border-b border-lab-line/40 bg-lab-panel/55 px-3 py-2 sm:px-4">
               <div className="mx-auto w-full max-w-5xl space-y-1.5">
                 <div className="flex gap-2">
                   {(
@@ -475,11 +489,11 @@ export function ItemPanel() {
                       key={kind}
                       type="button"
                       onClick={() => selectBrowse(kind)}
-                      className={`rounded-lg px-2.5 py-1 text-[11px] font-medium transition ${
+                      className={`min-h-11 flex-1 rounded-lg px-2.5 py-2 text-xs font-semibold transition md:min-h-0 md:flex-none md:py-1 md:text-[11px] md:font-medium ${
                         browse === kind
                           ? kind === "oils"
                             ? "bg-lab-amber text-white"
-                            : "bg-lab-teal text-lab-foam"
+                            : "bg-lab-ink text-lab-foam"
                           : "bg-white/80 text-lab-muted ring-1 ring-lab-line/60 hover:text-lab-ink"
                       }`}
                     >
@@ -495,7 +509,7 @@ export function ItemPanel() {
                     value={query}
                     onChange={(e) => setQuery(e.target.value)}
                     placeholder={searchPlaceholder}
-                    className="w-full rounded-lg border border-lab-line/70 bg-white px-2.5 py-1.5 text-xs text-lab-ink outline-none ring-lab-teal/30 placeholder:text-lab-muted focus:ring-2"
+                    className="w-full rounded-lg border border-lab-line/70 bg-white px-3 py-2.5 text-sm text-lab-ink outline-none ring-lab-teal/30 placeholder:text-lab-muted focus:ring-2 md:px-2.5 md:py-1.5 md:text-xs"
                   />
                 </label>
 
@@ -529,7 +543,7 @@ export function ItemPanel() {
                     Nothing matched. Try another formula or clear the search.
                   </p>
                 ) : browse === "chemicals" || browse === "oils" ? (
-                  <div className="grid grid-cols-1 gap-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                  <div className="grid grid-cols-1 gap-1.5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                     {list.map((item) => {
                       const chem = getChemical(item.id);
                       const highlighted = highlightIds.has(item.id);
@@ -545,10 +559,10 @@ export function ItemPanel() {
                           <button
                             type="button"
                             onClick={() => quickChemical(item.id)}
-                            className="flex min-w-0 flex-1 items-center gap-1.5 px-2 py-1 text-left"
+                            className="flex min-h-11 min-w-0 flex-1 items-center gap-1.5 px-2.5 py-2 text-left md:min-h-0 md:py-1"
                           >
                             <span
-                              className="relative flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-lab-wash text-sm"
+                              className="relative flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-lab-wash text-sm"
                               aria-hidden
                             >
                               {item.icon}
@@ -572,7 +586,7 @@ export function ItemPanel() {
                             type="button"
                             title="Pour into active vessel"
                             onClick={() => quickChemical(item.id)}
-                            className="shrink-0 border-l border-lab-line/40 px-2 text-xs font-bold text-lab-teal transition hover:bg-lab-teal hover:text-white"
+                            className="min-w-11 shrink-0 border-l border-lab-line/40 px-3 text-sm font-bold text-lab-ink transition hover:bg-lab-ink hover:text-lab-foam md:min-w-0 md:px-2 md:text-xs"
                           >
                             +
                           </button>
@@ -581,7 +595,7 @@ export function ItemPanel() {
                     })}
                   </div>
                 ) : (
-                  <div className="grid grid-cols-1 gap-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                  <div className="grid grid-cols-1 gap-1.5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                     {filteredEquipment.map((item) => {
                       const highlighted = highlightIds.has(item.id);
                       return (
@@ -589,7 +603,7 @@ export function ItemPanel() {
                           key={item.id}
                           type="button"
                           onClick={() => quickEquipment(item.id)}
-                          className={`flex items-center gap-2 rounded-lg border bg-white/90 px-2 py-1.5 text-left shadow-sm transition hover:border-lab-teal/45 hover:shadow-md ${
+                          className={`flex min-h-11 items-center gap-2 rounded-lg border bg-white/90 px-2.5 py-2 text-left shadow-sm transition hover:border-lab-teal/45 hover:shadow-md md:min-h-0 md:py-1.5 ${
                             highlighted
                               ? "border-lab-amber/55 ring-1 ring-lab-amber/20"
                               : "border-lab-line/55"
@@ -609,7 +623,7 @@ export function ItemPanel() {
                               {item.subcategory}
                             </span>
                           </span>
-                          <span className="shrink-0 rounded-md bg-lab-teal/10 px-1.5 py-0.5 text-[11px] font-semibold text-lab-teal">
+                          <span className="shrink-0 rounded-md bg-lab-ink/10 px-1.5 py-0.5 text-[11px] font-semibold text-lab-ink">
                             +
                           </span>
                         </button>
@@ -619,6 +633,7 @@ export function ItemPanel() {
                 )}
               </div>
             </div>
+            </div>
           </div>,
           document.body,
         )
@@ -626,29 +641,36 @@ export function ItemPanel() {
 
   return (
     <>
-      {/* Mobile inventory FAB — opens full-screen (no left rail on small screens) */}
-      <div className="pointer-events-none absolute bottom-16 right-3 z-40 flex flex-col gap-1.5 md:hidden">
-        <button
-          type="button"
-          onClick={() => openExpanded("oils")}
-          className="pointer-events-auto rounded-full bg-lab-amber px-3 py-2 text-[11px] font-semibold text-white shadow-lg"
-        >
-          Oils
-        </button>
-        <button
-          type="button"
-          onClick={() => openExpanded("chemicals")}
-          className="pointer-events-auto rounded-full bg-lab-teal px-3 py-2 text-[11px] font-semibold text-white shadow-lg"
-        >
-          Chemicals
-        </button>
-        <button
-          type="button"
-          onClick={() => openExpanded("equipment")}
-          className="pointer-events-auto rounded-full border border-lab-line bg-lab-panel px-3 py-2 text-[11px] font-semibold text-lab-ink shadow-lg"
-        >
-          Equipment
-        </button>
+      {/* Mobile right rail — one column, equal width, right edge aligned */}
+      <div className="pointer-events-none absolute inset-x-0 bottom-[calc(4.5rem+env(safe-area-inset-bottom,0px))] z-40 px-3 md:hidden">
+        <div className="ml-auto flex w-12 flex-col items-stretch gap-2">
+          {onOpenTutor ? (
+            <button
+              type="button"
+              onClick={onOpenTutor}
+              className="pointer-events-auto flex h-11 w-full items-center justify-center rounded-xl border border-lab-line/70 bg-lab-panel/95 text-[11px] font-bold tracking-wide text-lab-ink shadow-lg backdrop-blur-md"
+              aria-label="Open lab tutor"
+            >
+              Eq
+            </button>
+          ) : null}
+          <button
+            type="button"
+            onClick={() => openExpanded("oils")}
+            className="pointer-events-auto flex h-11 w-full items-center justify-center rounded-xl border border-lab-line/70 bg-lab-panel/95 text-[10px] font-bold tracking-wide text-lab-ink shadow-lg backdrop-blur-md"
+            aria-label="Open notes and oils"
+          >
+            Notes
+          </button>
+          <button
+            type="button"
+            onClick={() => openExpanded("equipment")}
+            className="pointer-events-auto flex h-11 w-full items-center justify-center rounded-xl border border-lab-line/70 bg-lab-panel/95 text-lg font-semibold leading-none text-lab-ink shadow-lg backdrop-blur-md"
+            aria-label="Open equipment"
+          >
+            +
+          </button>
+        </div>
       </div>
 
       <aside className="panel-glass hidden w-full shrink-0 flex-col border-b border-lab-line/60 md:flex md:h-full md:max-h-none md:w-[14rem] md:border-b-0 md:border-r xl:w-[15.5rem]">

@@ -1,65 +1,63 @@
-# Chem Lab — Brand Brief
+# Alyra Labs — Brand Brief
 
-Grounded in the existing product ([`DESIGN.md`](../DESIGN.md), [`globals.css`](../src/app/globals.css)) rather than invented from scratch. Chem Lab already has real design DNA — this brief formalizes it into a usable brand system.
+Product atelier for [ALYRA](https://www.alyra.in/) — India's first solid perfume brand. Digital desk where scent is composed with the same precision and restraint as the refillable balms.
 
-## What the product actually is
+## What the product is
 
-A virtual chemistry desk: drag glassware onto warm wood, pour reactants, watch a real balanced equation resolve (`HCl + NaOH → NaCl + H2O`), get a plain-language tutor explanation, earn XP. Not a quiz app, not a dashboard — a *tactile teaching instrument*.
+A virtual perfume chemistry desk: drag glassware onto dark wood, pour notes (top / heart / base), watch formulas resolve, invent and shelf signatures. Companion to the physical Alyra compact — not a generic quiz app.
 
 ## Name
 
-**Chem Lab** — kept as-is. It's already load-bearing across the codebase (metadata, wordmark, README) and it's plainly honest about what the product does, which suits the "real chemistry, no gimmicks" voice better than a cute neologism would.
+**Alyra Labs** — the lab behind the lyre. The angel-with-lyre mark (woodcut white on black) is the brand lockup; wordmark sits beside it in display serif.
 
 ## Tagline
 
-Primary (already living in the product's own hero copy — reuse it, don't replace it):
+Primary:
 
-> **The desk reacts to every move.**
+> **Compose scent. Press to skin.**
 
-Alternates for different contexts:
-- "Pour it. Stir it. See it react." (feature-demo videos)
-- "Real reactions. Zero safety goggles." (social / ad-length)
-- "Chemistry you can actually touch." (onboarding / brand statement)
+Alternates:
+- "Scent as authorship." (brand / founder voice — from alyra.in)
+- "Quiet permanence." (journal / about)
+- "Pour notes. Build a signature." (product demo)
 
 ## Voice
 
-- **Precise, not academic.** Say "acid + base → salt + water," not "an exothermic neutralization reaction occurs."
-- **Confident, unhurried.** Golden-hour teaching lab, not a game HUD shouting for attention.
-- **Earns excitement, doesn't manufacture it.** Bubbles and glow only appear because a real reaction happened — never decorative.
-- Never: exclamation-point marketing, gamer-bro hype, textbook dryness.
+- **Precise, unhurried.** Fine fragrance language without marketing shout.
+- **Close to skin.** Private, magnetic — never elevator-loud.
+- Align with [alyra.in](https://www.alyra.in/): alcohol-free solid perfume, refillable case, made in India.
+- Never: exclamation-point hype, gamer HUD, purple AI brochure, seafoam "edtech lab" leftovers.
 
-## Color system (already defined in `globals.css` — this is the canonical palette, do not drift from it)
+## Color system (`globals.css`)
 
 | Token | Hex | Role |
 |---|---|---|
-| `--lab-wash` | `#d8e4df` | Page atmosphere (cool seafoam wash) |
-| `--lab-panel` | `#f2f7f4` | Frosted glass panels |
-| `--lab-desk` | `#4a3428` | Walnut desk — the brand's signature surface |
-| `--lab-ink` | `#14241f` | Primary text, dark chrome bars |
-| `--lab-muted` | `#5a6f67` | Secondary text |
-| `--lab-teal` | `#1a6b5c` | Primary accent / CTAs — the "brand color" |
-| `--lab-line` | `#b4c5bd` | Borders |
-| `--lab-foam` | `#eaf4ef` | Light text on dark |
-| `--lab-glass` | `#8fc0b5` | Glassware tint |
-| `--lab-amber` | `#c4783a` | Heat / reward flash |
+| `--lab-wash` | `#ebe8e2` | Cool stone page atmosphere |
+| `--lab-panel` | `#f7f5f1` | Paper panels |
+| `--lab-desk` | `#2a221c` | Ebony atelier desk |
+| `--lab-ink` | `#0c0c0c` | Primary text / CTA fill |
+| `--lab-muted` | `#5c5750` | Secondary text |
+| `--lab-teal` | `#1a1a1a` | Primary accent (ink black — token name kept for code stability) |
+| `--lab-line` | `#d2cdc4` | Borders |
+| `--lab-foam` | `#f5f4f1` | Light text on dark |
+| `--lab-glass` | `#c4b49a` | Champagne glass tint |
+| `--lab-amber` | `#b8956c` | Heat / reward gold |
 | `--lab-hazard` | `#b42318` | Safe-fail red |
 
-Explicitly **not**: purple-on-white AI-brochure gradients, cream+terracotta editorial serif spam, dark-mode neon glow. The brand color story is *walnut wood + seafoam glass + ink*, lit like late-afternoon sun through a lab window.
+Monochrome luxury first (black / ivory / champagne). Desk wood stays tactile; CTAs are ink or white, not teal seafoam.
 
-## Typography (already in `layout.tsx` — never Inter/Roboto/Arial/system)
+## Typography
 
 | Role | Font | Use |
 |---|---|---|
-| Display | **Fraunces** (500/600/700) | Wordmark, headlines, XP numerals |
-| UI | **DM Sans** | Labels, buttons, body copy |
-| Formula | **JetBrains Mono** | Equations, chemical formulas — a distinctive brand signature no competitor uses |
+| Display | **Cormorant Garamond** | Alyra Labs wordmark, headlines |
+| UI | **DM Sans** | Labels, buttons, body |
+| Formula | **JetBrains Mono** | Equations, CAS, IFRA IDs |
 
-The JetBrains Mono equation banner (`HCl + NaOH → NaCl + H2O`) is a uniquely ownable brand asset — it appears nowhere else in edtech and should be reused deliberately in marketing (see screenshot `branding/screenshots/03-reaction-equation.png`).
+## Logo
 
-## Logo direction
+`public/alyra-logo.png` / `branding/logos/alyra-labs-mark.png` — white line-art angel with lyre on transparent (use light plate on dark UIs). Component: `src/components/brand/AlyraMark.tsx`.
 
-Five concepts explored (`branding/logos/`), spanning wordmark-only through icon lockups, all built from the same material vocabulary: walnut wood, seafoam glass, ink, and the meniscus/bubble curve already animated in the product's CSS. See `branding/logos/README.md` for the breakdown of each and recommended use case.
+## Anti-patterns
 
-## Anti-patterns (carried over from `DESIGN.md`)
-
-Purple gradients, cream+terracotta broadsheet layouts, dark mode by default, neon glow spam, generic flask clip-art, stock-photo "excited students," pill/badge clutter competing with the desk.
+Purple gradients, cream+terracotta broadsheet spam, neon glow, generic flask clip-art, seafoam-green "Chem Lab" nostalgia, pill/badge clutter over the desk.

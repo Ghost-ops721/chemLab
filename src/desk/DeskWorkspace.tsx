@@ -113,7 +113,7 @@ export function DeskWorkspace({
     <section
       ref={bindDesk}
       data-lab-desk
-      className={`relative min-h-0 flex-1 overflow-hidden rounded-[1.25rem] ${
+      className={`relative min-h-0 flex-1 overflow-hidden rounded-none md:rounded-[1.25rem] ${
         isOver ? "ring-2 ring-lab-teal ring-offset-2 ring-offset-lab-wash" : ""
       }`}
     >
@@ -133,7 +133,7 @@ export function DeskWorkspace({
       ) : null}
 
       {vessels.length > 0 ? (
-        <div className="absolute bottom-2 left-1/2 z-40 flex max-w-[calc(100%-7.5rem)] -translate-x-1/2 flex-wrap items-center justify-center gap-y-1.5 rounded-xl border border-white/20 bg-lab-ink/90 px-2 py-1.5 shadow-2xl backdrop-blur-md md:max-w-none">
+        <div className="absolute bottom-[max(0.5rem,env(safe-area-inset-bottom,0px))] left-1/2 z-40 flex w-[calc(100%-1rem)] max-w-[calc(100%-5.5rem)] -translate-x-1/2 flex-wrap items-center justify-center gap-y-1.5 rounded-xl border border-white/20 bg-lab-ink/90 px-2 py-1.5 pb-[max(0.4rem,env(safe-area-inset-bottom,0px))] shadow-2xl backdrop-blur-md md:bottom-2 md:w-auto md:max-w-none md:pb-1.5">
           <span className="hidden px-2 text-[9px] font-semibold uppercase tracking-[0.14em] text-lab-foam/55 sm:inline">
             Tools
           </span>
@@ -151,7 +151,7 @@ export function DeskWorkspace({
                   y: 50 + Math.floor(n / 3) * 200,
                 });
               }}
-              className="min-h-7 rounded-lg bg-white/10 px-2.5 py-1.5 text-[10px] font-semibold text-lab-foam transition hover:bg-white/20"
+              className="min-h-9 rounded-lg bg-white/10 px-2.5 py-2 text-[10px] font-semibold text-lab-foam transition hover:bg-white/20 md:min-h-7 md:py-1.5"
             >
               + Beaker
             </button>
@@ -165,7 +165,7 @@ export function DeskWorkspace({
                 stirVessel(active.instanceId);
                 showToast(labCopy.stirring);
               }}
-              className="min-h-7 rounded-lg bg-white/10 px-2.5 py-1.5 text-[10px] font-semibold text-lab-foam transition hover:bg-white/20"
+              className="min-h-9 rounded-lg bg-white/10 px-2.5 py-2 text-[10px] font-semibold text-lab-foam transition hover:bg-white/20 md:min-h-7 md:py-1.5"
             >
               Stir
             </button>
@@ -176,7 +176,7 @@ export function DeskWorkspace({
                 toggleHeat(active.instanceId);
               }}
               aria-pressed={Boolean(active?.heatAttached)}
-              className={`min-h-7 rounded-lg px-2.5 py-1.5 text-[10px] font-semibold transition ${
+              className={`min-h-9 rounded-lg px-2.5 py-2 text-[10px] font-semibold transition md:min-h-7 md:py-1.5 ${
                 active?.heatAttached
                   ? "bg-lab-amber text-white shadow-[0_0_0_1px_rgba(255,200,120,0.45)]"
                   : "bg-white/10 text-lab-foam hover:bg-white/20"
@@ -191,7 +191,7 @@ export function DeskWorkspace({
                 toggleCool(active.instanceId);
               }}
               aria-pressed={Boolean(active?.coolAttached)}
-              className={`min-h-7 rounded-lg px-2.5 py-1.5 text-[10px] font-semibold transition ${
+              className={`min-h-9 rounded-lg px-2.5 py-2 text-[10px] font-semibold transition md:min-h-7 md:py-1.5 ${
                 active?.coolAttached
                   ? "bg-[#0c4a6e] text-[#e0f2fe] shadow-[0_0_0_1px_rgba(125,211,252,0.4)]"
                   : "bg-white/10 text-lab-foam hover:bg-white/20"
@@ -205,7 +205,7 @@ export function DeskWorkspace({
                 if (!active) return;
                 tryShakeVessel(active.instanceId);
               }}
-              className="min-h-7 rounded-lg bg-white/10 px-2.5 py-1.5 text-[10px] font-semibold text-lab-foam transition hover:bg-white/20"
+              className="min-h-9 rounded-lg bg-white/10 px-2.5 py-2 text-[10px] font-semibold text-lab-foam transition hover:bg-white/20 md:min-h-7 md:py-1.5"
             >
               Shake
             </button>
@@ -218,7 +218,7 @@ export function DeskWorkspace({
                 if (!active) return;
                 tryMixVessel(active.instanceId);
               }}
-              className="min-h-7 rounded-lg bg-lab-teal px-2.5 py-1.5 text-[10px] font-semibold text-white transition hover:bg-lab-teal/90"
+              className="min-h-9 rounded-lg bg-lab-teal px-2.5 py-2 text-[10px] font-semibold text-white transition hover:bg-lab-teal/90 md:min-h-7 md:py-1.5"
             >
               Mix
             </button>
@@ -234,7 +234,7 @@ export function DeskWorkspace({
                 setConfirmClear(false);
                 showToast(labCopy.deskCleared);
               }}
-              className="min-h-7 rounded-lg border border-lab-hazard/40 bg-lab-hazard/25 px-2.5 py-1.5 text-[10px] font-semibold text-lab-foam transition hover:bg-lab-hazard/55"
+              className="min-h-9 rounded-lg border border-lab-hazard/40 bg-lab-hazard/25 px-2.5 py-2 text-[10px] font-semibold text-lab-foam transition hover:bg-lab-hazard/55 md:min-h-7 md:py-1.5"
             >
               {confirmClear ? "Confirm clear?" : "Clear board"}
             </button>
@@ -242,23 +242,26 @@ export function DeskWorkspace({
         </div>
       ) : null}
 
-      <div className="relative z-10 h-full min-h-[22rem] w-full">
+      <div className="relative z-10 h-full min-h-0 w-full md:min-h-[22rem]">
         {vessels.length === 0 ? (
           <div className="absolute inset-0 flex items-center justify-center p-3">
             <div className="max-w-sm px-3 text-center">
               <p className="font-display text-2xl tracking-tight text-lab-foam">
-                Your lab desk
+                Compose a signature
               </p>
-              <p className="mt-1.5 text-xs leading-snug text-lab-foam/75">
+              <p className="mt-1.5 text-xs leading-snug text-lab-foam/75 md:hidden">
+                Place a beaker. Pour notes. Mix. Nothing else in the way.
+              </p>
+              <p className="mt-1.5 hidden text-xs leading-snug text-lab-foam/75 md:block">
                 Drag glassware anywhere on the wood — or use Chemicals /
                 Equipment on mobile. Pour, stir, heat, shake to react. Drop one
                 beaker onto another to pour between them.
               </p>
-              <ol className="mt-4 space-y-1.5 text-left">
+              <ol className="mt-4 hidden space-y-1.5 text-left md:block">
                 {[
                   "Place a Beaker on the desk (Inventory or + Beaker)",
                   "Drop two chemicals in — watch the stream and splash",
-                  "Stir · Heat · Shake · Mix — or pour beaker into beaker",
+                  "Use the bottom bar to Stir · Heat · Shake · Mix — or pour beaker into beaker",
                 ].map((step, i) => (
                   <li
                     key={step}

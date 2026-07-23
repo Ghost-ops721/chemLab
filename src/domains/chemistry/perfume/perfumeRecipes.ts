@@ -789,7 +789,7 @@ export const PERFUME_RECIPES: PerfumeRecipe[] = [
   r({
     id: "inspired-citruscologne",
     displayName: "Citrus Cologne Starter",
-    brandLabel: "Chem Lab classic",
+    brandLabel: "Alyra Labs classic",
     family: "citrus",
     concentration: "cologne",
     top: ["limonene", "ethyl-acetate"],

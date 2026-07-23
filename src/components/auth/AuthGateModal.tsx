@@ -51,7 +51,7 @@ export function AuthGateModal() {
         onClick={(e) => e.stopPropagation()}
       >
         <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-lab-teal">
-          Chem Lab
+          Alyra Labs
         </p>
         <h2
           id="auth-gate-title"

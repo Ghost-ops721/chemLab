@@ -17,7 +17,7 @@ export const FALLBACK_EXPLANATIONS: Record<string, string> = {
   "no-reaction":
     "These chemicals do not react under the conditions modeled here. Nothing observable happens.",
   "hazard-sodium-water":
-    "Sodium metal and water react violently, releasing hydrogen gas and heat. This combo is blocked for safety in Chem Lab.",
+    "Sodium metal and water react violently, releasing hydrogen gas and heat. This combo is blocked for safety in Alyra Labs.",
   "hazard-incompatible":
     "This combination is unsafe or incompatible in the lab model. The reaction was stopped and no products were formed.",
   "hazard-chlorine":

@@ -1,9 +1,9 @@
 import type { Metadata } from "next";
-import { Fraunces, DM_Sans, JetBrains_Mono } from "next/font/google";
+import { Cormorant_Garamond, DM_Sans, JetBrains_Mono } from "next/font/google";
 import { AuthProvider } from "@/components/auth/AuthProvider";
 import "./globals.css";
 
-const display = Fraunces({
+const display = Cormorant_Garamond({
   variable: "--font-display",
   subsets: ["latin"],
   weight: ["500", "600", "700"],
@@ -20,9 +20,13 @@ const mono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Chem Lab — Build perfume on a chemistry desk",
+  title: "Alyra Labs — Compose perfume on a chemistry desk",
   description:
-    "Pour, stir, and invent scents and everyday formulas on a virtual chemistry desk. Free to explore — join the waitlist for 10% off Premium.",
+    "The digital atelier for Alyra solid perfume. Pour notes, build formulas, and invent scents on a virtual chemistry desk. From the makers of alyra.in.",
+  icons: {
+    icon: "/alyra-logo.png",
+    apple: "/alyra-logo.png",
+  },
 };
 
 export default function RootLayout({

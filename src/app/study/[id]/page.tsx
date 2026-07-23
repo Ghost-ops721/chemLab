@@ -130,7 +130,7 @@ export default function StudyPage() {
     <div className="min-h-dvh bg-gradient-to-b from-lab-wash via-[#e4efe9] to-lab-wash px-4 py-8">
       <div className="mx-auto flex max-w-lg items-center justify-between">
         <Link href="/lab" className="font-display text-2xl text-lab-ink">
-          Chem Lab
+          Alyra Labs
         </Link>
         <NavChrome />
       </div>

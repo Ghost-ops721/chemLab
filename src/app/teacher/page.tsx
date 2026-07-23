@@ -171,7 +171,7 @@ export default function TeacherPage() {
       <div className="mx-auto max-w-3xl">
         <div className="flex items-center justify-between">
           <Link href="/lab" className="font-display text-2xl text-lab-ink">
-            Chem Lab
+            Alyra Labs
           </Link>
           <NavChrome />
         </div>

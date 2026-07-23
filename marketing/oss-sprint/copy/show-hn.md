@@ -2,7 +2,7 @@
 
 **Title:** Show HN: Chem Lab – tactile virtual chemistry desk (MIT)
 
-**URL:** https://chemistry-nu-five.vercel.app
+**URL:** https://alyra-labs.vercel.app
 
 ---
 
@@ -10,7 +10,7 @@ Chem Lab is an open-source virtual chemistry desk. You drag glassware onto a wal
 
 Also: perfume atelier (top/heart/base notes), XP/badges, OCR note scan, teacher class codes.
 
-- Live: https://chemistry-nu-five.vercel.app
+- Live: https://alyra-labs.vercel.app
 - Source (MIT): https://github.com/Ghost-ops721/chemLab
 - Desk route: /lab
 

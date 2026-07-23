@@ -9,9 +9,8 @@ import { vesselDropId } from "@/drag/types";
 import { GlassVessel } from "@/animation/glassware/GlassVessel";
 import { fxAlive, useFxClock } from "@/animation/useFxClock";
 import { useDeskStore } from "@/store/deskStore";
-import { useAuthStore } from "@/store/authStore";
 import { showToast } from "@/gamification/ToastHost";
-import { tryMixVessel, tryShakeVessel } from "@/lab/labActions";
+import { tryMixVessel } from "@/lab/labActions";
 import { labCopy } from "@/lab/labCopy";
 import { snapAlignPosition, VESSEL_CARD } from "@/desk/vesselLayout";
 import {
@@ -66,7 +65,6 @@ export function VesselSlot({ vessel, deskRef }: Props) {
     ) || preview?.hazards.some((h) => h.level === "danger");
   const canMix =
     contents.length >= 2 || (contents.length >= 1 && vessel.heatAttached);
-  const labBlocked = useAuthStore((s) => s.isLabBlocked());
 
   const hasBoilable = contents.some((c) => {
     const chem = getChemical(c.chemicalId);
@@ -459,87 +457,6 @@ export function VesselSlot({ vessel, deskRef }: Props) {
           {result.label}
         </p>
       ) : null}
-
-      <div
-        className="mt-2 grid grid-cols-5 gap-1.5"
-        data-no-drag
-        role="toolbar"
-        aria-label="Vessel tools"
-      >
-        <button
-          type="button"
-          onClick={(e) => {
-            e.stopPropagation();
-            stirVessel(vessel.instanceId);
-          }}
-          className="min-h-7 rounded-lg bg-lab-wash px-1.5 py-1.5 text-[10px] font-semibold text-lab-ink transition hover:bg-white"
-          title="Stir (S)"
-        >
-          Stir
-        </button>
-        <button
-          type="button"
-          onClick={(e) => {
-            e.stopPropagation();
-            toggleHeat(vessel.instanceId);
-          }}
-          aria-pressed={vessel.heatAttached}
-          className={`min-h-7 rounded-lg px-1.5 py-1.5 text-[10px] font-semibold transition ${
-            vessel.heatAttached
-              ? "bg-lab-amber text-white shadow-[0_0_0_1px_rgba(196,120,58,0.45)]"
-              : "bg-lab-wash text-lab-ink hover:bg-white"
-          }`}
-          title="Heat (H)"
-        >
-          Heat
-        </button>
-        <button
-          type="button"
-          onClick={(e) => {
-            e.stopPropagation();
-            toggleCool(vessel.instanceId);
-          }}
-          aria-pressed={vessel.coolAttached}
-          className={`min-h-7 rounded-lg px-1.5 py-1.5 text-[10px] font-semibold transition ${
-            vessel.coolAttached
-              ? "bg-[#0c4a6e] text-[#e0f2fe] shadow-[0_0_0_1px_rgba(125,211,252,0.45)]"
-              : "bg-lab-wash text-lab-ink hover:bg-white"
-          }`}
-          title="Cool (C)"
-        >
-          Cool
-        </button>
-        <button
-          type="button"
-          onClick={(e) => {
-            e.stopPropagation();
-            tryShakeVessel(vessel.instanceId);
-          }}
-          disabled={!canMix && contents.length < 1}
-          className="min-h-7 rounded-lg bg-lab-wash px-1.5 py-1.5 text-[10px] font-semibold text-lab-ink transition hover:bg-white disabled:opacity-40"
-          title="Shake to agitate (then Mix)"
-        >
-          Shake
-        </button>
-        <button
-          type="button"
-          disabled={!canMix && !labBlocked}
-          onClick={(e) => {
-            e.stopPropagation();
-            tryMixVessel(vessel.instanceId);
-          }}
-          className={`min-h-7 rounded-lg px-1.5 py-1.5 text-[10px] font-semibold text-white transition ${
-            labBlocked
-              ? "bg-lab-amber hover:bg-lab-amber/90"
-              : canMix
-                ? "cta-pulse bg-lab-teal hover:bg-lab-teal/90"
-                : "cursor-not-allowed bg-lab-teal/35"
-          }`}
-          title={labBlocked ? "Sign up to Mix" : "Mix / React (M)"}
-        >
-          {labBlocked ? "Sign up" : "Mix"}
-        </button>
-      </div>
     </div>
   );
 }

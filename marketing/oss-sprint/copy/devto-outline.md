@@ -9,6 +9,6 @@
 2. Reaction matching → balanced equation banner
 3. Effects only when chemistry happens (no decorative glow)
 4. Tutor API (auth + rate limits) in one paragraph
-5. CTA: star https://github.com/Ghost-ops721/chemLab · try the perfume atelier on https://chemistry-nu-five.vercel.app
+5. CTA: star https://github.com/Ghost-ops721/chemLab · try the perfume atelier on https://alyra-labs.vercel.app
 
 **Tags:** opensource, nextjs, chemistry, education, webdev

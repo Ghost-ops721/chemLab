@@ -1,23 +1,25 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuthStore } from "@/store/authStore";
 import { WaitlistForm } from "@/components/marketing/WaitlistForm";
+import { AlyraMark } from "@/components/brand/AlyraMark";
 
 const BELOW = [
   {
     title: "Perfume Atelier",
-    body: "Top, heart, and base notes on warm wood. Build citrus to oud, remix, and keep what you invent.",
+    body: "Top, heart, and base notes on warm wood. Build citrus to oud, remix, and keep what you invent — the same craft behind Alyra solid perfume.",
   },
   {
-    title: "Real chemistry",
-    body: "Pour, stir, heat, shake — equations resolve when reactions happen. Bubbles and glow only when chemistry does.",
+    title: "Quiet permanence",
+    body: "Compose with precision and restraint. Formulas that evolve rather than announce — scent as authorship, written on skin.",
   },
   {
     title: "Invention shelf",
-    body: "Save formulas, compare versions, share a card. Your desk becomes a collection.",
+    body: "Save formulas, compare versions, share a card. Your desk becomes a collection of signatures.",
   },
 ] as const;
 
@@ -35,10 +37,16 @@ export function LandingPage() {
   return (
     <div className="min-h-dvh bg-lab-ink text-lab-foam">
       <header className="absolute inset-x-0 top-0 z-20 flex items-center justify-between px-5 py-5 sm:px-8">
-        <p className="font-display text-xl tracking-tight text-lab-foam/90 sm:text-2xl">
-          Chem Lab
-        </p>
+        <AlyraMark size="sm" href="/" onDark showWordmark wordmarkClassName="text-xl sm:text-2xl" />
         <nav className="flex items-center gap-1 text-sm">
+          <a
+            href="https://www.alyra.in/"
+            target="_blank"
+            rel="noreferrer"
+            className="rounded-md px-3 py-1.5 font-medium text-lab-foam/70 transition hover:text-lab-foam"
+          >
+            Shop Alyra
+          </a>
           <Link
             href="/login"
             className="rounded-md px-3 py-1.5 font-medium text-lab-foam/70 transition hover:text-lab-foam"
@@ -47,46 +55,59 @@ export function LandingPage() {
           </Link>
           <a
             href="#waitlist"
-            className="rounded-md bg-lab-teal px-3 py-1.5 font-semibold text-white transition hover:bg-lab-teal/90"
+            className="rounded-md bg-white px-3 py-1.5 font-semibold text-lab-ink transition hover:bg-lab-foam"
           >
             Waitlist
           </a>
         </nav>
       </header>
 
-      {/* Hero: one composition — brand, line, CTA, wood plane */}
+      {/* Hero: brand-first — angel mark + Alyra Labs, one line, CTAs, full-bleed plane */}
       <section className="landing-hero relative flex min-h-dvh flex-col justify-center overflow-hidden">
-        <div className="lab-desk-surface absolute inset-0" aria-hidden />
+        <div className="absolute inset-0 bg-[#0a0a0a]" aria-hidden />
         <div
-          className="pointer-events-none absolute inset-0 bg-gradient-to-r from-lab-ink/55 via-lab-ink/20 to-transparent"
+          className="pointer-events-none absolute inset-0 opacity-[0.14]"
+          style={{
+            backgroundImage:
+              "radial-gradient(ellipse at 70% 40%, rgba(196,180,154,0.35), transparent 55%), radial-gradient(ellipse at 20% 80%, rgba(255,255,255,0.08), transparent 45%)",
+          }}
           aria-hidden
         />
         <div
-          className="pointer-events-none absolute inset-0 bg-gradient-to-t from-lab-ink/70 via-transparent to-lab-ink/25"
+          className="pointer-events-none absolute inset-0 bg-linear-to-t from-black via-transparent to-black/40"
           aria-hidden
         />
 
-        {/* Soft glassware silhouettes — atmosphere, not chrome */}
-        <div className="pointer-events-none absolute inset-0" aria-hidden>
-          <div className="landing-vessel landing-vessel-a absolute bottom-[16%] right-[6%] h-48 opacity-55 sm:right-[10%] sm:h-64 sm:opacity-65 md:right-[14%]" />
-          <div className="landing-vessel landing-vessel-b absolute bottom-[20%] right-[20%] h-32 opacity-45 sm:right-[26%] sm:h-40 sm:opacity-55" />
-          <div className="landing-sheen absolute inset-x-0 top-0 h-1/2" />
-        </div>
-
-        <div className="relative z-10 mx-auto w-full max-w-3xl px-5 pt-20 sm:px-8">
-          <h1 className="landing-rise font-display text-5xl leading-[0.95] tracking-tight text-white sm:text-7xl md:text-8xl">
-            Chem Lab
+        <div className="relative z-10 mx-auto flex w-full max-w-3xl flex-col items-start px-5 pt-20 sm:px-8">
+          <div className="landing-rise">
+            <Image
+              src="/alyra-logo.png"
+              alt="Alyra Labs"
+              width={120}
+              height={120}
+              priority
+              className="h-20 w-20 sm:h-[7.5rem] sm:w-[7.5rem]"
+            />
+          </div>
+          <h1 className="landing-rise landing-rise-delay mt-6 font-display text-5xl leading-[0.95] tracking-tight text-white sm:text-7xl md:text-8xl">
+            Alyra Labs
           </h1>
-          <p className="landing-rise landing-rise-delay mt-5 max-w-md text-base leading-relaxed text-white/90 sm:text-lg">
-            Build perfume and real formulas on a chemistry desk.
-          </p>
-          <p className="landing-rise landing-rise-delay-2 mt-2 max-w-sm text-sm text-lab-glass">
-            Everything is open while we build. Join for 10% off Premium later.
+          <p className="landing-rise landing-rise-delay-2 mt-5 max-w-md text-base leading-relaxed text-white/85 sm:text-lg">
+            Compose fine fragrance on a chemistry desk — the atelier behind{" "}
+            <a
+              href="https://www.alyra.in/"
+              target="_blank"
+              rel="noreferrer"
+              className="underline decoration-white/30 underline-offset-4 transition hover:decoration-white/70"
+            >
+              Alyra
+            </a>{" "}
+            solid perfume.
           </p>
           <div className="landing-rise landing-rise-delay-3 mt-8 flex flex-wrap items-center gap-3">
             <a
               href="#waitlist"
-              className="rounded-md bg-lab-teal px-5 py-2.5 text-sm font-semibold text-white shadow-[0_8px_30px_rgba(0,0,0,0.35)] transition hover:bg-lab-teal/90"
+              className="rounded-md bg-white px-5 py-2.5 text-sm font-semibold text-lab-ink shadow-[0_8px_30px_rgba(0,0,0,0.35)] transition hover:bg-lab-foam"
             >
               Join the waitlist
             </a>
@@ -94,7 +115,7 @@ export function LandingPage() {
               href="/lab"
               className="rounded-md border border-white/35 bg-white/10 px-5 py-2.5 text-sm font-semibold text-white backdrop-blur-sm transition hover:border-white/55 hover:bg-white/15"
             >
-              Open the lab
+              Open the atelier
             </Link>
           </div>
         </div>
@@ -117,10 +138,14 @@ export function LandingPage() {
 
       <section
         id="waitlist"
-        className="lab-desk-surface relative overflow-hidden px-5 py-20 sm:px-8 sm:py-28"
+        className="relative overflow-hidden bg-[#121212] px-5 py-20 sm:px-8 sm:py-28"
       >
         <div
-          className="pointer-events-none absolute inset-0 bg-lab-ink/55"
+          className="pointer-events-none absolute inset-0 opacity-30"
+          style={{
+            backgroundImage:
+              "radial-gradient(ellipse at 50% 0%, rgba(196,180,154,0.2), transparent 50%)",
+          }}
           aria-hidden
         />
         <div className="relative mx-auto max-w-lg">
@@ -128,7 +153,7 @@ export function LandingPage() {
             Get early access
           </h2>
           <p className="mt-3 text-sm leading-relaxed text-lab-foam/75 sm:text-base">
-            The lab is free to explore now. Waitlist members get{" "}
+            The atelier is free to explore now. Waitlist members get{" "}
             <span className="text-lab-glass">10% off Premium</span> when it
             opens.
           </p>
@@ -142,14 +167,22 @@ export function LandingPage() {
             </Link>
             {" · "}
             <Link href="/lab" className="font-semibold text-lab-glass">
-              Open the lab
+              Open the atelier
             </Link>
           </p>
         </div>
       </section>
 
       <footer className="bg-lab-ink px-5 py-8 text-center text-[11px] text-lab-foam/40">
-        Chem Lab — pour, stir, invent.
+        Alyra Labs — compose scent.{" "}
+        <a
+          href="https://www.alyra.in/"
+          target="_blank"
+          rel="noreferrer"
+          className="underline decoration-white/20 underline-offset-2 hover:text-lab-foam/70"
+        >
+          alyra.in
+        </a>
       </footer>
     </div>
   );

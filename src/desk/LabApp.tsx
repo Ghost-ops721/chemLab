@@ -8,7 +8,7 @@ const LabShell = dynamic(
     ssr: false,
     loading: () => (
       <div className="flex h-dvh items-center justify-center bg-lab-wash">
-        <p className="font-display text-2xl text-lab-ink">Chem Lab</p>
+        <p className="font-display text-2xl text-lab-ink">Alyra Labs</p>
       </div>
     ),
   },

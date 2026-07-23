@@ -2,19 +2,31 @@ import { test, expect } from "@playwright/test";
 
 test.describe.configure({ mode: "serial" });
 
-test.describe("Chem Lab smoke", () => {
-  test("home loads desk chrome", async ({ page }) => {
+test.describe("Alyra Labs smoke", () => {
+  test("home loads Alyra Labs brand", async ({ page }) => {
     await page.goto("/");
-    await expect(page.getByRole("button", { name: "Equipment" })).toBeVisible({
+    await expect(page.getByRole("heading", { name: "Alyra Labs" })).toBeVisible({
+      timeout: 45_000,
+    });
+    await expect(page.getByRole("link", { name: "Open the atelier" }).first()).toBeVisible();
+  });
+
+  test("lab loads desk chrome", async ({ page }) => {
+    await page.goto("/lab");
+    await expect(
+      page.getByRole("button", { name: "Equipment", exact: true }),
+    ).toBeVisible({
       timeout: 45_000,
     });
     await expect(page.getByRole("button", { name: "Desk" })).toBeVisible();
-    await expect(page.getByText("Chem Lab").first()).toBeVisible();
+    await expect(page.getByText("Alyra Labs").first()).toBeVisible();
   });
 
   test("place beaker and open chemicals", async ({ page }) => {
-    await page.goto("/");
-    await expect(page.getByRole("button", { name: "Equipment" })).toBeVisible({
+    await page.goto("/lab");
+    await expect(
+      page.getByRole("button", { name: "Equipment", exact: true }),
+    ).toBeVisible({
       timeout: 45_000,
     });
 
@@ -32,11 +44,12 @@ test.describe("Chem Lab smoke", () => {
   });
 
   test("perfume atelier button opens catalog", async ({ page }) => {
-    await page.goto("/");
-    await expect(page.getByRole("button", { name: "Perfume" })).toBeVisible({
+    await page.goto("/lab");
+    const perfume = page.getByRole("button", { name: "Perfume", exact: true });
+    await expect(perfume).toBeVisible({
       timeout: 45_000,
     });
-    await page.getByRole("button", { name: "Perfume" }).click();
+    await perfume.click();
     await expect(
       page.getByRole("heading", { name: /inspired scents/i }),
     ).toBeVisible();

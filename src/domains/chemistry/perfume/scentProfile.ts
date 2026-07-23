@@ -59,7 +59,7 @@ const CONCENTRATION_LABEL: Record<PerfumeConcentration, string> = {
 
 const LEGACY_CITRUS_COLOGNE: ScentProfile = {
   displayName: "Citrus Cologne",
-  brandLabel: "Chem Lab classic",
+  brandLabel: "Alyra Labs classic",
   family: "citrus",
   concentration: "cologne",
   smellsLike:

@@ -35,7 +35,7 @@ export function InventionShareCard({
       : null;
 
   async function copyShareText() {
-    const text = `I made “${invention.name}” in Chem Lab — score ${invention.bestScore}/100 (${latest?.tier ?? "make"}). Can you beat my formula?`;
+    const text = `I made “${invention.name}” in Alyra Labs — score ${invention.bestScore}/100 (${latest?.tier ?? "make"}). Can you beat my formula?`;
     try {
       await navigator.clipboard.writeText(text);
       track("invention_shared", {
@@ -50,7 +50,7 @@ export function InventionShareCard({
   }
 
   async function nativeShare() {
-    const text = `I made “${invention.name}” in Chem Lab — score ${invention.bestScore}/100.`;
+    const text = `I made “${invention.name}” in Alyra Labs — score ${invention.bestScore}/100.`;
     if (typeof navigator !== "undefined" && navigator.share) {
       try {
         await navigator.share({
@@ -143,7 +143,7 @@ export function InventionShareCard({
           className="relative overflow-hidden bg-gradient-to-br from-lab-teal/20 via-lab-panel to-lab-amber/15 px-5 pb-5 pt-6"
         >
           <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-lab-teal">
-            Made in Chem Lab
+            Made in Alyra Labs
           </p>
           <h3 className="mt-2 font-display text-2xl leading-tight text-lab-ink">
             {invention.name}

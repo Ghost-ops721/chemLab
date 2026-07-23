@@ -8,7 +8,7 @@ I built an open-source browser lab where you drag glassware, pour chemicals, and
 
 Not a quiz app — meant for demos, curiosity, and teaching. MIT license.
 
-Try it: https://chemistry-nu-five.vercel.app/lab  
+Try it: https://alyra-labs.vercel.app/lab  
 Source: https://github.com/Ghost-ops721/chemLab
 
 Curious what reactions you'd want added next.

@@ -2,7 +2,7 @@
   "meta": {
     "product": "Chem Lab",
     "ntfy_topic": "chemistry",
-    "live": "https://chemistry-nu-five.vercel.app",
+    "live": "https://alyra-labs.vercel.app",
     "repo": "https://github.com/Ghost-ops721/chemLab"
   },
   "tasks": [
@@ -42,7 +42,7 @@
       "day": 3,
       "slot": "a",
       "title": "Day 3A · README hero + demo link",
-      "body": "Chem Lab · Day 3 A · 10 min\nAt top of README after title: embed branding/screenshots/01-desk-hero.png and link Demo → https://chemistry-nu-five.vercel.app\nDone when: hero image + demo link at top of README.",
+      "body": "Chem Lab · Day 3 A · 10 min\nAt top of README after title: embed branding/screenshots/01-desk-hero.png and link Demo → https://alyra-labs.vercel.app\nDone when: hero image + demo link at top of README.",
       "done_hint": "Hero screenshot + demo URL in README",
       "copy_file": null
     },
@@ -122,7 +122,7 @@
       "day": 8,
       "slot": "a",
       "title": "Day 8A · Show HN",
-      "body": "Chem Lab · Day 8 A · 10 min\nOpen https://news.ycombinator.com/submit\nTitle: Show HN: Chem Lab – tactile virtual chemistry desk (MIT)\nURL: https://chemistry-nu-five.vercel.app\nPaste first comment from marketing/oss-sprint/copy/show-hn.md\nDone when: Show HN is live + first comment posted.",
+      "body": "Chem Lab · Day 8 A · 10 min\nOpen https://news.ycombinator.com/submit\nTitle: Show HN: Chem Lab – tactile virtual chemistry desk (MIT)\nURL: https://alyra-labs.vercel.app\nPaste first comment from marketing/oss-sprint/copy/show-hn.md\nDone when: Show HN is live + first comment posted.",
       "done_hint": "Show HN live",
       "copy_file": "copy/show-hn.md"
     },
@@ -194,7 +194,7 @@
       "day": 12,
       "slot": "b",
       "title": "Day 12B · Ask 3 people to star",
-      "body": "Chem Lab · Day 12 B · 10 min\nText/DM 3 friends or colleagues: please star https://github.com/Ghost-ops721/chemLab and try one reaction on https://chemistry-nu-five.vercel.app/lab\nDone when: 3 asks sent.",
+      "body": "Chem Lab · Day 12 B · 10 min\nText/DM 3 friends or colleagues: please star https://github.com/Ghost-ops721/chemLab and try one reaction on https://alyra-labs.vercel.app/lab\nDone when: 3 asks sent.",
       "done_hint": "3 star/try asks sent",
       "copy_file": null
     },
@@ -394,7 +394,7 @@
       "day": 25,
       "slot": "a",
       "title": "Day 25A · GitHub Release v0.1.0",
-      "body": "Chem Lab · Day 25 A · 10 min\ngh release create v0.1.0 --title \"v0.1.0\" --notes \"MIT OSS soft launch. Demo: https://chemistry-nu-five.vercel.app\"\nAttach or link a demo GIF/screenshot.\nDone when: release page live.",
+      "body": "Chem Lab · Day 25 A · 10 min\ngh release create v0.1.0 --title \"v0.1.0\" --notes \"MIT OSS soft launch. Demo: https://alyra-labs.vercel.app\"\nAttach or link a demo GIF/screenshot.\nDone when: release page live.",
       "done_hint": "v0.1.0 release published",
       "copy_file": null
     },

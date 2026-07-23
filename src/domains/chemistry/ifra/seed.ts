@@ -11,7 +11,7 @@ export const IFRA_PRODUCT_CATEGORIES: IfraProductCategory[] = [
     label: "Category 4 — Fine fragrance",
     shortLabel: "Fine fragrance",
     description:
-      "Hydroalcoholic fine fragrance / EDT / EDP — primary Chem Lab perfume category.",
+      "Hydroalcoholic fine fragrance / EDT / EDP — primary Alyra Labs perfume category.",
   },
   {
     id: "cat5a",
@@ -47,7 +47,7 @@ export const IFRA_CATEGORY_BY_ID: Record<
 ) as Record<IfraProductCategoryId, IfraProductCategory>;
 
 /**
- * Teaching-aligned IFRA-style limits keyed by Chem Lab oil chemicalIds / CAS.
+ * Teaching-aligned IFRA-style limits keyed by Alyra Labs oil chemicalIds / CAS.
  * Values are pedagogical approximations inspired by common Category 4 usage
  * ceilings and oilMeta.maxSuggestedPct — version-pinned, not official tables.
  */

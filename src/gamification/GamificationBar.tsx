@@ -112,8 +112,10 @@ export function GamificationBar({
     }
   }
 
+  const [moreOpen, setMoreOpen] = useState(false);
+
   return (
-    <div className="flex flex-col border-b border-white/10 bg-lab-ink text-lab-foam">
+    <div className="flex shrink-0 flex-col border-b border-white/10 bg-lab-ink text-lab-foam">
       {guestWarn ? (
         <div className="bg-lab-amber/90 px-3 py-1 text-center text-[11px] font-semibold text-lab-ink md:px-4">
           {labCopy.guestBannerWarn}{" "}
@@ -131,7 +133,100 @@ export function GamificationBar({
         </div>
       ) : null}
 
-      <div className="flex items-center gap-2 px-3 py-1 md:gap-3 md:px-4">
+      {/* Phone: compact strip — XP + Perfume + overflow */}
+      <div className="flex items-center gap-2 px-3 py-1.5 md:hidden">
+        <div className="flex min-w-0 flex-1 items-baseline gap-1.5">
+          <span className="font-display text-base text-lab-foam">{xp}</span>
+          <span className="text-[9px] text-lab-glass">XP</span>
+          <span className="font-display text-base text-lab-amber">{stars}</span>
+          <span className="text-[9px] text-lab-amber/80">★</span>
+          {goal ? (
+            <button
+              type="button"
+              className="ml-1 min-w-0 truncate text-left text-[11px] text-lab-foam/80"
+              onClick={() => setGuideOpen(true)}
+            >
+              {goal.title}
+            </button>
+          ) : null}
+        </div>
+        {onOpenAtelier ? (
+          <button
+            type="button"
+            onClick={onOpenAtelier}
+            className="min-h-9 shrink-0 rounded-lg bg-lab-amber/90 px-2.5 text-[11px] font-semibold text-lab-ink"
+          >
+            Perfume
+          </button>
+        ) : null}
+        <button
+          type="button"
+          onClick={() => setPickerOpen(true)}
+          className="min-h-9 shrink-0 rounded-lg bg-lab-foam/15 px-2.5 text-[11px] font-semibold text-lab-foam"
+        >
+          Goals
+        </button>
+        <button
+          type="button"
+          onClick={() => setMoreOpen((v) => !v)}
+          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-white/15 text-lab-foam"
+          aria-expanded={moreOpen}
+          aria-label="More"
+        >
+          ···
+        </button>
+      </div>
+      {moreOpen ? (
+        <div className="flex flex-wrap gap-2 border-t border-white/10 px-3 py-2 md:hidden">
+          {onOpenShelf ? (
+            <button
+              type="button"
+              onClick={() => {
+                setMoreOpen(false);
+                onOpenShelf();
+              }}
+              className="min-h-9 rounded-lg border border-white/15 px-3 text-[11px] font-semibold"
+            >
+              Shelf
+            </button>
+          ) : null}
+          {onOpenMarket ? (
+            <button
+              type="button"
+              onClick={() => {
+                setMoreOpen(false);
+                onOpenMarket();
+              }}
+              className="min-h-9 rounded-lg border border-white/15 px-3 text-[11px] font-semibold"
+            >
+              Market
+            </button>
+          ) : null}
+          {onOpenShop ? (
+            <button
+              type="button"
+              onClick={() => {
+                setMoreOpen(false);
+                onOpenShop();
+              }}
+              className="min-h-9 rounded-lg border border-white/15 px-3 text-[11px] font-semibold"
+            >
+              Shop
+            </button>
+          ) : null}
+          <button
+            type="button"
+            onClick={() => void claimDaily()}
+            disabled={claiming || (Boolean(user) && !canClaimDaily)}
+            className="min-h-9 rounded-lg border border-lab-amber/50 px-3 text-[11px] font-semibold text-lab-amber disabled:opacity-40"
+          >
+            {canClaimDaily ? "Daily ★" : "★ claimed"}
+          </button>
+        </div>
+      ) : null}
+
+      {/* Desktop: full bar (unchanged) */}
+      <div className="hidden items-center gap-2 px-3 py-1 md:flex md:gap-3 md:px-4">
         <div className="flex shrink-0 flex-col leading-none">
           <div className="flex items-baseline gap-1.5">
             <span className="text-[9px] uppercase tracking-[0.18em] text-lab-glass">

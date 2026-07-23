@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import type { EngineResult } from "@/types";
+import type { EngineResult, LiveVesselPreview } from "@/types";
 import { getFallbackExplanation } from "@/domains/chemistry/data/explanations";
 import {
   isPerfumeExplanationKey,
@@ -63,7 +63,14 @@ async function streamExplanation(
   return { text: text.trim() };
 }
 
-export function ExplanationPanel() {
+export function ExplanationPanel({
+  mobileOpen,
+  onMobileOpenChange,
+}: {
+  /** Phone sheet — controlled from the shared right FAB rail. */
+  mobileOpen?: boolean;
+  onMobileOpenChange?: (open: boolean) => void;
+} = {}) {
   const vessels = useDeskStore((s) => s.vessels);
   const lastId = useDeskStore((s) => s.lastExplanationVesselId);
   const activeId = useDeskStore((s) => s.activeVesselId);
@@ -89,7 +96,12 @@ export function ExplanationPanel() {
     text: string;
     source: "tutor" | "fallback";
   } | null>(null);
-  const [expanded, setExpanded] = useState(false);
+  const [internalExpanded, setInternalExpanded] = useState(false);
+  const expanded = mobileOpen ?? internalExpanded;
+  const setExpanded = (next: boolean) => {
+    onMobileOpenChange?.(next);
+    if (mobileOpen === undefined) setInternalExpanded(next);
+  };
   const [retrying, setRetrying] = useState(false);
   const [banner, setBanner] = useState<string | null>(null);
 
@@ -235,125 +247,216 @@ export function ExplanationPanel() {
   }
 
   return (
-    <aside
-      className={`panel-glass flex w-full shrink-0 flex-col md:h-full md:w-[13.5rem] xl:w-[15rem] md:border-l md:border-lab-line/60 ${
-        expanded ? "max-h-[50vh] md:max-h-none" : "max-h-28 md:max-h-none"
-      }`}
-    >
-      <button
-        type="button"
-        className="flex w-full items-center justify-between border-b border-lab-line/50 px-2.5 py-2 text-left md:pointer-events-none"
-        onClick={() => {
-          setExpanded((v) => {
-            if (!v) track("tutor_open");
-            return !v;
-          });
-        }}
+    <>
+      {/* Desktop tutor rail — unchanged */}
+      <aside
+        className={`panel-glass hidden w-full shrink-0 flex-col md:flex md:h-full md:w-[13.5rem] md:border-l md:border-lab-line/60 xl:w-[15rem]`}
       >
-        <div>
-          <p className="font-display text-[10px] uppercase tracking-[0.2em] text-lab-teal">
-            Lab tutor
-          </p>
-          <h2 className="mt-0.5 font-display text-base leading-tight text-lab-ink">
-            What happened
-          </h2>
-        </div>
-        <span className="text-lab-muted md:hidden">{expanded ? "▾" : "▴"}</span>
-      </button>
-      <div
-        className={`scroll-thin flex-1 overflow-y-auto px-2.5 py-2 text-xs leading-snug text-lab-ink/90 ${
-          expanded ? "" : "hidden md:block"
-        }`}
-      >
-        {!result && !livePreview ? (
-          <div className="rounded-lg bg-lab-wash/70 px-2 py-2 text-lab-muted">
-            <p>
-              Pour oils and ethanol, then adjust amounts — this panel tells you
-              honestly what the blend would smell like and flags hazards live.
+        <div className="flex w-full items-center justify-between border-b border-lab-line/50 px-2.5 py-2 text-left">
+          <div>
+            <p className="font-display text-[10px] uppercase tracking-[0.2em] text-lab-teal">
+              Lab tutor
             </p>
-            {!user && authReady ? (
-              <p className="mt-2 text-[11px] text-lab-teal">
-                <Link href="/login" className="font-semibold underline">
-                  Sign in
-                </Link>{" "}
-                to unlock the live lab tutor after Mix.
-              </p>
-            ) : null}
+            <h2 className="mt-0.5 font-display text-base leading-tight text-lab-ink">
+              What happened
+            </h2>
           </div>
-        ) : (
-          <>
-            {livePreview ? <FormulaInspector preview={livePreview} /> : null}
-            {!result ? (
-              <p className="text-[11px] text-lab-muted">
-                Mix when ready to lock the reaction / perfume craft.
-              </p>
-            ) : waiting ? (
-          <p className="text-lab-muted motion-safe:animate-pulse">
-            Consulting the lab tutor…
-          </p>
-        ) : (
-          <>
-            {banner || showSignInBanner ? (
-              <p className="mb-2 rounded-md bg-lab-wash px-2 py-1.5 text-[11px] text-lab-muted">
-                {banner ?? labCopy.tutorSignIn}{" "}
-                {(banner === labCopy.tutorSignIn || showSignInBanner) ? (
-                  <Link
-                    href="/login"
-                    className="font-semibold text-lab-teal underline"
-                  >
-                    Log in
-                  </Link>
-                ) : null}
-              </p>
-            ) : null}
-            {result.label ? (
-              <p className="equation-pop mb-2 rounded-lg bg-lab-ink px-2 py-1.5 font-mono text-[11px] leading-snug text-lab-foam">
-                {result.label}
-              </p>
-            ) : null}
-            {!result.ok ? (
-              <p className="mb-2 rounded-md bg-lab-hazard/15 px-2 py-1 text-[11px] font-semibold text-lab-hazard">
-                Safe-fail — combination blocked
-              </p>
-            ) : null}
-            {result.products.length > 0 ? (
-              <p className="mb-2 text-[11px] text-lab-muted">
-                Products:{" "}
-                <span className="text-lab-ink">
-                  {result.products.map((p) => p.name).join(", ")}
-                </span>
-              </p>
-            ) : null}
-            {scentProfile ? (
-              <div className="mb-2">
-                <ScentProfileDetails profile={scentProfile} compact />
+        </div>
+        <div className="scroll-thin flex-1 overflow-y-auto px-2.5 py-2 text-xs leading-snug text-lab-ink/90">
+          <TutorBody
+            result={result}
+            livePreview={livePreview}
+            user={user}
+            authReady={authReady}
+            waiting={waiting}
+            banner={banner}
+            showSignInBanner={showSignInBanner}
+            text={text}
+            source={source ?? undefined}
+            scentProfile={scentProfile}
+            retrying={retrying}
+            onRetry={() => void retry()}
+          />
+        </div>
+      </aside>
+
+      {expanded ? (
+        <div
+          className="fixed inset-0 z-[280] flex flex-col justify-end md:hidden"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="tutor-sheet-title"
+        >
+          <button
+            type="button"
+            className="absolute inset-0 bg-lab-ink/45"
+            aria-label="Close tutor"
+            onClick={() => setExpanded(false)}
+          />
+          <div className="relative flex max-h-[72dvh] flex-col rounded-t-2xl border border-lab-line bg-lab-panel pb-[env(safe-area-inset-bottom,0px)] shadow-2xl">
+            <div className="mx-auto mt-2 h-1 w-9 shrink-0 rounded-full bg-lab-line" />
+            <div className="flex items-center justify-between gap-3 border-b border-lab-line/50 px-4 py-3">
+              <div className="min-w-0">
+                <p className="font-display text-[10px] uppercase tracking-[0.2em] text-lab-muted">
+                  Lab tutor
+                </p>
+                <h2
+                  id="tutor-sheet-title"
+                  className="font-display text-lg leading-tight text-lab-ink"
+                >
+                  What happened
+                </h2>
               </div>
-            ) : null}
-            <p className="whitespace-pre-wrap">{text}</p>
-            <div className="mt-3 flex items-center gap-2">
               <button
                 type="button"
-                onClick={() => void retry()}
-                disabled={retrying || !user}
-                className="rounded-md border border-lab-line px-2 py-1 text-[10px] font-semibold text-lab-teal hover:bg-lab-wash disabled:opacity-50"
+                onClick={() => setExpanded(false)}
+                className="min-h-11 shrink-0 rounded-lg bg-lab-ink px-3 text-xs font-semibold text-lab-foam"
               >
-                {retrying ? "…" : "Explain again"}
+                Done
               </button>
-              {source ? (
-                <p className="text-[9px] uppercase tracking-wider text-lab-muted">
-                  {source === "tutor"
-                    ? labCopy.tutorLive
-                    : source === "saved"
-                      ? labCopy.tutorSaved
-                      : labCopy.tutorOffline}
+            </div>
+            <div className="scroll-thin min-h-0 flex-1 overflow-y-auto px-4 py-3 text-sm leading-relaxed text-lab-ink/90">
+              <TutorBody
+                result={result}
+                livePreview={livePreview}
+                user={user}
+                authReady={authReady}
+                waiting={waiting}
+                banner={banner}
+                showSignInBanner={showSignInBanner}
+                text={text}
+                source={source ?? undefined}
+                scentProfile={scentProfile}
+                retrying={retrying}
+                onRetry={() => void retry()}
+              />
+            </div>
+          </div>
+        </div>
+      ) : null}
+    </>
+  );
+}
+
+function TutorBody({
+  result,
+  livePreview,
+  user,
+  authReady,
+  waiting,
+  banner,
+  showSignInBanner,
+  text,
+  source,
+  scentProfile,
+  retrying,
+  onRetry,
+}: {
+  result: EngineResult | undefined;
+  livePreview: LiveVesselPreview | null | undefined;
+  user: ReturnType<typeof useAuthStore.getState>["user"];
+  authReady: boolean;
+  waiting: boolean;
+  banner: string | null;
+  showSignInBanner: boolean;
+  text: string;
+  source: "tutor" | "fallback" | "saved" | undefined;
+  scentProfile: ReturnType<typeof resolveScentProfile> | null;
+  retrying: boolean;
+  onRetry: () => void;
+}) {
+  return (
+    <>
+      {!result && !livePreview ? (
+        <div className="rounded-lg bg-lab-wash/70 px-2 py-2 text-lab-muted">
+          <p>
+            Pour oils and ethanol, then adjust amounts — this panel tells you
+            honestly what the blend would smell like and flags hazards live.
+          </p>
+          {!user && authReady ? (
+            <p className="mt-2 text-[11px] text-lab-teal">
+              <Link href="/login" className="font-semibold underline">
+                Sign in
+              </Link>{" "}
+              to unlock the live lab tutor after Mix.
+            </p>
+          ) : null}
+        </div>
+      ) : (
+        <>
+          {livePreview ? (
+            <FormulaInspector preview={livePreview} />
+          ) : null}
+          {!result ? (
+            <p className="text-[11px] text-lab-muted">
+              Mix when ready to lock the reaction / perfume craft.
+            </p>
+          ) : waiting ? (
+            <p className="text-lab-muted motion-safe:animate-pulse">
+              Consulting the lab tutor…
+            </p>
+          ) : (
+            <>
+              {banner || showSignInBanner ? (
+                <p className="mb-2 rounded-md bg-lab-wash px-2 py-1.5 text-[11px] text-lab-muted">
+                  {banner ?? labCopy.tutorSignIn}{" "}
+                  {banner === labCopy.tutorSignIn || showSignInBanner ? (
+                    <Link
+                      href="/login"
+                      className="font-semibold text-lab-teal underline"
+                    >
+                      Log in
+                    </Link>
+                  ) : null}
                 </p>
               ) : null}
-            </div>
-          </>
-            )}
-          </>
-        )}
-      </div>
-    </aside>
+              {result.label ? (
+                <p className="equation-pop mb-2 rounded-lg bg-lab-ink px-2 py-1.5 font-mono text-[11px] leading-snug text-lab-foam">
+                  {result.label}
+                </p>
+              ) : null}
+              {!result.ok ? (
+                <p className="mb-2 rounded-md bg-lab-hazard/15 px-2 py-1 text-[11px] font-semibold text-lab-hazard">
+                  Safe-fail — combination blocked
+                </p>
+              ) : null}
+              {result.products.length > 0 ? (
+                <p className="mb-2 text-[11px] text-lab-muted">
+                  Products:{" "}
+                  <span className="text-lab-ink">
+                    {result.products.map((p) => p.name).join(", ")}
+                  </span>
+                </p>
+              ) : null}
+              {scentProfile ? (
+                <div className="mb-2">
+                  <ScentProfileDetails profile={scentProfile} compact />
+                </div>
+              ) : null}
+              <p className="whitespace-pre-wrap">{text}</p>
+              <div className="mt-3 flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={onRetry}
+                  disabled={retrying || !user}
+                  className="min-h-11 rounded-md border border-lab-line px-3 py-2 text-[11px] font-semibold text-lab-teal hover:bg-lab-wash disabled:opacity-50 md:min-h-0 md:px-2 md:py-1 md:text-[10px]"
+                >
+                  {retrying ? "…" : "Explain again"}
+                </button>
+                {source ? (
+                  <p className="text-[9px] uppercase tracking-wider text-lab-muted">
+                    {source === "tutor"
+                      ? labCopy.tutorLive
+                      : source === "saved"
+                        ? labCopy.tutorSaved
+                        : labCopy.tutorOffline}
+                  </p>
+                ) : null}
+              </div>
+            </>
+          )}
+        </>
+      )}
+    </>
   );
 }

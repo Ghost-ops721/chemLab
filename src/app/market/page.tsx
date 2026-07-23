@@ -22,7 +22,7 @@ export default function MarketPage() {
           <MarketBrowser />
         </div>
         <p className="mt-6 text-[11px] leading-snug text-lab-muted">
-          IFRA badges are teaching screens against Chem Lab’s{" "}
+          IFRA badges are teaching screens against Alyra Labs’s{" "}
           <span className="font-mono">49th-Amendment-teaching</span> seed —
           not certified compliance.
         </p>

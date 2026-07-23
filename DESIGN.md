@@ -60,6 +60,39 @@ Chrome is tight so the desk stays dominant. Prefer compact over airy:
 | Gaps | `gap-1`–`gap-1.5`, header `py-1.5`–`py-2` |
 
 Never inflate chrome with `text-3xl+` titles or `py-3+` list paddings outside modals.
+Never fuse a full tool row at `gap-0.5` — instrument controls need `gap-1.5` minimum so labels stay scannable.
+
+## Desk tool rail + vessel actions
+
+The bottom desk rail and the beaker card footer are **instrument clusters**, not a single pill bar.
+
+| Cluster | Controls |
+|---------|----------|
+| Place | `+ Beaker` |
+| Process | Stir · Heat · Cool · Shake |
+| React | Mix (teal primary) |
+| Reset | Clear board (hazard tint, confirm-gated) |
+
+Rules:
+- Separators (1px `white/15` or `lab-line`) between clusters; `gap-1.5` inside a cluster
+- Min control height ~28px; `px-2.5 py-1.5` on the desk rail
+- Heat/Cool are toggles: inactive = quiet wash; active = semantic fill **and** physical FX under the glass
+- Heat active → `--lab-amber` + soft ember ring; Cool active → ice wash (`#7dd3fc` family), never flat `sky-600` flood
+- Mix stays the only pulsing CTA; Clear never sits flush against Mix without a divider
+
+## Heat / Cool (physical states)
+
+Heat and Cool live **on the vessel**, not only on the button paint.
+
+| State | Under glass | In well | Button |
+|-------|-------------|---------|--------|
+| Heat on | Bunsen stand + layered flame (amber → cream tip) | Soft amber wash + heat haze | Amber fill + ring |
+| Cool on | Ice bath tray + soft cubes | Frost rim + cool flash on toggle | Ice fill (`#0c4a6e` / `#7dd3fc`), not neon blue |
+| Off | Nothing under glass | No wash | Quiet `lab-wash` / rail `white/10` |
+
+Motion: 200–300ms toggle; flame/frost idle loops. `prefers-reduced-motion` → static tint, no dance/haze.
+
+Anti-patterns: flat orange sheet over the whole card, fused flame rectangles, blue flood that kills liquid color.
 
 ## Flow
 
@@ -90,6 +123,20 @@ Memorable flow for perfume:
 4. Mix → pack / XP / ★
 
 The desk stays free-play; the guide panel is a floating coach with openable hints — not a HUD on the wood.
+
+### Active Goal coach
+
+Quiet seafoam glass coach — supports the desk, never competes with the beaker.
+
+| Element | Treatment |
+|---------|-----------|
+| Chrome | `lab-panel/95` + `lab-line`, Fraunces title truncate + `title` tooltip |
+| Progress | Thin `h-1` teal bar; `text-[10px]` step counts |
+| Steps | Compact rows; current step teal wash; done check in teal — no emoji noise in the header strip |
+| Complete | Soft teal footer + single “Make more like this” CTA (reward overlay owns celebration) |
+| Minimized | Compact ink chip bottom-left — not a second toolbar |
+
+Anti-patterns: mint game-HUD glow, truncated titles without tooltip, emoji-heavy headers fighting the vessel card.
 
 ## Production UI states (tutor + OCR)
 

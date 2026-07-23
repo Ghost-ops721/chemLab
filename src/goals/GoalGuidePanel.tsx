@@ -43,29 +43,33 @@ export function GoalGuidePanel() {
       <button
         type="button"
         onClick={() => setGuideOpen(true)}
-        className="fixed bottom-20 left-2 z-40 rounded-xl border border-lab-teal/40 bg-lab-ink px-2.5 py-1.5 text-left text-lab-foam shadow-xl md:bottom-20"
+        title={goal.title}
+        className="fixed bottom-20 left-2 z-40 max-w-[11rem] rounded-xl border border-lab-teal/35 bg-lab-ink/95 px-2.5 py-1.5 text-left text-lab-foam shadow-xl backdrop-blur md:bottom-20"
       >
-        <p className="text-[9px] uppercase tracking-wider text-lab-glass">
+        <p className="text-[9px] font-semibold uppercase tracking-[0.14em] text-lab-glass">
           Goal · {doneCount}/{goal.steps.length}
         </p>
-        <p className="text-xs font-semibold">
-          {goal.icon} {goal.title}
-        </p>
+        <p className="truncate text-xs font-semibold">{goal.title}</p>
       </button>
     );
   }
 
   return (
-    <aside className="pointer-events-auto flex max-h-[min(70vh,24rem)] w-full flex-col overflow-hidden rounded-xl border border-lab-line/70 bg-lab-panel/95 shadow-xl backdrop-blur md:max-w-[17rem]">
+    <aside className="pointer-events-auto flex max-h-[min(70vh,24rem)] w-full flex-col overflow-hidden rounded-xl border border-lab-line/80 bg-lab-panel/95 shadow-xl backdrop-blur-md md:max-w-[17rem]">
       <div className="flex items-start justify-between gap-2 border-b border-lab-line/50 px-2.5 py-1.5">
         <div className="min-w-0">
           <p className="text-[9px] font-semibold uppercase tracking-[0.14em] text-lab-muted">
             Active goal
           </p>
-          <h3 className="truncate font-display text-base leading-tight text-lab-ink">
-            {goal.icon} {goal.title}
+          <h3
+            className="truncate font-display text-base leading-tight text-lab-ink"
+            title={goal.title}
+          >
+            {goal.title}
           </h3>
-          <p className="mt-px text-[10px] text-lab-muted">{goal.tagline}</p>
+          <p className="mt-px truncate text-[10px] text-lab-muted" title={goal.tagline}>
+            {goal.tagline}
+          </p>
         </div>
         <div className="flex shrink-0 gap-1">
           <button
@@ -104,9 +108,6 @@ export function GoalGuidePanel() {
             style={{ width: `${pct}%` }}
           />
         </div>
-        <p className="mt-1.5 text-[10px] leading-snug text-lab-ink/80">
-          {goal.productBlurb}
-        </p>
       </div>
 
       <ol className="scroll-thin min-h-0 flex-1 space-y-0.5 overflow-y-auto px-1.5 py-1.5">
@@ -118,10 +119,10 @@ export function GoalGuidePanel() {
               key={s.id}
               className={`rounded-lg px-2 py-1.5 text-xs ${
                 isCurrent
-                  ? "bg-lab-teal/10 ring-1 ring-lab-teal/30"
+                  ? "bg-lab-teal/10 ring-1 ring-lab-teal/25"
                   : isDone
-                    ? "opacity-70"
-                    : "opacity-45"
+                    ? "opacity-65"
+                    : "opacity-40"
               }`}
             >
               <div className="flex items-start gap-1.5">
@@ -151,14 +152,14 @@ export function GoalGuidePanel() {
       </ol>
 
       {done ? (
-        <div className="border-t border-lab-line/50 bg-lab-teal/10 px-2.5 py-2">
+        <div className="border-t border-lab-line/50 bg-lab-teal/8 px-2.5 py-2">
           <p className="text-xs font-semibold text-lab-teal">Goal complete</p>
-          <p className="mt-0.5 text-[11px] leading-snug text-lab-ink/85">
+          <p className="mt-0.5 text-[11px] leading-snug text-lab-ink/80">
             {goal.successBlurb}
           </p>
           <button
             type="button"
-            className="mt-1.5 rounded-md bg-lab-teal px-2.5 py-1 text-[11px] font-semibold text-white"
+            className="mt-1.5 rounded-md bg-lab-teal px-2.5 py-1.5 text-[11px] font-semibold text-white transition hover:bg-lab-teal/90"
             onClick={() => {
               abandonGoal();
               setPickerOpen(true);

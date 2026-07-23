@@ -394,34 +394,34 @@ export function VesselEffects({
           ))
         : null}
 
-      {/* Exothermic shimmer / endothermic frost */}
+      {/* Exothermic shimmer / endothermic frost — secondary to glass */}
       {heat?.intensity === "exo" || heatAttached ? (
         <div
-          className={`absolute inset-0 ${
-            heat?.intensity === "exo" ? "lab-heat-exo" : "bg-orange-400/10"
+          className={`pointer-events-none absolute inset-0 rounded-[inherit] ${
+            heat?.intensity === "exo" ? "lab-heat-exo" : "lab-heat-attached"
           }`}
         />
       ) : null}
-      {heat?.intensity === "exo" ? (
-        <div className="lab-heat-haze absolute inset-x-2 top-2 h-10" />
+      {heat?.intensity === "exo" || heatAttached ? (
+        <div className="lab-heat-haze pointer-events-none absolute inset-x-3 top-1 h-8" />
       ) : null}
       {heat?.intensity === "endo" || coolAttached ? (
-        <div className="lab-heat-endo absolute inset-0">
-          <div className="lab-frost absolute inset-x-1 top-1 h-4 rounded-t-lg" />
+        <div className="lab-heat-endo pointer-events-none absolute inset-0 rounded-[inherit]">
+          <div className="lab-frost absolute inset-x-1 top-0.5 h-5 rounded-t-lg" />
         </div>
       ) : null}
 
       {heatFlash ? (
         <div
           key={fx?.heatFlashAt}
-          className="lab-heat-ignite absolute inset-x-4 bottom-0 h-10"
+          className="lab-heat-ignite pointer-events-none absolute inset-x-4 bottom-0 h-12"
         />
       ) : null}
 
       {coolFlash ? (
         <div
           key={fx?.coolFlashAt}
-          className="lab-cool-flash absolute inset-x-3 bottom-0 h-8"
+          className="lab-cool-flash pointer-events-none absolute inset-x-3 bottom-0 h-10"
         />
       ) : null}
 

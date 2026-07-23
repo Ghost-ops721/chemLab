@@ -280,24 +280,26 @@ export function VesselSlot({ vessel, deskRef }: Props) {
         </div>
       </div>
 
-      {/* Bunsen stand under glass */}
+      {/* Bunsen stand under glass — physical heat, not button paint */}
       {vessel.heatAttached ? (
-        <div className="lab-burner pointer-events-none absolute -bottom-2 left-1/2 z-0 h-5 w-16 -translate-x-1/2 rounded-b-md bg-lab-desk">
-          <div className="absolute -top-3 left-1/2 flex -translate-x-1/2 gap-0.5">
-            <span className="lab-flame inline-block h-4 w-2 rounded-full bg-lab-amber" />
-            <span className="lab-flame lab-flame-delay inline-block h-5 w-2.5 rounded-full bg-lab-amber/70" />
-            <span className="lab-flame inline-block h-3.5 w-2 rounded-full bg-lab-amber/90" />
+        <div className="lab-burner pointer-events-none absolute -bottom-1.5 left-1/2 z-0 h-6 w-[4.5rem] -translate-x-1/2 rounded-b-lg bg-gradient-to-b from-[#2a1a12] to-[#1a100c] shadow-[0_4px_10px_rgba(0,0,0,0.35)]">
+          <div className="absolute inset-x-2 top-0 h-px bg-lab-amber/30" />
+          <div className="absolute -top-4 left-1/2 flex -translate-x-1/2 items-end gap-[3px]">
+            <span className="lab-flame inline-block h-4 w-[7px] rounded-[50%_50%_45%_45%] bg-gradient-to-t from-lab-amber via-[#ffb347] to-[#fff3c4]" />
+            <span className="lab-flame lab-flame-delay inline-block h-5 w-[9px] rounded-[50%_50%_45%_45%] bg-gradient-to-t from-[#c4783a] via-[#ff9f43] to-[#fff8e1]" />
+            <span className="lab-flame inline-block h-3.5 w-[7px] rounded-[50%_50%_45%_45%] bg-gradient-to-t from-lab-amber via-[#ffb347] to-[#fff3c4]" />
           </div>
         </div>
       ) : null}
 
       {/* Ice bath under glass */}
       {vessel.coolAttached ? (
-        <div className="lab-ice-bath pointer-events-none absolute -bottom-2 left-1/2 z-0 h-5 w-16 -translate-x-1/2 rounded-b-md bg-sky-900/80">
-          <div className="absolute -top-2 left-1/2 flex -translate-x-1/2 gap-0.5">
-            <span className="lab-ice-cube inline-block h-2.5 w-2.5 rounded-sm bg-sky-200/90" />
-            <span className="lab-ice-cube lab-ice-delay inline-block h-3 w-3 rounded-sm bg-sky-100/80" />
-            <span className="lab-ice-cube inline-block h-2 w-2.5 rounded-sm bg-sky-200/70" />
+        <div className="lab-ice-bath pointer-events-none absolute -bottom-1.5 left-1/2 z-0 h-6 w-[4.5rem] -translate-x-1/2 rounded-b-lg bg-gradient-to-b from-[#0c4a6e] to-[#082f49] shadow-[0_4px_10px_rgba(8,47,73,0.4)]">
+          <div className="absolute inset-x-2 top-0 h-px bg-[#7dd3fc]/35" />
+          <div className="absolute -top-2.5 left-1/2 flex -translate-x-1/2 items-end gap-[3px]">
+            <span className="lab-ice-cube inline-block h-2.5 w-2.5 rotate-12 rounded-[2px] bg-gradient-to-br from-white/90 to-[#7dd3fc]/80" />
+            <span className="lab-ice-cube lab-ice-delay inline-block h-3 w-3 -rotate-6 rounded-[2px] bg-gradient-to-br from-white to-[#bae6fd]/85" />
+            <span className="lab-ice-cube inline-block h-2 w-2.5 rotate-6 rounded-[2px] bg-gradient-to-br from-[#e0f2fe] to-[#7dd3fc]/70" />
           </div>
         </div>
       ) : null}
@@ -458,14 +460,19 @@ export function VesselSlot({ vessel, deskRef }: Props) {
         </p>
       ) : null}
 
-      <div className="mt-2 grid grid-cols-5 gap-1" data-no-drag>
+      <div
+        className="mt-2 grid grid-cols-5 gap-1.5"
+        data-no-drag
+        role="toolbar"
+        aria-label="Vessel tools"
+      >
         <button
           type="button"
           onClick={(e) => {
             e.stopPropagation();
             stirVessel(vessel.instanceId);
           }}
-          className="rounded-lg bg-lab-wash px-1 py-1.5 text-[10px] font-semibold text-lab-ink hover:bg-white"
+          className="min-h-7 rounded-lg bg-lab-wash px-1.5 py-1.5 text-[10px] font-semibold text-lab-ink transition hover:bg-white"
           title="Stir (S)"
         >
           Stir
@@ -476,9 +483,10 @@ export function VesselSlot({ vessel, deskRef }: Props) {
             e.stopPropagation();
             toggleHeat(vessel.instanceId);
           }}
-          className={`rounded-lg px-1 py-1.5 text-[10px] font-semibold ${
+          aria-pressed={vessel.heatAttached}
+          className={`min-h-7 rounded-lg px-1.5 py-1.5 text-[10px] font-semibold transition ${
             vessel.heatAttached
-              ? "bg-lab-amber text-white"
+              ? "bg-lab-amber text-white shadow-[0_0_0_1px_rgba(196,120,58,0.45)]"
               : "bg-lab-wash text-lab-ink hover:bg-white"
           }`}
           title="Heat (H)"
@@ -491,9 +499,10 @@ export function VesselSlot({ vessel, deskRef }: Props) {
             e.stopPropagation();
             toggleCool(vessel.instanceId);
           }}
-          className={`rounded-lg px-1 py-1.5 text-[10px] font-semibold ${
+          aria-pressed={vessel.coolAttached}
+          className={`min-h-7 rounded-lg px-1.5 py-1.5 text-[10px] font-semibold transition ${
             vessel.coolAttached
-              ? "bg-sky-600 text-white"
+              ? "bg-[#0c4a6e] text-[#e0f2fe] shadow-[0_0_0_1px_rgba(125,211,252,0.45)]"
               : "bg-lab-wash text-lab-ink hover:bg-white"
           }`}
           title="Cool (C)"
@@ -507,7 +516,7 @@ export function VesselSlot({ vessel, deskRef }: Props) {
             tryShakeVessel(vessel.instanceId);
           }}
           disabled={!canMix && contents.length < 1}
-          className="rounded-lg bg-lab-wash px-1 py-1.5 text-[10px] font-semibold text-lab-ink hover:bg-white disabled:opacity-40"
+          className="min-h-7 rounded-lg bg-lab-wash px-1.5 py-1.5 text-[10px] font-semibold text-lab-ink transition hover:bg-white disabled:opacity-40"
           title="Shake to agitate (then Mix)"
         >
           Shake
@@ -519,7 +528,7 @@ export function VesselSlot({ vessel, deskRef }: Props) {
             e.stopPropagation();
             tryMixVessel(vessel.instanceId);
           }}
-          className={`rounded-lg px-1 py-1.5 text-[10px] font-semibold text-white ${
+          className={`min-h-7 rounded-lg px-1.5 py-1.5 text-[10px] font-semibold text-white transition ${
             labBlocked
               ? "bg-lab-amber hover:bg-lab-amber/90"
               : canMix

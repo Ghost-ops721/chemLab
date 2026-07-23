@@ -133,91 +133,112 @@ export function DeskWorkspace({
       ) : null}
 
       {vessels.length > 0 ? (
-        <div className="absolute bottom-2 left-1/2 z-40 flex max-w-[calc(100%-7.5rem)] -translate-x-1/2 items-center gap-0.5 rounded-xl border border-white/20 bg-lab-ink/85 px-1.5 py-1 shadow-2xl backdrop-blur-md md:max-w-none">
-          <span className="hidden px-1.5 text-[9px] uppercase tracking-wider text-lab-foam/60 sm:inline">
+        <div className="absolute bottom-2 left-1/2 z-40 flex max-w-[calc(100%-7.5rem)] -translate-x-1/2 flex-wrap items-center justify-center gap-y-1.5 rounded-xl border border-white/20 bg-lab-ink/90 px-2 py-1.5 shadow-2xl backdrop-blur-md md:max-w-none">
+          <span className="hidden px-2 text-[9px] font-semibold uppercase tracking-[0.14em] text-lab-foam/55 sm:inline">
             Tools
           </span>
-          {(
-            [
-              {
-                id: "beaker",
-                label: "+ Beaker",
-                run: () => {
-                  const n = vessels.length;
-                  placeEquipment("beaker", {
-                    x: 60 + (n % 3) * (VESSEL_CARD.width + 6),
-                    y: 50 + Math.floor(n / 3) * 200,
-                  });
-                },
-              },
-              {
-                id: "stir",
-                label: "Stir",
-                run: () => {
-                  if (!active) return;
-                  stirVessel(active.instanceId);
-                  showToast(labCopy.stirring);
-                },
-              },
-              {
-                id: "heat",
-                label: "Heat",
-                run: () => {
-                  if (!active) return;
-                  toggleHeat(active.instanceId);
-                },
-              },
-              {
-                id: "cool",
-                label: "Cool",
-                run: () => {
-                  if (!active) return;
-                  toggleCool(active.instanceId);
-                },
-              },
-              {
-                id: "shake",
-                label: "Shake",
-                run: () => {
-                  if (!active) return;
-                  tryShakeVessel(active.instanceId);
-                },
-              },
-              {
-                id: "mix",
-                label: "Mix",
-                run: () => {
-                  if (!active) return;
-                  tryMixVessel(active.instanceId);
-                },
-              },
-            ] as const
-          ).map((tool) => (
+          <span
+            className="mx-1 hidden h-5 w-px bg-white/15 sm:block"
+            aria-hidden
+          />
+          <div className="flex items-center gap-1.5">
             <button
-              key={tool.id}
               type="button"
-              onClick={tool.run}
-              className="rounded-lg bg-white/10 px-2 py-1 text-[10px] font-semibold text-lab-foam transition hover:bg-lab-teal/80"
+              onClick={() => {
+                const n = vessels.length;
+                placeEquipment("beaker", {
+                  x: 60 + (n % 3) * (VESSEL_CARD.width + 6),
+                  y: 50 + Math.floor(n / 3) * 200,
+                });
+              }}
+              className="min-h-7 rounded-lg bg-white/10 px-2.5 py-1.5 text-[10px] font-semibold text-lab-foam transition hover:bg-white/20"
             >
-              {tool.label}
+              + Beaker
             </button>
-          ))}
-          <button
-            type="button"
-            onClick={() => {
-              if (!confirmClear) {
-                setConfirmClear(true);
-                window.setTimeout(() => setConfirmClear(false), 2500);
-                return;
-              }
-              clearDesk();
-              setConfirmClear(false);
-              showToast(labCopy.deskCleared);
-            }}
-            className="rounded-lg bg-lab-hazard/30 px-2 py-1 text-[10px] font-semibold text-lab-foam transition hover:bg-lab-hazard/60"
-          >
-            {confirmClear ? "Confirm clear?" : "Clear board"}
-          </button>
+          </div>
+          <span className="mx-1 h-5 w-px bg-white/15" aria-hidden />
+          <div className="flex items-center gap-1.5">
+            <button
+              type="button"
+              onClick={() => {
+                if (!active) return;
+                stirVessel(active.instanceId);
+                showToast(labCopy.stirring);
+              }}
+              className="min-h-7 rounded-lg bg-white/10 px-2.5 py-1.5 text-[10px] font-semibold text-lab-foam transition hover:bg-white/20"
+            >
+              Stir
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                if (!active) return;
+                toggleHeat(active.instanceId);
+              }}
+              aria-pressed={Boolean(active?.heatAttached)}
+              className={`min-h-7 rounded-lg px-2.5 py-1.5 text-[10px] font-semibold transition ${
+                active?.heatAttached
+                  ? "bg-lab-amber text-white shadow-[0_0_0_1px_rgba(255,200,120,0.45)]"
+                  : "bg-white/10 text-lab-foam hover:bg-white/20"
+              }`}
+            >
+              Heat
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                if (!active) return;
+                toggleCool(active.instanceId);
+              }}
+              aria-pressed={Boolean(active?.coolAttached)}
+              className={`min-h-7 rounded-lg px-2.5 py-1.5 text-[10px] font-semibold transition ${
+                active?.coolAttached
+                  ? "bg-[#0c4a6e] text-[#e0f2fe] shadow-[0_0_0_1px_rgba(125,211,252,0.4)]"
+                  : "bg-white/10 text-lab-foam hover:bg-white/20"
+              }`}
+            >
+              Cool
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                if (!active) return;
+                tryShakeVessel(active.instanceId);
+              }}
+              className="min-h-7 rounded-lg bg-white/10 px-2.5 py-1.5 text-[10px] font-semibold text-lab-foam transition hover:bg-white/20"
+            >
+              Shake
+            </button>
+          </div>
+          <span className="mx-1 h-5 w-px bg-white/15" aria-hidden />
+          <div className="flex items-center gap-1.5">
+            <button
+              type="button"
+              onClick={() => {
+                if (!active) return;
+                tryMixVessel(active.instanceId);
+              }}
+              className="min-h-7 rounded-lg bg-lab-teal px-2.5 py-1.5 text-[10px] font-semibold text-white transition hover:bg-lab-teal/90"
+            >
+              Mix
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                if (!confirmClear) {
+                  setConfirmClear(true);
+                  window.setTimeout(() => setConfirmClear(false), 2500);
+                  return;
+                }
+                clearDesk();
+                setConfirmClear(false);
+                showToast(labCopy.deskCleared);
+              }}
+              className="min-h-7 rounded-lg border border-lab-hazard/40 bg-lab-hazard/25 px-2.5 py-1.5 text-[10px] font-semibold text-lab-foam transition hover:bg-lab-hazard/55"
+            >
+              {confirmClear ? "Confirm clear?" : "Clear board"}
+            </button>
+          </div>
         </div>
       ) : null}
 

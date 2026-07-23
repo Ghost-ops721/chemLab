@@ -212,53 +212,55 @@ export function GamificationBar({
           {canClaimDaily ? "Daily ★" : "★ claimed"}
         </button>
 
-        {onOpenShop ? (
+        <div className="flex shrink-0 items-center gap-2">
+          {onOpenShop ? (
+            <button
+              type="button"
+              onClick={onOpenShop}
+              className="hidden shrink-0 rounded-lg border border-white/20 px-2 py-1 text-[10px] font-semibold text-lab-foam/90 hover:bg-white/10 md:inline-flex"
+            >
+              Shop
+            </button>
+          ) : null}
+
+          {onOpenAtelier ? (
+            <button
+              type="button"
+              onClick={onOpenAtelier}
+              className="shrink-0 rounded-lg bg-lab-amber/90 px-2.5 py-1 text-[11px] font-semibold text-lab-ink shadow-sm hover:bg-lab-amber"
+            >
+              Perfume
+            </button>
+          ) : null}
+
+          {onOpenMarket ? (
+            <button
+              type="button"
+              onClick={onOpenMarket}
+              className="hidden shrink-0 rounded-lg border border-lab-glass/50 bg-white/10 px-2.5 py-1 text-[11px] font-semibold text-lab-foam hover:bg-white/15 sm:inline-flex"
+            >
+              Market
+            </button>
+          ) : null}
+
+          {onOpenShelf ? (
+            <button
+              type="button"
+              onClick={onOpenShelf}
+              className="shrink-0 rounded-lg border border-lab-glass/50 bg-white/10 px-2.5 py-1 text-[11px] font-semibold text-lab-foam hover:bg-white/15"
+            >
+              Shelf
+            </button>
+          ) : null}
+
           <button
             type="button"
-            onClick={onOpenShop}
-            className="hidden shrink-0 rounded-lg border border-white/20 px-2 py-1 text-[10px] font-semibold text-lab-foam/90 hover:bg-white/10 md:inline-flex"
+            onClick={() => setPickerOpen(true)}
+            className="shrink-0 rounded-lg bg-lab-teal px-2.5 py-1 text-[11px] font-semibold text-white shadow-sm transition hover:bg-lab-teal/90"
           >
-            Shop
+            Goals
           </button>
-        ) : null}
-
-        {onOpenAtelier ? (
-          <button
-            type="button"
-            onClick={onOpenAtelier}
-            className="shrink-0 rounded-lg bg-lab-amber/90 px-2.5 py-1 text-[11px] font-semibold text-lab-ink shadow-sm hover:bg-lab-amber"
-          >
-            Perfume
-          </button>
-        ) : null}
-
-        {onOpenMarket ? (
-          <button
-            type="button"
-            onClick={onOpenMarket}
-            className="hidden shrink-0 rounded-lg border border-lab-glass/50 bg-white/10 px-2.5 py-1 text-[11px] font-semibold text-lab-foam hover:bg-white/15 sm:inline-flex"
-          >
-            Market
-          </button>
-        ) : null}
-
-        {onOpenShelf ? (
-          <button
-            type="button"
-            onClick={onOpenShelf}
-            className="shrink-0 rounded-lg border border-lab-glass/50 bg-white/10 px-2.5 py-1 text-[11px] font-semibold text-lab-foam hover:bg-white/15"
-          >
-            Shelf
-          </button>
-        ) : null}
-
-        <button
-          type="button"
-          onClick={() => setPickerOpen(true)}
-          className="shrink-0 rounded-lg bg-lab-teal px-2.5 py-1 text-[11px] font-semibold text-white shadow-sm transition hover:bg-lab-teal/90"
-        >
-          Goals
-        </button>
+        </div>
 
         <div className="hidden items-center gap-2 text-[11px] text-lab-foam/65 lg:flex">
           <span>{journal.length} logged</span>

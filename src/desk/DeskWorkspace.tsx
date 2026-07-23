@@ -250,29 +250,31 @@ export function DeskWorkspace({
                   </li>
                 ))}
               </ol>
-              <button
-                type="button"
-                onClick={() => trySeedDemoReaction()}
-                className="mt-4 rounded-lg bg-lab-foam px-3 py-1.5 text-xs font-semibold text-lab-ink shadow-lg transition hover:bg-white active:scale-[0.98]"
-              >
-                Try starter: HCl + NaOH
-              </button>
-              {onOpenAtelier ? (
+              <div className="mt-4 flex flex-col items-stretch gap-2">
                 <button
                   type="button"
-                  onClick={onOpenAtelier}
-                  className="mt-1.5 rounded-lg bg-lab-teal px-3 py-1.5 text-xs font-semibold text-white shadow-lg transition hover:bg-lab-teal/90 active:scale-[0.98]"
+                  onClick={() => trySeedDemoReaction()}
+                  className="rounded-lg bg-lab-foam px-3 py-1.5 text-xs font-semibold text-lab-ink shadow-lg transition hover:bg-white active:scale-[0.98]"
                 >
-                  Browse Perfume Atelier
+                  Try starter: HCl + NaOH
                 </button>
-              ) : null}
-              <button
-                type="button"
-                onClick={() => setPickerOpen(true)}
-                className="mt-1.5 rounded-lg border border-lab-foam/40 bg-transparent px-3 py-1.5 text-xs font-semibold text-lab-foam transition hover:bg-white/10 active:scale-[0.98]"
-              >
-                Pick a lab goal
-              </button>
+                {onOpenAtelier ? (
+                  <button
+                    type="button"
+                    onClick={onOpenAtelier}
+                    className="rounded-lg bg-lab-teal px-3 py-1.5 text-xs font-semibold text-white shadow-lg transition hover:bg-lab-teal/90 active:scale-[0.98]"
+                  >
+                    Browse Perfume Atelier
+                  </button>
+                ) : null}
+                <button
+                  type="button"
+                  onClick={() => setPickerOpen(true)}
+                  className="rounded-lg border border-lab-foam/40 bg-transparent px-3 py-1.5 text-xs font-semibold text-lab-foam transition hover:bg-white/10 active:scale-[0.98]"
+                >
+                  Pick a lab goal
+                </button>
+              </div>
             </div>
           </div>
         ) : (

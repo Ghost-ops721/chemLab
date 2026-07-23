@@ -21,6 +21,9 @@ import { isOilItem } from "@/domains/chemistry/perfume/oilMeta";
 
 type BrowseKind = "equipment" | "chemicals" | "oils";
 
+/** Keep the left rail scannable; full catalog lives in the Show more modal. */
+const SIDEBAR_PREVIEW_LIMIT = 8;
+
 export function ItemPanel() {
   const [browse, setBrowse] = useState<BrowseKind>("equipment");
   const [expanded, setExpanded] = useState(false);
@@ -288,6 +291,12 @@ export function ItemPanel() {
         ? filteredOils
         : filteredEquipment;
 
+  const sidebarList = useMemo(
+    () => list.slice(0, SIDEBAR_PREVIEW_LIMIT),
+    [list],
+  );
+  const hasMoreInSidebar = list.length > SIDEBAR_PREVIEW_LIMIT;
+
   const browseTitle =
     browse === "equipment"
       ? "Equipment"
@@ -297,18 +306,18 @@ export function ItemPanel() {
 
   const browseHint =
     browse === "equipment"
-      ? "Place glassware on the desk, or use heat and cool on the active vessel."
+      ? "Drag onto desk, or tap + to place / use."
       : browse === "oils"
         ? targetVessel
-          ? `Pour fragrance oils into ${EQUIPMENT_BY_ID[targetVessel.equipmentId]?.name ?? "vessel"} — adjust ml on the vessel.`
-          : "Place glassware first, then pour oils and ethanol."
+          ? `Pour oils into ${EQUIPMENT_BY_ID[targetVessel.equipmentId]?.name ?? "vessel"} — adjust ml below.`
+          : "Place glassware first, then pour oils."
         : targetVessel
           ? `Pour into ${EQUIPMENT_BY_ID[targetVessel.equipmentId]?.name ?? "vessel"}${
               targetVessel.contentIds.length
                 ? ` · ${targetVessel.contentIds.length} inside`
                 : ""
             }.`
-          : "Place glassware first, then pour reactants into it.";
+          : "Place glassware first, then pour reactants.";
 
   const oilRoles = ["all", "carrier", "top", "heart", "base"];
 
@@ -358,7 +367,7 @@ export function ItemPanel() {
   }
 
   function InlineBrowseList() {
-    if (list.length === 0) {
+    if (sidebarList.length === 0) {
       return (
         <p className="rounded-lg border border-dashed border-lab-line/70 bg-white/40 px-2 py-4 text-center text-[10px] text-lab-muted">
           Nothing matched. Try another search.
@@ -369,7 +378,7 @@ export function ItemPanel() {
     if (browse === "equipment") {
       return (
         <>
-          {filteredEquipment.map((item) => (
+          {sidebarList.map((item) => (
             <DraggableItem
               key={item.id}
               item={item}
@@ -387,7 +396,7 @@ export function ItemPanel() {
 
     return (
       <>
-        {list.map((item) => {
+        {sidebarList.map((item) => {
           const chem = getChemical(item.id);
           return (
             <DraggableItem
@@ -454,7 +463,7 @@ export function ItemPanel() {
 
             <div className="shrink-0 border-b border-lab-line/40 bg-lab-panel/55 px-3 py-1.5 sm:px-4">
               <div className="mx-auto w-full max-w-5xl space-y-1.5">
-                <div className="flex gap-1.5">
+                <div className="flex gap-2">
                   {(
                     [
                       ["equipment", "Equipment"],
@@ -647,11 +656,11 @@ export function ItemPanel() {
           <p className="font-display text-[10px] uppercase tracking-[0.2em] text-lab-teal">
             Inventory
           </p>
-          <div className="mt-1.5 flex gap-1.5">
+          <div className="mt-2 flex gap-3">
             <button
               type="button"
               onClick={() => selectBrowse("equipment")}
-              className={`flex-1 rounded-lg border px-1.5 py-1 text-[11px] font-medium shadow-sm transition ${
+              className={`flex-1 rounded-lg border px-1.5 py-1.5 text-[11px] font-medium shadow-sm transition ${
                 browse === "equipment"
                   ? "border-lab-ink/20 bg-lab-ink text-lab-foam"
                   : "border-lab-line/60 bg-white/90 text-lab-ink hover:border-lab-teal/50 hover:bg-white"
@@ -662,7 +671,7 @@ export function ItemPanel() {
             <button
               type="button"
               onClick={() => selectBrowse("oils")}
-              className={`flex-1 rounded-lg border px-1.5 py-1 text-[11px] font-medium shadow-sm transition ${
+              className={`flex-1 rounded-lg border px-1.5 py-1.5 text-[11px] font-medium shadow-sm transition ${
                 browse === "oils"
                   ? "border-lab-amber bg-lab-amber text-white"
                   : "border-lab-amber/40 bg-lab-amber/10 text-lab-amber hover:bg-lab-amber/15"
@@ -673,7 +682,7 @@ export function ItemPanel() {
             <button
               type="button"
               onClick={() => selectBrowse("chemicals")}
-              className={`flex-1 rounded-lg border px-1.5 py-1 text-[11px] font-medium shadow-sm transition ${
+              className={`flex-1 rounded-lg border px-1.5 py-1.5 text-[11px] font-medium shadow-sm transition ${
                 browse === "chemicals"
                   ? "border-lab-teal bg-lab-teal text-lab-foam"
                   : "border-lab-teal/35 bg-lab-teal/10 text-lab-teal hover:bg-lab-teal/15"
@@ -683,7 +692,7 @@ export function ItemPanel() {
             </button>
           </div>
 
-          <p className="mt-1.5 text-[10px] leading-snug text-lab-muted">
+          <p className="mt-2 text-[10px] leading-snug text-lab-muted">
             {browseHint}
           </p>
 
@@ -729,63 +738,66 @@ export function ItemPanel() {
             </div>
           ) : null}
 
-          <div className="mt-1.5 flex items-center justify-between gap-1">
-            <p className="text-[9px] text-lab-muted">
-              {list.length}{" "}
-              {browse === "equipment"
-                ? "tools"
-                : browse === "oils"
-                  ? "oils"
-                  : "chemicals"}
-            </p>
-            <button
-              type="button"
-              onClick={() => setExpanded(true)}
-              className="rounded-md border border-lab-line/60 bg-white/90 px-1.5 py-0.5 text-[10px] font-semibold text-lab-teal transition hover:border-lab-teal/50 hover:bg-lab-teal/10"
-            >
-              Show more
-            </button>
-          </div>
+          <p className="mt-1.5 text-[9px] text-lab-muted">
+            Showing {Math.min(sidebarList.length, list.length)} of {list.length}{" "}
+            {browse === "equipment"
+              ? "tools"
+              : browse === "oils"
+                ? "oils"
+                : "chemicals"}
+          </p>
         </div>
 
-        <div className="scroll-thin flex-1 space-y-1 overflow-y-auto px-2 py-1.5">
-          {goal
-            ? equipment
-                .filter((item) => highlightIds.has(item.id))
-                .map((item) => (
-                  <DraggableItem
-                    key={`goal-${item.id}`}
-                    item={item}
-                    payload={{ type: "equipment", itemId: item.id }}
-                    subtitle={item.subcategory}
-                    onQuickAdd={() => quickEquipment(item.id)}
-                    hint="Needed for your goal"
-                    highlighted
-                    dragIdPrefix="goal-eq"
-                  />
-                ))
-            : null}
-          {goal
-            ? items
-                .filter((item) => highlightIds.has(item.id))
-                .map((item) => {
-                  const chem = getChemical(item.id);
-                  return (
+        <div className="scroll-thin flex min-h-0 flex-1 flex-col px-2 py-1.5">
+          <div className="min-h-0 flex-1 space-y-1.5 overflow-y-auto">
+            {goal
+              ? equipment
+                  .filter((item) => highlightIds.has(item.id))
+                  .map((item) => (
                     <DraggableItem
-                      key={`goal-chem-${item.id}`}
+                      key={`goal-${item.id}`}
                       item={item}
-                      payload={{ type: "chemical", itemId: item.id }}
-                      subtitle={chem?.formula}
-                      accentColor={chem?.color}
-                      onQuickAdd={() => quickChemical(item.id)}
+                      payload={{ type: "equipment", itemId: item.id }}
+                      subtitle={item.subcategory}
+                      onQuickAdd={() => quickEquipment(item.id)}
                       hint="Needed for your goal"
                       highlighted
-                      dragIdPrefix="goal-chem"
+                      dragIdPrefix="goal-eq"
                     />
-                  );
-                })
-            : null}
-          <InlineBrowseList />
+                  ))
+              : null}
+            {goal
+              ? items
+                  .filter((item) => highlightIds.has(item.id))
+                  .map((item) => {
+                    const chem = getChemical(item.id);
+                    return (
+                      <DraggableItem
+                        key={`goal-chem-${item.id}`}
+                        item={item}
+                        payload={{ type: "chemical", itemId: item.id }}
+                        subtitle={chem?.formula}
+                        accentColor={chem?.color}
+                        onQuickAdd={() => quickChemical(item.id)}
+                        hint="Needed for your goal"
+                        highlighted
+                        dragIdPrefix="goal-chem"
+                      />
+                    );
+                  })
+              : null}
+            <InlineBrowseList />
+          </div>
+
+          <button
+            type="button"
+            onClick={() => openExpanded(browse)}
+            className="mt-1.5 w-full shrink-0 rounded-lg border border-lab-teal/40 bg-lab-teal/10 px-2 py-1.5 text-[11px] font-semibold text-lab-teal transition hover:border-lab-teal/60 hover:bg-lab-teal/15"
+          >
+            {hasMoreInSidebar
+              ? `Show more ${browseTitle.toLowerCase()}…`
+              : `Browse all ${browseTitle.toLowerCase()}…`}
+          </button>
         </div>
 
         {expandedUi}

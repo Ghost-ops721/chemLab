@@ -1,26 +1,864 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --lab-wash: #d8e4df;
+  --lab-panel: #f2f7f4;
+  --lab-desk: #4a3428;
+  --lab-ink: #14241f;
+  --lab-muted: #5a6f67;
+  --lab-teal: #1a6b5c;
+  --lab-line: #b4c5bd;
+  --lab-foam: #eaf4ef;
+  --lab-glass: #8fc0b5;
+  --lab-amber: #c4783a;
+  --lab-hazard: #b42318;
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  --color-lab-wash: var(--lab-wash);
+  --color-lab-panel: var(--lab-panel);
+  --color-lab-desk: var(--lab-desk);
+  --color-lab-ink: var(--lab-ink);
+  --color-lab-muted: var(--lab-muted);
+  --color-lab-teal: var(--lab-teal);
+  --color-lab-line: var(--lab-line);
+  --color-lab-foam: var(--lab-foam);
+  --color-lab-glass: var(--lab-glass);
+  --color-lab-amber: var(--lab-amber);
+  --color-lab-hazard: var(--lab-hazard);
+  --font-sans: var(--font-sans);
+  --font-display: var(--font-display);
+  --font-mono: var(--font-mono);
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  color: var(--lab-ink);
+  font-family: var(--font-sans), system-ui, sans-serif;
+  background: var(--lab-wash);
+}
+
+.font-display {
+  font-family: var(--font-display), Georgia, serif;
+}
+
+.lab-desk-surface {
+  background:
+    radial-gradient(ellipse at 18% 8%, rgba(255, 240, 210, 0.12), transparent 42%),
+    radial-gradient(ellipse at 85% 95%, rgba(0, 0, 0, 0.28), transparent 55%),
+    repeating-linear-gradient(
+      90deg,
+      transparent,
+      transparent 48px,
+      rgba(0, 0, 0, 0.04) 48px,
+      rgba(0, 0, 0, 0.04) 49px
+    ),
+    linear-gradient(165deg, #6e4d3c 0%, #4a3428 42%, #342419 100%);
+  box-shadow: inset 0 0 100px rgba(0, 0, 0, 0.28);
+}
+
+.panel-glass {
+  background: color-mix(in srgb, var(--lab-panel) 92%, transparent);
+  backdrop-filter: blur(12px);
+}
+
+.vessel-glass {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.55) 0%, rgba(255, 255, 255, 0.08) 40%, rgba(143, 192, 181, 0.2) 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.65),
+    inset 0 -8px 16px rgba(20, 36, 31, 0.08);
+}
+
+@keyframes rise-bubble {
+  0% {
+    transform: translateY(0) scale(1);
+    opacity: 0.9;
+  }
+  100% {
+    transform: translateY(-78px) scale(0.55);
+    opacity: 0;
+  }
+}
+
+.bubble {
+  animation: rise-bubble 1.55s ease-in infinite;
+}
+
+@keyframes settle-ppt {
+  from {
+    transform: translateY(-12px);
+    opacity: 0.15;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.precipitate {
+  animation: settle-ppt 0.95s ease-out forwards;
+}
+
+@keyframes toast-in {
+  from {
+    opacity: 0;
+    transform: translateY(12px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.toast-enter {
+  animation: toast-in 0.28s ease-out;
+}
+
+@keyframes equation-pop {
+  0% {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.equation-pop {
+  animation: equation-pop 0.45s ease-out;
+}
+
+@keyframes soft-pulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgba(26, 107, 92, 0.35);
+  }
+  50% {
+    box-shadow: 0 0 0 8px rgba(26, 107, 92, 0);
+  }
+}
+
+.cta-pulse {
+  animation: soft-pulse 2.2s ease-out infinite;
+}
+
+/* Hide scrollbar chrome but keep scroll */
+.scroll-thin {
+  scrollbar-width: thin;
+  scrollbar-color: var(--lab-line) transparent;
+}
+
+/* ——— Extreme lab interactivity FX ——— */
+
+.lab-desk-sheen {
+  background:
+    radial-gradient(ellipse at 70% 20%, rgba(255, 255, 255, 0.06), transparent 45%),
+    radial-gradient(ellipse at 30% 80%, rgba(255, 200, 120, 0.04), transparent 40%);
+  animation: desk-breathe 8s ease-in-out infinite;
+}
+
+@keyframes desk-breathe {
+  0%,
+  100% {
+    opacity: 0.7;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+@keyframes splash-drop {
+  0% {
+    transform: translateY(0) scale(1);
+    opacity: 0.95;
+  }
+  100% {
+    transform: translateY(48px) scale(0.35);
+    opacity: 0;
+  }
+}
+
+.lab-splash {
+  animation: splash-drop 0.7s ease-in forwards;
+}
+
+@keyframes swirl-spin {
+  from {
+    transform: rotate(0deg) scale(0.85);
+    opacity: 0.15;
+  }
+  to {
+    transform: rotate(360deg) scale(1.05);
+    opacity: 0.45;
+  }
+}
+
+.lab-swirl-active {
+  animation: swirl-spin 0.9s linear;
+}
+
+@keyframes shockwave {
+  0% {
+    transform: scale(0.6);
+    opacity: 0.8;
+  }
+  100% {
+    transform: scale(1.25);
+    opacity: 0;
+  }
+}
+
+.lab-shock {
+  animation: shockwave 0.7s ease-out forwards;
+}
+
+@keyframes flake-fall {
+  0% {
+    transform: translateY(-40px) rotate(0deg);
+    opacity: 0.9;
+  }
+  100% {
+    transform: translateY(70px) rotate(40deg);
+    opacity: 0.2;
+  }
+}
+
+.lab-flake {
+  animation: flake-fall 0.85s ease-in forwards;
+}
+
+@keyframes heat-exo {
+  0%,
+  100% {
+    background: rgba(251, 146, 60, 0.12);
+  }
+  50% {
+    background: rgba(249, 115, 22, 0.28);
+  }
+}
+
+.lab-heat-exo {
+  animation: heat-exo 1.1s ease-in-out infinite;
+}
+
+.lab-heat-endo {
+  background: linear-gradient(180deg, rgba(125, 211, 252, 0.22), rgba(186, 230, 253, 0.08));
+}
+
+@keyframes heat-ignite {
+  0% {
+    opacity: 0;
+    transform: scaleY(0.2);
+  }
+  40% {
+    opacity: 1;
+    transform: scaleY(1);
+  }
+  100% {
+    opacity: 0;
+    transform: scaleY(1.2);
+  }
+}
+
+.lab-heat-ignite {
+  background: radial-gradient(ellipse at center, rgba(255, 180, 60, 0.7), transparent 70%);
+  transform-origin: bottom;
+  animation: heat-ignite 0.7s ease-out forwards;
+}
+
+@keyframes smoke-rise {
+  0% {
+    transform: translateY(8px) scale(0.8);
+    opacity: 0.35;
+  }
+  100% {
+    transform: translateY(-28px) scale(1.35);
+    opacity: 0;
+  }
+}
+
+.lab-smoke {
+  animation: smoke-rise 2.4s ease-out infinite;
+}
+
+@keyframes spark-pop {
+  0% {
+    transform: scale(0);
+    opacity: 1;
+  }
+  70% {
+    transform: scale(1.6);
+    opacity: 0.8;
+  }
+  100% {
+    transform: scale(0);
+    opacity: 0;
+  }
+}
+
+.lab-spark {
+  animation: spark-pop 0.55s ease-out forwards;
+}
+
+@keyframes vessel-shake {
+  0%,
+  100% {
+    transform: translateX(0) rotate(0deg);
+  }
+  20% {
+    transform: translateX(-4px) rotate(-1.5deg);
+  }
+  40% {
+    transform: translateX(5px) rotate(1.5deg);
+  }
+  60% {
+    transform: translateX(-3px) rotate(-1deg);
+  }
+  80% {
+    transform: translateX(3px) rotate(0.8deg);
+  }
+}
+
+.lab-vessel-shake {
+  animation: vessel-shake 0.55s ease-in-out;
+}
+
+@keyframes vessel-pop {
+  0% {
+    transform: scale(1);
+  }
+  40% {
+    transform: scale(1.05);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+.lab-vessel-pop {
+  animation: vessel-pop 0.45s ease-out;
+}
+
+@keyframes liquid-bob {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-2px);
+  }
+}
+
+.lab-liquid-bob {
+  animation: liquid-bob 0.45s ease-in-out 2;
+}
+
+.lab-liquid-swirl-bg {
+  background-image: radial-gradient(
+    circle at 40% 60%,
+    rgba(255, 255, 255, 0.12),
+    transparent 55%
+  );
+}
+
+@keyframes meniscus-wave {
+  0%,
+  100% {
+    border-radius: 40% 60% 12px 12px / 18% 22% 12px 12px;
+  }
+  50% {
+    border-radius: 55% 45% 12px 12px / 24% 14% 12px 12px;
+  }
+}
+
+.lab-meniscus {
+  animation: meniscus-wave 1.4s ease-in-out infinite;
+}
+
+@keyframes flame-dance {
+  0%,
+  100% {
+    transform: scaleY(1) translateY(0);
+    opacity: 0.95;
+    filter: brightness(1);
+  }
+  50% {
+    transform: scaleY(1.25) translateY(-2px);
+    opacity: 1;
+    filter: brightness(1.25);
+  }
+}
+
+.lab-flame {
+  animation: flame-dance 0.35s ease-in-out infinite;
+  transform-origin: bottom;
+}
+
+.lab-flame-delay {
+  animation-delay: 0.12s;
+}
+
+@keyframes hazard-pulse {
+  0%,
+  100% {
+    background: rgba(180, 35, 24, 0.08);
+  }
+  50% {
+    background: rgba(180, 35, 24, 0.22);
+  }
+}
+
+.lab-hazard-pulse {
+  animation: hazard-pulse 0.7s ease-in-out infinite;
+}
+
+/* ——— Pour stream / richer liquid FX ——— */
+
+@keyframes pour-ribbon {
+  0% {
+    stroke-dashoffset: 120;
+    opacity: 0;
+  }
+  15% {
+    opacity: 1;
+  }
+  100% {
+    stroke-dashoffset: 0;
+    opacity: 0.35;
+  }
+}
+
+.lab-pour-ribbon {
+  stroke-dasharray: 120;
+  animation: pour-ribbon 0.75s ease-out forwards;
+}
+
+@keyframes pour-drop {
+  0% {
+    opacity: 0;
+    transform: scale(0.4);
+  }
+  30% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(0.6) translateY(6px);
+  }
+}
+
+.lab-pour-drop {
+  animation: pour-drop 0.7s ease-out forwards;
+  transform-box: fill-box;
+  transform-origin: center;
+}
+
+@keyframes pour-bloom {
+  0% {
+    transform: scale(0.2);
+    opacity: 0.7;
+  }
+  100% {
+    transform: scale(2.2);
+    opacity: 0;
+  }
+}
+
+.lab-pour-bloom {
+  animation: pour-bloom 0.55s ease-out forwards;
+  transform-box: fill-box;
+  transform-origin: center;
+}
+
+@keyframes ripple-out {
+  0% {
+    transform: translateX(-50%) scale(0.4);
+    opacity: 0.7;
+  }
+  100% {
+    transform: translateX(-50%) scale(1.6);
+    opacity: 0;
+  }
+}
+
+.lab-ripple {
+  animation: ripple-out 0.7s ease-out forwards;
+}
+
+@keyframes rim-drip {
+  0% {
+    transform: translateY(0) scaleY(1);
+    opacity: 0.9;
+  }
+  100% {
+    transform: translateY(28px) scaleY(1.6);
+    opacity: 0;
+  }
+}
+
+.lab-rim-drip {
+  animation: rim-drip 0.55s ease-in forwards;
+}
+
+@keyframes stir-rod-swing {
+  0% {
+    transform: translateX(-50%) rotate(calc(var(--stir-deg, 12deg) * -1));
+  }
+  50% {
+    transform: translateX(-50%) rotate(var(--stir-deg, 12deg));
+  }
+  100% {
+    transform: translateX(-50%) rotate(calc(var(--stir-deg, 12deg) * -1));
+  }
+}
+
+.lab-stir-rod-active {
+  animation: stir-rod-swing 0.55s ease-in-out 2;
+}
+
+.lab-swirl-idle {
+  animation: swirl-spin 2.8s linear infinite;
+  opacity: 0.25;
+}
+
+@keyframes color-bloom {
+  0% {
+    transform: scale(0.5);
+    opacity: 0.85;
+  }
+  100% {
+    transform: scale(1.35);
+    opacity: 0;
+  }
+}
+
+.lab-color-bloom {
+  animation: color-bloom 0.8s ease-out forwards;
+}
+
+@keyframes heat-haze {
+  0%,
+  100% {
+    opacity: 0.25;
+    transform: translateY(0) scaleX(1);
+    filter: blur(4px);
+  }
+  50% {
+    opacity: 0.55;
+    transform: translateY(-4px) scaleX(1.05);
+    filter: blur(6px);
+  }
+}
+
+.lab-heat-haze {
+  background: linear-gradient(
+    180deg,
+    rgba(255, 180, 80, 0.35),
+    transparent 80%
+  );
+  animation: heat-haze 1.2s ease-in-out infinite;
+}
+
+.lab-frost {
+  background: linear-gradient(
+    180deg,
+    rgba(220, 245, 255, 0.55),
+    rgba(186, 230, 253, 0.05)
+  );
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.6);
+}
+
+.lab-ppt-grain {
+  background-image: radial-gradient(
+      circle at 20% 40%,
+      rgba(0, 0, 0, 0.12) 1px,
+      transparent 1.5px
+    ),
+    radial-gradient(
+      circle at 70% 60%,
+      rgba(0, 0, 0, 0.1) 1px,
+      transparent 1.5px
+    ),
+    radial-gradient(
+      circle at 45% 80%,
+      rgba(255, 255, 255, 0.15) 1px,
+      transparent 1.5px
+    );
+  background-size: 8px 8px, 10px 10px, 7px 7px;
+}
+
+@keyframes ppt-cloud-in {
+  0% {
+    opacity: 0;
+    transform: scale(0.7);
+  }
+  40% {
+    opacity: 0.85;
+    transform: scale(1.05);
+  }
+  100% {
+    opacity: 0.35;
+    transform: scale(1);
+  }
+}
+
+.lab-ppt-cloud {
+  opacity: 0.4;
+}
+
+.lab-ppt-cloud-active {
+  animation: ppt-cloud-in 1.1s ease-out both;
+}
+
+@keyframes ppt-bed-grow {
+  from {
+    transform: scaleY(0.2);
+    opacity: 0.3;
+  }
+  to {
+    transform: scaleY(1);
+    opacity: 1;
+  }
+}
+
+.lab-ppt-bed {
+  transform-origin: bottom center;
+  animation: ppt-bed-grow 0.9s ease-out both;
+}
+
+@keyframes vessel-pour-tilt {
+  0% {
+    transform: rotate(0deg);
+  }
+  30% {
+    transform: rotate(-26deg);
+  }
+  100% {
+    transform: rotate(-22deg);
+  }
+}
+
+.lab-vessel-pour-tilt {
+  animation: vessel-pour-tilt 0.4s ease-out forwards;
+  transform-origin: 70% 80%;
+}
+
+/* ——— Goal reward celebration ——— */
+
+.reward-card {
+  animation: reward-card-in 0.42s cubic-bezier(0.22, 1.2, 0.36, 1);
+}
+
+@keyframes reward-card-in {
+  from {
+    opacity: 0;
+    transform: translateY(18px) scale(0.94);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.reward-soap {
+  animation: soap-enter 0.7s cubic-bezier(0.34, 1.4, 0.64, 1);
+}
+
+@keyframes soap-enter {
+  0% {
+    opacity: 0;
+    transform: translateY(40px) rotate(-18deg) scale(0.6);
+  }
+  55% {
+    opacity: 1;
+    transform: translateY(-8px) rotate(8deg) scale(1.08);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) rotate(0deg) scale(1);
+  }
+}
+
+.reward-soap-bar {
+  animation: soap-wobble 1.6s ease-in-out 0.55s infinite;
+  transform-origin: 50% 85%;
+}
+
+@keyframes soap-wobble {
+  0%,
+  100% {
+    transform: rotate(-3deg) translateY(0);
+  }
+  25% {
+    transform: rotate(5deg) translateY(-3px);
+  }
+  50% {
+    transform: rotate(-4deg) translateY(1px);
+  }
+  75% {
+    transform: rotate(3deg) translateY(-2px);
+  }
+}
+
+.reward-soap-caption {
+  animation: soap-caption-pop 0.5s ease-out 0.55s both;
+}
+
+@keyframes soap-caption-pop {
+  from {
+    opacity: 0;
+    transform: scale(0.85);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.reward-bubble {
+  animation: reward-bubble-rise 2s ease-out infinite;
+}
+
+@keyframes reward-bubble-rise {
+  0% {
+    opacity: 0;
+    transform: translateY(0) scale(0.6);
+  }
+  20% {
+    opacity: 0.9;
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-88px) scale(1.15);
+  }
+}
+
+.reward-mist {
+  animation: reward-mist-drift 1.8s ease-out infinite;
+}
+
+@keyframes reward-mist-drift {
+  0% {
+    opacity: 0;
+    transform: translateY(12px) scale(0.5);
+  }
+  30% {
+    opacity: 0.85;
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-36px) scale(1.4);
+  }
+}
+
+.reward-ink-drip {
+  animation: reward-ink-drip 1.1s ease-in infinite;
+}
+
+@keyframes reward-ink-drip {
+  0% {
+    opacity: 0;
+    height: 0;
+    transform: translate(-50%, 0);
+  }
+  40% {
+    opacity: 1;
+    height: 1.6rem;
+  }
+  100% {
+    opacity: 0;
+    height: 2rem;
+    transform: translate(-50%, 18px);
+  }
+}
+
+.reward-fizz {
+  animation: reward-fizz-up 1.4s ease-out infinite;
+}
+
+@keyframes reward-fizz-up {
+  0% {
+    opacity: 0;
+    transform: translateY(0) scale(0.5);
+  }
+  25% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-56px) scale(1.1);
+  }
+}
+
+.reward-bottle {
+  animation: reward-bottle-pop 0.55s cubic-bezier(0.34, 1.45, 0.64, 1);
+}
+
+@keyframes reward-bottle-pop {
+  from {
+    opacity: 0;
+    transform: translateY(16px) scale(0.85);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.reward-tablet {
+  animation: reward-tablet-bounce 0.9s ease-in-out infinite;
+}
+
+@keyframes reward-tablet-bounce {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-6px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bubble,
+  .lab-splash,
+  .lab-swirl-active,
+  .lab-swirl-idle,
+  .lab-shock,
+  .lab-flake,
+  .lab-heat-exo,
+  .lab-heat-ignite,
+  .lab-smoke,
+  .lab-spark,
+  .lab-vessel-shake,
+  .lab-vessel-pop,
+  .lab-liquid-bob,
+  .lab-meniscus,
+  .lab-flame,
+  .lab-hazard-pulse,
+  .lab-pour-ribbon,
+  .lab-pour-drop,
+  .lab-pour-bloom,
+  .lab-ripple,
+  .lab-rim-drip,
+  .lab-stir-rod-active,
+  .lab-color-bloom,
+  .lab-heat-haze,
+  .lab-vessel-pour-tilt,
+  .cta-pulse,
+  .lab-desk-sheen,
+  .reward-card,
+  .reward-soap,
+  .reward-soap-bar,
+  .reward-soap-caption,
+  .reward-bubble,
+  .reward-mist,
+  .reward-ink-drip,
+  .reward-fizz,
+  .reward-bottle,
+  .reward-tablet {
+    animation: none !important;
+  }
 }

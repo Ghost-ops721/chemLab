@@ -1,0 +1,330 @@
+"use client";
+
+import {
+  getGoal,
+  type GoalVisualKind,
+} from "@/domains/chemistry/data/goals";
+import { useGoalStore } from "@/store/goalStore";
+
+function SoapVisual({ caption }: { caption: string }) {
+  return (
+    <div className="reward-stage relative mx-auto flex h-36 w-44 items-end justify-center">
+      {Array.from({ length: 8 }).map((_, i) => (
+        <span
+          key={i}
+          className="reward-bubble absolute rounded-full border border-white/70 bg-white/35"
+          style={{
+            width: 8 + (i % 4) * 5,
+            height: 8 + (i % 4) * 5,
+            left: `${8 + i * 11}%`,
+            bottom: 12,
+            animationDelay: `${i * 0.12}s`,
+          }}
+        />
+      ))}
+      <div className="reward-soap relative z-10">
+        <div className="reward-soap-bar relative h-16 w-28 rounded-[1.1rem] bg-gradient-to-br from-[#f4e7c8] via-[#e8d4a8] to-[#d4b87a] shadow-[0_10px_20px_rgba(20,36,31,0.28),inset_0_2px_0_rgba(255,255,255,0.55)]">
+          <div className="absolute inset-x-3 top-2.5 rounded-md border border-[#c9a86a]/55 bg-[#c9a86a]/15 px-1 py-0.5 text-center">
+            <p className="font-display text-[11px] font-bold tracking-[0.18em] text-[#6b4e1f]">
+              REACTO
+            </p>
+            <p className="text-[7px] font-semibold uppercase tracking-[0.22em] text-[#8a6a2f]/90">
+              Chem Lab
+            </p>
+          </div>
+          <div className="absolute -right-1 top-3 h-3 w-3 rounded-full bg-white/70 blur-[1px]" />
+          <div className="absolute bottom-2 left-3 right-3 h-1 rounded-full bg-[#b89555]/35" />
+        </div>
+        <p className="reward-soap-caption mt-2 text-center text-[11px] font-semibold text-lab-teal">
+          {caption}
+        </p>
+      </div>
+    </div>
+  );
+}
+
+function BottleVisual({
+  caption,
+  label,
+  fill,
+}: {
+  caption: string;
+  label: string;
+  fill: string;
+}) {
+  return (
+    <div className="reward-stage relative mx-auto flex h-36 w-40 flex-col items-center justify-end">
+      {Array.from({ length: 5 }).map((_, i) => (
+        <span
+          key={i}
+          className="reward-mist absolute rounded-full bg-lab-glass/50"
+          style={{
+            width: 6 + (i % 3) * 4,
+            height: 6 + (i % 3) * 4,
+            left: `${35 + (i % 3) * 12}%`,
+            top: 8 + i * 4,
+            animationDelay: `${i * 0.15}s`,
+          }}
+        />
+      ))}
+      <div className="reward-bottle relative z-10 flex flex-col items-center">
+        <div className="h-3 w-4 rounded-t-sm bg-lab-ink/80" />
+        <div className="h-2 w-6 rounded-sm bg-lab-amber/90" />
+        <div
+          className="relative h-20 w-12 overflow-hidden rounded-b-2xl rounded-t-md border border-lab-glass/60 shadow-lg"
+          style={{
+            background: `linear-gradient(180deg, #f7faf8 0%, ${fill} 100%)`,
+          }}
+        >
+          <div className="absolute inset-x-2 bottom-2 top-6 rounded-b-xl bg-lab-teal/20" />
+          <p className="absolute inset-x-0 top-1 text-center font-display text-[8px] font-bold tracking-wider text-lab-teal">
+            {label}
+          </p>
+        </div>
+      </div>
+      <p className="mt-1.5 text-[11px] font-semibold text-lab-teal">{caption}</p>
+    </div>
+  );
+}
+
+function TabletVisual({ caption }: { caption: string }) {
+  return (
+    <div className="reward-stage relative mx-auto flex h-36 w-44 items-end justify-center">
+      {Array.from({ length: 10 }).map((_, i) => (
+        <span
+          key={i}
+          className="reward-fizz absolute rounded-full bg-white/80"
+          style={{
+            width: 5 + (i % 3) * 3,
+            height: 5 + (i % 3) * 3,
+            left: `${18 + i * 7}%`,
+            bottom: 28,
+            animationDelay: `${i * 0.08}s`,
+          }}
+        />
+      ))}
+      <div className="reward-tablet relative z-10 mb-6 h-10 w-16 rounded-full border border-lab-line bg-gradient-to-b from-white to-lab-foam shadow-md">
+        <div className="absolute inset-x-0 top-1/2 h-px -translate-y-1/2 bg-lab-line/80" />
+      </div>
+      <p className="absolute bottom-0 text-[11px] font-semibold text-lab-teal">
+        {caption}
+      </p>
+    </div>
+  );
+}
+
+function BeakerVisual({ caption, fill }: { caption: string; fill: string }) {
+  return (
+    <div className="reward-stage relative mx-auto flex h-36 w-40 flex-col items-center justify-end">
+      <div className="reward-bottle relative z-10 flex flex-col items-center">
+        <div className="h-2 w-16 rounded-t-sm border border-lab-glass/50 bg-white/40" />
+        <div className="relative h-[4.75rem] w-14 overflow-hidden rounded-b-lg border border-lab-glass/60 bg-gradient-to-b from-white/70 to-lab-glass/20 shadow-lg">
+          <div
+            className="absolute inset-x-0 bottom-0 h-2/3"
+            style={{ background: fill }}
+          />
+        </div>
+      </div>
+      <p className="mt-1.5 text-[11px] font-semibold text-lab-teal">{caption}</p>
+    </div>
+  );
+}
+
+function FlameVisual({ caption }: { caption: string }) {
+  return (
+    <div className="reward-stage relative mx-auto flex h-36 w-40 flex-col items-center justify-end">
+      <div className="reward-bottle relative flex h-24 w-16 items-end justify-center">
+        <div className="lab-flame absolute bottom-10 h-14 w-8 rounded-[50%] bg-gradient-to-t from-lab-amber via-[#ffecb3] to-transparent opacity-90" />
+        <div className="h-3 w-10 rounded-sm bg-lab-ink/70" />
+      </div>
+      <p className="mt-1 text-[11px] font-semibold text-lab-teal">{caption}</p>
+    </div>
+  );
+}
+
+function CrystalVisual({ caption }: { caption: string }) {
+  return (
+    <div className="reward-stage relative mx-auto flex h-36 w-40 flex-col items-center justify-end">
+      <div className="reward-bottle relative z-10 flex h-20 items-end gap-1">
+        {[18, 28, 22, 14].map((h, i) => (
+          <span
+            key={i}
+            className="block w-4 rounded-t-sm border border-lab-glass/60 bg-gradient-to-b from-white to-lab-glass/40 shadow-sm"
+            style={{ height: h }}
+          />
+        ))}
+      </div>
+      <p className="mt-2 text-[11px] font-semibold text-lab-teal">{caption}</p>
+    </div>
+  );
+}
+
+function GasVisual({ caption }: { caption: string }) {
+  return (
+    <div className="reward-stage relative mx-auto flex h-36 w-44 items-end justify-center">
+      {Array.from({ length: 9 }).map((_, i) => (
+        <span
+          key={i}
+          className="reward-bubble absolute rounded-full border border-lab-glass/50 bg-lab-foam/50"
+          style={{
+            width: 10 + (i % 4) * 4,
+            height: 10 + (i % 4) * 4,
+            left: `${10 + i * 9}%`,
+            bottom: 20,
+            animationDelay: `${i * 0.1}s`,
+          }}
+        />
+      ))}
+      <div className="reward-bottle relative z-10 mb-2 h-16 w-10 rounded-b-xl border border-lab-glass/50 bg-white/50" />
+      <p className="absolute bottom-0 text-[11px] font-semibold text-lab-teal">
+        {caption}
+      </p>
+    </div>
+  );
+}
+
+function SlimeVisual({ caption }: { caption: string }) {
+  return (
+    <div className="reward-stage relative mx-auto flex h-36 w-40 flex-col items-center justify-end">
+      <div className="reward-soap relative z-10">
+        <div className="reward-soap-bar h-14 w-24 rounded-[2rem] bg-gradient-to-br from-[#b9f6ca] via-[#69f0ae] to-[#00c853] shadow-lg" />
+        <p className="reward-soap-caption mt-2 text-center text-[11px] font-semibold text-lab-teal">
+          {caption}
+        </p>
+      </div>
+    </div>
+  );
+}
+
+function BalmVisual({ caption }: { caption: string }) {
+  return (
+    <div className="reward-stage relative mx-auto flex h-36 w-40 flex-col items-center justify-end">
+      <div className="reward-bottle relative z-10 flex flex-col items-center">
+        <div className="h-3 w-14 rounded-t-full bg-lab-amber/80" />
+        <div className="h-12 w-16 rounded-b-xl border border-[#ffcc80] bg-gradient-to-b from-[#ffe0b2] to-[#ffb74d] shadow-md" />
+      </div>
+      <p className="mt-2 text-[11px] font-semibold text-lab-teal">{caption}</p>
+    </div>
+  );
+}
+
+function ProductVisual({
+  kind,
+  caption,
+  title,
+}: {
+  kind: GoalVisualKind;
+  caption: string;
+  title: string;
+}) {
+  const short = title.replace(/^Make (a |an )?|^Test for /i, "").slice(0, 10).toUpperCase();
+  switch (kind) {
+    case "soap":
+      return <SoapVisual caption={caption} />;
+    case "bottle":
+      return <BottleVisual caption={caption} label={short} fill="#9fd4c4" />;
+    case "tablet":
+      return <TabletVisual caption={caption} />;
+    case "beaker":
+      return <BeakerVisual caption={caption} fill="rgba(26,107,92,0.35)" />;
+    case "flame":
+      return <FlameVisual caption={caption} />;
+    case "crystal":
+      return <CrystalVisual caption={caption} />;
+    case "gas":
+      return <GasVisual caption={caption} />;
+    case "slime":
+      return <SlimeVisual caption={caption} />;
+    case "balm":
+      return <BalmVisual caption={caption} />;
+    default:
+      return (
+        <div className="flex h-36 items-center justify-center text-4xl">🧪</div>
+      );
+  }
+}
+
+export function GoalRewardOverlay() {
+  const rewardGoalId = useGoalStore((s) => s.rewardGoalId);
+  const rewardXp = useGoalStore((s) => s.rewardXp);
+  const dismissReward = useGoalStore((s) => s.dismissReward);
+  const setPickerOpen = useGoalStore((s) => s.setPickerOpen);
+  const abandonGoal = useGoalStore((s) => s.abandonGoal);
+
+  if (!rewardGoalId) return null;
+  const goal = getGoal(rewardGoalId);
+  if (!goal) return null;
+
+  function makeMore() {
+    dismissReward();
+    abandonGoal();
+    setPickerOpen(true);
+  }
+
+  return (
+    <div
+      className="fixed inset-0 z-[60] flex items-center justify-center bg-lab-ink/55 p-4 backdrop-blur-[3px]"
+      role="dialog"
+      aria-modal
+      aria-label="Goal reward"
+      onClick={() => dismissReward()}
+    >
+      <div
+        className="reward-card w-full max-w-sm overflow-hidden rounded-2xl border border-lab-teal/30 bg-lab-panel shadow-2xl"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="border-b border-lab-line/50 bg-gradient-to-br from-lab-teal/15 via-lab-panel to-lab-amber/10 px-4 pb-3 pt-4 text-center">
+          <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-lab-teal">
+            Reward unlocked
+          </p>
+          <h2 className="mt-1 font-display text-2xl tracking-tight text-lab-ink">
+            {goal.icon} You made it!
+          </h2>
+          <p className="mt-1 text-sm font-semibold text-lab-ink/90">
+            {goal.title.replace(/^Make /i, "")} — the real deal
+          </p>
+          <div className="mt-2 inline-flex items-baseline gap-1.5 rounded-full bg-lab-ink px-3 py-1 text-lab-foam">
+            <span className="text-[10px] uppercase tracking-wider text-lab-glass">
+              XP
+            </span>
+            <span className="font-display text-lg leading-none">+{rewardXp}</span>
+          </div>
+        </div>
+
+        <div className="px-4 py-4">
+          <ProductVisual
+            kind={goal.visualKind}
+            caption={goal.rewardCaption}
+            title={goal.title}
+          />
+          <p className="mt-3 text-center text-[12px] leading-snug text-lab-ink/85">
+            {goal.successBlurb}
+          </p>
+          <p className="mt-2 text-center font-display text-base text-lab-teal">
+            Make more like this
+          </p>
+          <p className="mt-0.5 text-center text-[11px] text-lab-muted">
+            Pick another product goal and keep crafting.
+          </p>
+        </div>
+
+        <div className="flex gap-2 border-t border-lab-line/50 bg-lab-wash/40 px-4 py-3">
+          <button
+            type="button"
+            className="flex-1 rounded-lg border border-lab-line bg-white px-3 py-2 text-xs font-semibold text-lab-ink hover:bg-lab-panel"
+            onClick={() => dismissReward()}
+          >
+            Keep looking
+          </button>
+          <button
+            type="button"
+            className="flex-[1.4] rounded-lg bg-lab-teal px-3 py-2 text-xs font-semibold text-white shadow-sm hover:bg-lab-teal/90"
+            onClick={makeMore}
+          >
+            Make more like this
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}

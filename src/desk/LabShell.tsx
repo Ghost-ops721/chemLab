@@ -1,0 +1,370 @@
+"use client";
+
+import { useEffect, useRef, useState } from "react";
+import {
+  DndContext,
+  DragOverlay,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+  type DragMoveEvent,
+  type DragStartEvent,
+} from "@dnd-kit/core";
+import { ItemPanel } from "@/panel/ItemPanel";
+import { DeskWorkspace } from "@/desk/DeskWorkspace";
+import { ExplanationPanel } from "@/explanation/ExplanationPanel";
+import {
+  GamificationBar,
+  RecipeJournal,
+} from "@/gamification/GamificationBar";
+import { ToastHost, showToast } from "@/gamification/ToastHost";
+import { useDeskStore } from "@/store/deskStore";
+import { useProgressStore } from "@/store/progressStore";
+import { DESK_SURFACE, parseVesselId, type DragPayload } from "@/drag/types";
+import { EQUIPMENT_BY_ID } from "@/domains/chemistry/data/equipment";
+import { getChemical } from "@/domains/chemistry/data/chemicals";
+import { ScanWorkbench } from "@/scan/ScanWorkbench";
+import { GoalPicker } from "@/goals/GoalPicker";
+import { GoalGuidePanel } from "@/goals/GoalGuidePanel";
+import { GoalProgressWatcher } from "@/goals/GoalProgressWatcher";
+import { GoalRewardOverlay } from "@/goals/GoalRewardOverlay";
+import { AuthGateModal } from "@/components/auth/AuthGateModal";
+import { NavChrome } from "@/components/auth/NavChrome";
+import { useAuthStore } from "@/store/authStore";
+
+type LabMode = "desk" | "scan";
+
+export function LabShell() {
+  const placeEquipment = useDeskStore((s) => s.placeEquipment);
+  const addChemicalToVessel = useDeskStore((s) => s.addChemicalToVessel);
+  const attachHeat = useDeskStore((s) => s.attachHeat);
+  const stirVessel = useDeskStore((s) => s.stirVessel);
+  const activeVesselId = useDeskStore((s) => s.activeVesselId);
+  const vessels = useDeskStore((s) => s.vessels);
+  const lastExplanationVesselId = useDeskStore((s) => s.lastExplanationVesselId);
+  const recordDiscovery = useProgressStore((s) => s.recordDiscovery);
+
+  const [mode, setMode] = useState<LabMode>("desk");
+  const [activeDrag, setActiveDrag] = useState<DragPayload | null>(null);
+  const lastRecorded = useRef<string | null>(null);
+  const deskPointer = useRef<{ x: number; y: number } | null>(null);
+
+  useEffect(() => {
+    (
+      window as unknown as {
+        __reactolab?: {
+          runPair: (
+            equipmentId: string,
+            a: string,
+            b: string,
+            heat?: boolean,
+          ) => unknown;
+        };
+      }
+    ).__reactolab = {
+      runPair: (equipmentId, a, b, heat) =>
+        useDeskStore.getState().runPair(equipmentId, a, b, heat),
+    };
+    return () => {
+      delete (window as unknown as { __reactolab?: unknown }).__reactolab;
+    };
+  }, []);
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
+  );
+
+  useEffect(() => {
+    const v = vessels.find((x) => x.instanceId === lastExplanationVesselId);
+    const result = v?.lastResult;
+    if (!result?.discoveryId) return;
+    if (lastRecorded.current === result.discoveryId) return;
+    lastRecorded.current = result.discoveryId;
+    const { isNew, xpGained, newBadges, questCompleted } =
+      recordDiscovery(result);
+    if (isNew) {
+      showToast({
+        title: result.ok
+          ? `+${xpGained} XP · Discovery`
+          : `+${xpGained} XP · Hazard noted`,
+        detail: result.label ?? result.explanationKey,
+      });
+      for (const badge of newBadges) {
+        showToast({
+          title: `Badge: ${badge.title}`,
+          detail: badge.description,
+        });
+      }
+      if (questCompleted) {
+        showToast({
+          title: `✓ Quest complete · +${questCompleted.xpGained} XP`,
+          detail: questCompleted.prompt,
+        });
+      }
+    } else {
+      const quest = useProgressStore.getState().advanceQuestIfNeeded(result);
+      if (quest.completed && quest.prompt) {
+        showToast({
+          title: `✓ Quest complete · +${quest.xpGained} XP`,
+          detail: quest.prompt,
+        });
+      }
+    }
+  }, [vessels, lastExplanationVesselId, recordDiscovery]);
+
+  function onDragStart(event: DragStartEvent) {
+    const data = event.active.data.current as DragPayload | undefined;
+    setActiveDrag(data ?? null);
+  }
+
+  function onDragMove(event: DragMoveEvent) {
+    const rect = event.active.rect.current.translated;
+    if (rect) {
+      deskPointer.current = {
+        x: rect.left + rect.width / 2,
+        y: rect.top + rect.height / 2,
+      };
+    }
+  }
+
+  function onDragEnd(event: DragEndEvent) {
+    setActiveDrag(null);
+    const payload = event.active.data.current as DragPayload | undefined;
+    const overId = event.over?.id ? String(event.over.id) : null;
+    if (!payload || !overId) return;
+
+    if (payload.type === "equipment") {
+      const eq = EQUIPMENT_BY_ID[payload.itemId];
+      if (!eq) return;
+      if (eq.function === "heat-source") {
+        const vesselId = parseVesselId(overId) ?? activeVesselId;
+        if (vesselId) {
+          attachHeat(vesselId);
+          showToast({ title: "🔥 Burner lit", detail: "Heat attached to vessel" });
+        }
+        return;
+      }
+      if (eq.function === "stirring") {
+        const vesselId = parseVesselId(overId) ?? activeVesselId;
+        if (vesselId) {
+          stirVessel(vesselId, true);
+          showToast({ title: "Stirring", detail: "Keep stirring — Mix fires after enough swirls" });
+        }
+        return;
+      }
+      if (overId === DESK_SURFACE || parseVesselId(overId)) {
+        const dropPos = deskPointer.current;
+        const deskEl = document.querySelector<HTMLElement>("[data-lab-desk]");
+        let position: { x: number; y: number } | undefined;
+        if (dropPos && deskEl) {
+          const rect = deskEl.getBoundingClientRect();
+          position = {
+            x: Math.max(8, dropPos.x - rect.left - 90),
+            y: Math.max(8, dropPos.y - rect.top - 40),
+          };
+        }
+        placeEquipment(payload.itemId, position);
+      }
+      return;
+    }
+
+    if (payload.type === "chemical") {
+      const vesselId =
+        parseVesselId(overId) ??
+        (overId === DESK_SURFACE ? activeVesselId : null);
+      if (!vesselId) {
+        showToast({
+          title: "Drop onto a vessel",
+          detail: "Place a beaker first, then pour chemicals into it",
+        });
+        return;
+      }
+      const beforeBlocked = useAuthStore.getState().isLabBlocked();
+      const ok = addChemicalToVessel(vesselId, payload.itemId);
+      if (ok) {
+        const chem = getChemical(payload.itemId);
+        showToast({
+          title: `Poured ${chem?.formula ?? payload.itemId}`,
+          detail: "Stir the liquid or press Mix when ready",
+        });
+        const adds = useAuthStore.getState().guestChemicalAdds;
+        if (!useAuthStore.getState().user && adds === 1) {
+          showToast({
+            title: "1 chemical left as guest",
+            detail: "Sign up after the next pour to keep mixing",
+          });
+        }
+      } else if (beforeBlocked || useAuthStore.getState().isLabBlocked()) {
+        showToast({
+          title: "Sign up to continue",
+          detail: "Create an account to pour more and Mix",
+        });
+      } else {
+        showToast({
+          title: "Couldn't add chemical",
+          detail: "Vessel may be full or already contains that chemical",
+        });
+      }
+    }
+  }
+
+  const overlayIcon =
+    activeDrag?.type === "chemical"
+      ? getChemical(activeDrag.itemId)?.icon
+      : activeDrag
+        ? EQUIPMENT_BY_ID[activeDrag.itemId]?.icon
+        : null;
+  const overlayLabel =
+    activeDrag?.type === "chemical"
+      ? getChemical(activeDrag.itemId)?.formula
+      : activeDrag
+        ? EQUIPMENT_BY_ID[activeDrag.itemId]?.name
+        : null;
+  const overlayColor =
+    activeDrag?.type === "chemical"
+      ? getChemical(activeDrag.itemId)?.color
+      : undefined;
+
+  return (
+    <DndContext
+      sensors={sensors}
+      onDragStart={onDragStart}
+      onDragMove={onDragMove}
+      onDragEnd={onDragEnd}
+    >
+      <div className="flex h-dvh flex-col overflow-hidden bg-lab-wash">
+        <header className="flex items-center justify-between gap-3 border-b border-lab-line/40 bg-lab-panel/90 px-3 py-1.5 backdrop-blur md:px-4">
+          <div className="min-w-0">
+            <h1 className="font-display text-2xl leading-none tracking-tight text-lab-ink">
+              Chem Lab
+            </h1>
+            <p className="mt-0.5 max-w-md truncate text-[11px] text-lab-muted">
+              {mode === "desk"
+                ? "Pour, stir, heat, shake — the desk reacts to every move."
+                : "Scan notes into editable formulas — hover each piece to learn."}
+            </p>
+          </div>
+          <div className="flex items-center gap-2">
+            <NavChrome />
+            <div className="flex rounded-lg bg-lab-desk/15 p-0.5">
+              {(
+                [
+                  ["desk", "Desk"],
+                  ["scan", "Scan"],
+                ] as const
+              ).map(([id, label]) => (
+                <button
+                  key={id}
+                  type="button"
+                  onClick={() => setMode(id)}
+                  className={`rounded-md px-2.5 py-1 text-[11px] font-semibold transition ${
+                    mode === id
+                      ? "bg-white text-lab-ink shadow-sm"
+                      : "text-lab-muted hover:text-lab-ink"
+                  }`}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+          </div>
+        </header>
+
+        <GamificationBar />
+
+        {mode === "scan" ? (
+          <div className="min-h-0 flex-1 overflow-hidden bg-lab-panel/40">
+            <ScanWorkbench
+              onClose={() => setMode("desk")}
+              onAddChemical={(chemicalId) => {
+                const vesselId = activeVesselId ?? vessels[0]?.instanceId;
+                if (!vesselId) {
+                  showToast({
+                    title: "No vessel on desk",
+                    detail: "Place a beaker first, then add from Scan.",
+                  });
+                  setMode("desk");
+                  return;
+                }
+                const ok = addChemicalToVessel(vesselId, chemicalId);
+                if (!ok) {
+                  showToast({
+                    title: "Couldn't add chemical",
+                    detail: "Vessel full, already present, or lab locked",
+                  });
+                  return;
+                }
+                showToast({
+                  title: "Added to vessel",
+                  detail: getChemical(chemicalId)?.name ?? chemicalId,
+                });
+              }}
+              onRunOnDesk={(chemicalIds) => {
+                setMode("desk");
+                const id =
+                  useDeskStore.getState().placeEquipment("beaker", {
+                    x: 140,
+                    y: 90,
+                  }) ?? useDeskStore.getState().activeVesselId;
+                if (!id) {
+                  showToast({
+                    title: "Couldn't place beaker",
+                    detail: "Try again from the desk",
+                  });
+                  return;
+                }
+                for (const chemId of chemicalIds) {
+                  useDeskStore.getState().addChemicalToVessel(id, chemId);
+                }
+                showToast({
+                  title: "Ready on desk",
+                  detail: `${chemicalIds.join(" + ")} — stir or Mix to react`,
+                });
+              }}
+            />
+          </div>
+        ) : (
+          <div className="relative flex min-h-0 flex-1 flex-col md:flex-row">
+            <ItemPanel />
+            <div className="relative flex min-h-0 min-w-0 flex-1 flex-col gap-1 p-1.5 md:p-2">
+              <DeskWorkspace />
+              <div className="pointer-events-none absolute bottom-3 left-2 right-20 z-30 flex justify-start md:left-3 md:right-auto">
+                <div className="pointer-events-auto w-full max-w-sm md:w-[17rem]">
+                  <GoalGuidePanel />
+                </div>
+              </div>
+            </div>
+            <div className="shrink-0 border-t border-lab-line/50 md:border-t-0">
+              <ExplanationPanel />
+            </div>
+          </div>
+        )}
+
+        <RecipeJournal />
+        <ToastHost />
+        <GoalPicker />
+        <GoalRewardOverlay />
+        <GoalProgressWatcher />
+        <AuthGateModal />
+      </div>
+
+      <DragOverlay dropAnimation={null}>
+        {overlayLabel ? (
+          <div className="flex items-center gap-1.5 rounded-lg border border-lab-teal/50 bg-white px-2 py-1.5 text-xs shadow-2xl">
+            <span className="text-base">{overlayIcon}</span>
+            <span className="font-mono font-medium text-lab-ink">
+              {overlayLabel}
+            </span>
+            {overlayColor ? (
+              <span
+                className="ml-1 h-6 w-6 rounded-full shadow-inner ring-2 ring-white"
+                style={{ background: overlayColor }}
+              />
+            ) : null}
+          </div>
+        ) : null}
+      </DragOverlay>
+    </DndContext>
+  );
+}

@@ -20,7 +20,7 @@ const GENDERS: { value: Gender; label: string }[] = [
 ];
 
 const inputClass =
-  "mt-1 w-full rounded-lg border border-lab-line bg-white px-3 py-2 text-sm outline-none ring-0 focus:outline-none focus:ring-0";
+  "mt-1 w-full rounded-lg border border-lab-line bg-white px-3 py-2 text-sm text-lab-ink outline-none focus-visible:border-lab-teal focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-lab-teal";
 
 function ProfileFormFields({
   profile,
@@ -218,7 +218,7 @@ function ProfileFormFields({
       <button
         type="submit"
         disabled={pending}
-        className="w-full rounded-lg bg-lab-teal px-3 py-2 text-sm font-semibold text-white outline-none ring-0 hover:bg-lab-teal/90 focus:outline-none focus:ring-0 disabled:opacity-60"
+        className="w-full rounded-lg bg-lab-teal px-3 py-2 text-sm font-semibold text-white hover:bg-lab-teal/90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-lab-teal disabled:opacity-60"
       >
         {pending ? "Saving…" : onboarding ? "Save & enter lab" : "Save profile"}
       </button>

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import dynamic from "next/dynamic";
 import {
   DndContext,
   DragOverlay,
@@ -24,7 +25,6 @@ import { useProgressStore } from "@/store/progressStore";
 import { DESK_SURFACE, parseVesselId, type DragPayload } from "@/drag/types";
 import { EQUIPMENT_BY_ID } from "@/domains/chemistry/data/equipment";
 import { getChemical } from "@/domains/chemistry/data/chemicals";
-import { ScanWorkbench } from "@/scan/ScanWorkbench";
 import { GoalPicker } from "@/goals/GoalPicker";
 import { GoalGuidePanel } from "@/goals/GoalGuidePanel";
 import { GoalProgressWatcher } from "@/goals/GoalProgressWatcher";
@@ -32,6 +32,21 @@ import { GoalRewardOverlay } from "@/goals/GoalRewardOverlay";
 import { AuthGateModal } from "@/components/auth/AuthGateModal";
 import { NavChrome } from "@/components/auth/NavChrome";
 import { useAuthStore } from "@/store/authStore";
+import { labCopy } from "@/lab/labCopy";
+import { VESSEL_CARD } from "@/desk/vesselLayout";
+import { track } from "@/lib/analytics/track";
+
+const ScanWorkbench = dynamic(
+  () => import("@/scan/ScanWorkbench").then((m) => m.ScanWorkbench),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="flex h-full items-center justify-center text-sm text-lab-muted">
+        Opening scan…
+      </div>
+    ),
+  },
+);
 
 type LabMode = "desk" | "scan";
 
@@ -47,13 +62,38 @@ export function LabShell() {
 
   const [mode, setMode] = useState<LabMode>("desk");
   const [activeDrag, setActiveDrag] = useState<DragPayload | null>(null);
+  const [hydrated, setHydrated] = useState(false);
   const lastRecorded = useRef<string | null>(null);
   const deskPointer = useRef<{ x: number; y: number } | null>(null);
 
   useEffect(() => {
+    const finish = () => setHydrated(true);
+    const unsubDesk = useDeskStore.persist.onFinishHydration(finish);
+    const unsubProgress = useProgressStore.persist.onFinishHydration(finish);
+    if (
+      useDeskStore.persist.hasHydrated() &&
+      useProgressStore.persist.hasHydrated()
+    ) {
+      finish();
+    }
+    // Soft-launch failsafe: never leave users on the splash forever
+    const timeout = window.setTimeout(finish, 2500);
+    return () => {
+      unsubDesk();
+      unsubProgress();
+      window.clearTimeout(timeout);
+    };
+  }, []);
+
+  useEffect(() => {
+    track("page_view", { surface: "lab" });
+  }, []);
+
+  useEffect(() => {
+    if (process.env.NODE_ENV !== "development") return;
     (
       window as unknown as {
-        __reactolab?: {
+        __chemlab?: {
           runPair: (
             equipmentId: string,
             a: string,
@@ -62,12 +102,12 @@ export function LabShell() {
           ) => unknown;
         };
       }
-    ).__reactolab = {
+    ).__chemlab = {
       runPair: (equipmentId, a, b, heat) =>
         useDeskStore.getState().runPair(equipmentId, a, b, heat),
     };
     return () => {
-      delete (window as unknown as { __reactolab?: unknown }).__reactolab;
+      delete (window as unknown as { __chemlab?: unknown }).__chemlab;
     };
   }, []);
 
@@ -83,6 +123,10 @@ export function LabShell() {
     lastRecorded.current = result.discoveryId;
     const { isNew, xpGained, newBadges, questCompleted } =
       recordDiscovery(result);
+      track("desk_mix", {
+        discoveryId: result.discoveryId,
+        ok: result.ok,
+      });
     if (isNew) {
       showToast({
         title: result.ok
@@ -98,7 +142,7 @@ export function LabShell() {
       }
       if (questCompleted) {
         showToast({
-          title: `✓ Quest complete · +${questCompleted.xpGained} XP`,
+          title: `Quest complete · +${questCompleted.xpGained} XP`,
           detail: questCompleted.prompt,
         });
       }
@@ -106,7 +150,7 @@ export function LabShell() {
       const quest = useProgressStore.getState().advanceQuestIfNeeded(result);
       if (quest.completed && quest.prompt) {
         showToast({
-          title: `✓ Quest complete · +${quest.xpGained} XP`,
+          title: `Quest complete · +${quest.xpGained} XP`,
           detail: quest.prompt,
         });
       }
@@ -141,7 +185,7 @@ export function LabShell() {
         const vesselId = parseVesselId(overId) ?? activeVesselId;
         if (vesselId) {
           attachHeat(vesselId);
-          showToast({ title: "🔥 Burner lit", detail: "Heat attached to vessel" });
+          showToast(labCopy.burnerOn);
         }
         return;
       }
@@ -149,7 +193,7 @@ export function LabShell() {
         const vesselId = parseVesselId(overId) ?? activeVesselId;
         if (vesselId) {
           stirVessel(vesselId, true);
-          showToast({ title: "Stirring", detail: "Keep stirring — Mix fires after enough swirls" });
+          showToast(labCopy.stirring);
         }
         return;
       }
@@ -160,11 +204,12 @@ export function LabShell() {
         if (dropPos && deskEl) {
           const rect = deskEl.getBoundingClientRect();
           position = {
-            x: Math.max(8, dropPos.x - rect.left - 90),
+            x: Math.max(8, dropPos.x - rect.left - VESSEL_CARD.width / 2),
             y: Math.max(8, dropPos.y - rect.top - 40),
           };
         }
         placeEquipment(payload.itemId, position);
+        track("desk_place_equipment", { equipmentId: payload.itemId });
       }
       return;
     }
@@ -174,37 +219,25 @@ export function LabShell() {
         parseVesselId(overId) ??
         (overId === DESK_SURFACE ? activeVesselId : null);
       if (!vesselId) {
-        showToast({
-          title: "Drop onto a vessel",
-          detail: "Place a beaker first, then pour chemicals into it",
-        });
+        showToast(labCopy.dropOntoVessel);
         return;
       }
       const beforeBlocked = useAuthStore.getState().isLabBlocked();
       const ok = addChemicalToVessel(vesselId, payload.itemId);
       if (ok) {
+        track("desk_add_chemical", { chemicalId: payload.itemId });
+      }
+      if (ok) {
         const chem = getChemical(payload.itemId);
-        showToast({
-          title: `Poured ${chem?.formula ?? payload.itemId}`,
-          detail: "Stir the liquid or press Mix when ready",
-        });
+        showToast(labCopy.pourOk(chem?.formula ?? payload.itemId));
         const adds = useAuthStore.getState().guestChemicalAdds;
         if (!useAuthStore.getState().user && adds === 1) {
-          showToast({
-            title: "1 chemical left as guest",
-            detail: "Sign up after the next pour to keep mixing",
-          });
+          showToast(labCopy.guestOneLeft);
         }
       } else if (beforeBlocked || useAuthStore.getState().isLabBlocked()) {
-        showToast({
-          title: "Sign up to continue",
-          detail: "Create an account to pour more and Mix",
-        });
+        showToast(labCopy.signUpToPour);
       } else {
-        showToast({
-          title: "Couldn't add chemical",
-          detail: "Vessel may be full or already contains that chemical",
-        });
+        showToast(labCopy.pourFail);
       }
     }
   }
@@ -225,6 +258,14 @@ export function LabShell() {
     activeDrag?.type === "chemical"
       ? getChemical(activeDrag.itemId)?.color
       : undefined;
+
+  if (!hydrated) {
+    return (
+      <div className="flex h-dvh items-center justify-center bg-lab-wash">
+        <p className="font-display text-2xl text-lab-ink">Chem Lab</p>
+      </div>
+    );
+  }
 
   return (
     <DndContext
@@ -258,6 +299,7 @@ export function LabShell() {
                   key={id}
                   type="button"
                   onClick={() => setMode(id)}
+                  aria-pressed={mode === id}
                   className={`rounded-md px-2.5 py-1 text-[11px] font-semibold transition ${
                     mode === id
                       ? "bg-white text-lab-ink shadow-sm"
@@ -280,19 +322,18 @@ export function LabShell() {
               onAddChemical={(chemicalId) => {
                 const vesselId = activeVesselId ?? vessels[0]?.instanceId;
                 if (!vesselId) {
-                  showToast({
-                    title: "No vessel on desk",
-                    detail: "Place a beaker first, then add from Scan.",
-                  });
+                  showToast(labCopy.noVessel);
                   setMode("desk");
                   return;
                 }
+                const beforeBlocked = useAuthStore.getState().isLabBlocked();
                 const ok = addChemicalToVessel(vesselId, chemicalId);
                 if (!ok) {
-                  showToast({
-                    title: "Couldn't add chemical",
-                    detail: "Vessel full, already present, or lab locked",
-                  });
+                  showToast(
+                    beforeBlocked || useAuthStore.getState().isLabBlocked()
+                      ? labCopy.signUpToPour
+                      : labCopy.pourFail,
+                  );
                   return;
                 }
                 showToast({
@@ -314,12 +355,29 @@ export function LabShell() {
                   });
                   return;
                 }
+                const added: string[] = [];
+                const failed: string[] = [];
                 for (const chemId of chemicalIds) {
-                  useDeskStore.getState().addChemicalToVessel(id, chemId);
+                  if (useDeskStore.getState().addChemicalToVessel(id, chemId)) {
+                    added.push(chemId);
+                  } else {
+                    failed.push(chemId);
+                  }
+                }
+                if (added.length === 0) {
+                  showToast(
+                    useAuthStore.getState().isLabBlocked()
+                      ? labCopy.signUpToPour
+                      : labCopy.pourFail,
+                  );
+                  return;
                 }
                 showToast({
                   title: "Ready on desk",
-                  detail: `${chemicalIds.join(" + ")} — stir or Mix to react`,
+                  detail:
+                    failed.length > 0
+                      ? `${added.join(" + ")} added · ${failed.length} skipped — stir or Mix`
+                      : `${added.join(" + ")} — stir or Mix to react`,
                 });
               }}
             />
@@ -329,8 +387,8 @@ export function LabShell() {
             <ItemPanel />
             <div className="relative flex min-h-0 min-w-0 flex-1 flex-col gap-1 p-1.5 md:p-2">
               <DeskWorkspace />
-              <div className="pointer-events-none absolute bottom-3 left-2 right-20 z-30 flex justify-start md:left-3 md:right-auto">
-                <div className="pointer-events-auto w-full max-w-sm md:w-[17rem]">
+              <div className="pointer-events-none absolute bottom-14 left-2 z-30 flex justify-start md:bottom-3 md:left-3 md:right-auto">
+                <div className="pointer-events-auto w-[min(100%,17rem)] max-w-sm">
                   <GoalGuidePanel />
                 </div>
               </div>

@@ -96,43 +96,25 @@ export async function getUserProfile(
 export async function ensureUserProfile(
   uid: string,
   email: string,
-  local?: { xp: number; discoveredIds: string[]; badgeIds: string[] },
+  _local?: { xp: number; discoveredIds: string[]; badgeIds: string[] },
   signup?: SignupProfileFields,
 ): Promise<UserProfile> {
   const existing = await getUserProfile(uid, email);
   if (existing) {
-    const xp = Math.max(existing.xp, local?.xp ?? 0);
-    const discoveredIds = Array.from(
-      new Set([...existing.discoveredIds, ...(local?.discoveredIds ?? [])]),
-    );
-    const badgeIds = Array.from(
-      new Set([...existing.badgeIds, ...(local?.badgeIds ?? [])]),
-    );
     const displayName =
       existing.displayName?.trim() || signup?.displayName.trim() || undefined;
     const phone = existing.phone?.trim() || signup?.phone.trim() || undefined;
     const needsMeta =
       (!existing.displayName && displayName) || (!existing.phone && phone);
-    if (
-      xp !== existing.xp ||
-      discoveredIds.length !== existing.discoveredIds.length ||
-      badgeIds.length !== existing.badgeIds.length ||
-      needsMeta
-    ) {
+    if (needsMeta) {
       const updatedAt = Date.now();
       await updateDoc(usersRef(uid), {
-        xp,
-        discoveredIds,
-        badgeIds,
         ...(displayName ? { displayName } : {}),
         ...(phone ? { phone } : {}),
         updatedAt,
       });
       return {
         ...existing,
-        xp,
-        discoveredIds,
-        badgeIds,
         displayName,
         phone,
         updatedAt,
@@ -150,9 +132,10 @@ export async function ensureUserProfile(
     dob: "",
     address: "",
     pincode: "",
-    xp: local?.xp ?? 0,
-    discoveredIds: local?.discoveredIds ?? [],
-    badgeIds: local?.badgeIds ?? [],
+    // Progress starts empty; merge guest XP via /api/progress (Admin).
+    xp: 0,
+    discoveredIds: [],
+    badgeIds: [],
     createdAt: now,
     updatedAt: now,
   };
@@ -186,10 +169,24 @@ export async function syncProgressToFirestore(
   uid: string,
   progress: { xp: number; discoveredIds: string[]; badgeIds: string[] },
 ): Promise<void> {
-  await updateDoc(usersRef(uid), {
-    xp: progress.xp,
-    discoveredIds: progress.discoveredIds,
-    badgeIds: progress.badgeIds,
-    updatedAt: Date.now(),
-  });
+  // Prefer server Admin path when running in the browser.
+  if (typeof window !== "undefined") {
+    const { getAuthHeaders } = await import("@/lib/client/authHeaders");
+    const headers = await getAuthHeaders();
+    if (!headers) return;
+    const res = await fetch("/api/progress", {
+      method: "POST",
+      headers,
+      body: JSON.stringify(progress),
+    });
+    if (!res.ok) {
+      throw new Error(`Progress sync failed (${res.status})`);
+    }
+    return;
+  }
+
+  // Server-side fallback (should use Admin route instead).
+  void uid;
+  void progress;
+  throw new Error("syncProgressToFirestore must be called from the client");
 }

@@ -10,6 +10,8 @@ import { useDeskStore } from "@/store/deskStore";
 import { showToast } from "@/gamification/ToastHost";
 import { useGoalStore } from "@/store/goalStore";
 import { getGoal } from "@/domains/chemistry/data/goals";
+import { useAuthStore } from "@/store/authStore";
+import { labCopy } from "@/lab/labCopy";
 
 type ModalKind = "equipment" | "chemicals" | null;
 
@@ -93,19 +95,18 @@ export function ItemPanel() {
       setModal("equipment");
       return;
     }
+    const beforeBlocked = useAuthStore.getState().isLabBlocked();
     const ok = addChemicalToVessel(targetVessel.instanceId, id);
     if (!ok) {
-      showToast({
-        title: "Couldn’t pour",
-        detail: "Vessel full or chemical already inside.",
-      });
+      showToast(
+        beforeBlocked || useAuthStore.getState().isLabBlocked()
+          ? labCopy.signUpToPour
+          : labCopy.pourFail,
+      );
       return;
     }
     const chem = getChemical(id);
-    showToast({
-      title: `Poured ${chem?.formula ?? id}`,
-      detail: "Stir the liquid or press Mix when ready",
-    });
+    showToast(labCopy.pourOk(chem?.formula ?? id));
     setModal(null);
   }
 
@@ -121,10 +122,7 @@ export function ItemPanel() {
         return;
       }
       attachHeat(targetVessel.instanceId);
-      showToast({
-        title: "Burner on",
-        detail: "Heat attached — Mix or Shake to react.",
-      });
+      showToast(labCopy.burnerOn);
       setModal(null);
       return;
     }
@@ -351,8 +349,8 @@ export function ItemPanel() {
 
   return (
     <>
-      {/* Mobile inventory FAB — keeps desk as hero */}
-      <div className="pointer-events-none absolute bottom-3 right-3 z-40 flex flex-col gap-1.5 md:hidden">
+      {/* Mobile inventory FAB — above tool dock / toasts */}
+      <div className="pointer-events-none absolute bottom-16 right-3 z-40 flex flex-col gap-1.5 md:hidden">
         <button
           type="button"
           onClick={() => openModal("chemicals")}

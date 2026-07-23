@@ -1,0 +1,89 @@
+{
+  "timeline": {
+    "background": "#4a3428",
+    "tracks": [
+      {
+        "clips": [
+          {
+            "asset": {
+              "type": "text",
+              "text": "The desk reacts to every move.",
+              "font": {
+                "family": "Montserrat",
+                "color": "#eaf4ef",
+                "size": 34
+              },
+              "alignment": { "horizontal": "center", "vertical": "bottom" }
+            },
+            "start": 0,
+            "length": 20,
+            "position": "bottom",
+            "offset": { "y": 0.12 },
+            "transition": { "in": "fade", "out": "fade" }
+          }
+        ]
+      },
+      {
+        "clips": [
+          {
+            "asset": {
+              "type": "text",
+              "text": "Chem Lab",
+              "font": {
+                "family": "Montserrat ExtraBold",
+                "color": "#eaf4ef",
+                "size": 96
+              },
+              "alignment": { "horizontal": "center", "vertical": "middle" }
+            },
+            "start": 0,
+            "length": 3,
+            "transition": { "in": "fade", "out": "fade" }
+          },
+          {
+            "asset": {
+              "type": "image",
+              "src": "REPLACE_WITH_PUBLIC_URL/01-desk-hero.png"
+            },
+            "start": 3,
+            "length": 7,
+            "fit": "cover",
+            "effect": "zoomIn",
+            "transition": { "in": "fade", "out": "fade" }
+          },
+          {
+            "asset": {
+              "type": "image",
+              "src": "REPLACE_WITH_PUBLIC_URL/03-reaction-equation.png"
+            },
+            "start": 10,
+            "length": 5,
+            "fit": "cover",
+            "effect": "zoomIn",
+            "transition": { "in": "fade", "out": "fade" }
+          },
+          {
+            "asset": {
+              "type": "image",
+              "src": "REPLACE_WITH_PUBLIC_URL/logo-lockup.png"
+            },
+            "start": 15,
+            "length": 5,
+            "fit": "contain",
+            "transition": { "in": "fade", "out": "fade" }
+          }
+        ]
+      }
+    ],
+    "soundtrack": {
+      "src": "https://s3-ap-southeast-2.amazonaws.com/shotstack-assets/music/moment.mp3",
+      "effect": "fadeOut",
+      "volume": 0.4
+    }
+  },
+  "output": {
+    "format": "mp4",
+    "fps": 30,
+    "size": { "width": 1920, "height": 1080 }
+  }
+}

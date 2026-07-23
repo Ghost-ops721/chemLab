@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useRef, useState } from "react";
+import Link from "next/link";
 import {
   equationFromRaw,
   type EditableEquation,
@@ -9,6 +10,10 @@ import {
 import { lookupKnowledge, type KnowledgeCard } from "@/domains/chemistry/knowledge/lookup";
 import { FormulaTokenBoard } from "./FormulaTokenBoard";
 import { KnowledgeCardPanel } from "./KnowledgeCardPanel";
+import { getAuthHeaders } from "@/lib/client/authHeaders";
+import { useAuthStore } from "@/store/authStore";
+import { labCopy } from "@/lab/labCopy";
+import { track } from "@/lib/analytics/track";
 
 interface OcrEquation {
   id: string;
@@ -34,6 +39,7 @@ interface Props {
 
 export function ScanWorkbench({ onAddChemical, onClose, onRunOnDesk }: Props) {
   const inputRef = useRef<HTMLInputElement>(null);
+  const user = useAuthStore((s) => s.user);
   const [preview, setPreview] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -65,19 +71,30 @@ export function ScanWorkbench({ onAddChemical, onClose, onRunOnDesk }: Props) {
     setBusy(true);
     setError(null);
     try {
+      const headers = await getAuthHeaders();
+      if (!headers) {
+        setError(labCopy.scanSignIn);
+        return;
+      }
       const dataUrl = await readAsDataUrl(file);
       setPreview(dataUrl);
       const base64 = dataUrl.split(",")[1] ?? "";
       const res = await fetch("/api/ocr", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers,
         body: JSON.stringify({
           imageBase64: base64,
           mediaType: file.type || "image/jpeg",
         }),
       });
       const data = (await res.json()) as OcrResponse;
+      if (res.status === 401) throw new Error(labCopy.scanSignIn);
+      if (res.status === 429) throw new Error(labCopy.scanRateLimited);
       if (!res.ok) throw new Error(data.error ?? "OCR failed");
+      track("scan_upload", {
+        equationCount: data.equations.length,
+        source: data.source,
+      });
       loadEquations(
         data.equations,
         data.source === "fallback"
@@ -104,12 +121,20 @@ export function ScanWorkbench({ onAddChemical, onClose, onRunOnDesk }: Props) {
     setError(null);
     setPreview(null);
     try {
+      const headers = await getAuthHeaders();
+      if (!headers) {
+        setError(labCopy.scanSignIn);
+        return;
+      }
       const res = await fetch("/api/ocr", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers,
         body: JSON.stringify({ demo: true }),
       });
       const data = (await res.json()) as OcrResponse;
+      if (res.status === 401) throw new Error(labCopy.scanSignIn);
+      if (res.status === 429) throw new Error(labCopy.scanRateLimited);
+      if (!res.ok) throw new Error(data.error ?? "Demo failed");
       loadEquations(data.equations, data.handwrittenNotes);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Demo failed");
@@ -225,6 +250,14 @@ export function ScanWorkbench({ onAddChemical, onClose, onRunOnDesk }: Props) {
         />
       </div>
 
+      {!user ? (
+        <p className="rounded-lg bg-lab-wash px-3 py-2 text-sm text-lab-muted">
+          {labCopy.scanSignIn}{" "}
+          <Link href="/login" className="font-semibold text-lab-teal underline">
+            Log in
+          </Link>
+        </p>
+      ) : null}
       {error ? (
         <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-lab-hazard">
           {error}

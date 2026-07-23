@@ -2,8 +2,16 @@ import { createGroq } from "@ai-sdk/groq";
 import { generateText, Output } from "ai";
 import { z } from "zod";
 import { equationFromRaw } from "@/domains/chemistry/knowledge/tokenize";
+import {
+  enforceRateLimit,
+  requireFirebaseUser,
+} from "@/lib/server/requireAuth";
+import { logLlmUsage } from "@/lib/server/analytics";
 
 export const maxDuration = 60;
+
+/** ~4MB decoded binary ≈ 5.5M base64 chars */
+const MAX_BASE64_CHARS = 5_500_000;
 
 const OcrSchema = z.object({
   equations: z.array(
@@ -76,6 +84,12 @@ function fallbackDemo(reason: string): OcrResult {
 }
 
 export async function POST(req: Request) {
+  const auth = await requireFirebaseUser(req);
+  if ("response" in auth) return auth.response;
+
+  const limited = enforceRateLimit(req, auth.uid, "ocr");
+  if (limited) return limited.response;
+
   let body: {
     imageBase64?: string;
     mediaType?: string;
@@ -88,13 +102,25 @@ export async function POST(req: Request) {
     return Response.json({ error: "Invalid JSON" }, { status: 400 });
   }
 
-  if (body.demo || !body.imageBase64) {
-    if (body.demo) {
-      return Response.json(
-        fallbackDemo("Demo mode — sample equations for exploring the board."),
-      );
-    }
+  if (body.demo) {
+    return Response.json(
+      fallbackDemo("Demo mode — sample equations for exploring the board."),
+    );
+  }
+
+  if (!body.imageBase64) {
     return Response.json({ error: "Missing imageBase64" }, { status: 400 });
+  }
+
+  const rawB64 = body.imageBase64.includes(",")
+    ? body.imageBase64.split(",")[1]!
+    : body.imageBase64;
+
+  if (rawB64.length > MAX_BASE64_CHARS) {
+    return Response.json(
+      { error: "Image too large — use a smaller photo (under ~4MB)." },
+      { status: 413 },
+    );
   }
 
   const mediaType = body.mediaType?.startsWith("image/")
@@ -107,16 +133,18 @@ export async function POST(req: Request) {
   if (!process.env.GROQ_API_KEY) {
     return Response.json(
       fallbackDemo(
-        "No GROQ_API_KEY — showing sample equations. Add a key for real vision OCR.",
+        "Sample equations (OCR offline — GROQ_API_KEY not set on server).",
       ),
     );
   }
 
   const groq = createGroq({ apiKey: process.env.GROQ_API_KEY });
+  const started = Date.now();
+  const OCR_MODEL = "meta-llama/llama-4-scout-17b-16e-instruct";
 
   try {
-    const { output } = await generateText({
-      model: groq("meta-llama/llama-4-scout-17b-16e-instruct"),
+    const { output, usage } = await generateText({
+      model: groq(OCR_MODEL),
       temperature: 0.1,
       output: Output.object({
         schema: OcrSchema,
@@ -152,6 +180,17 @@ Rules:
       ],
     });
 
+    logLlmUsage({
+      uid: auth.uid,
+      route: "ocr",
+      model: OCR_MODEL,
+      promptTokens: usage?.inputTokens,
+      completionTokens: usage?.outputTokens,
+      totalTokens: usage?.totalTokens,
+      ms: Date.now() - started,
+      ok: Boolean(output),
+    });
+
     if (!output) {
       return Response.json(
         fallbackDemo("Vision returned empty — try a clearer photo."),
@@ -172,6 +211,13 @@ Rules:
     );
   } catch (err) {
     console.error("[ocr]", err);
+    logLlmUsage({
+      uid: auth.uid,
+      route: "ocr",
+      model: OCR_MODEL,
+      ms: Date.now() - started,
+      ok: false,
+    });
     return Response.json(
       fallbackDemo(
         "OCR request failed — sample equations loaded so you can still explore.",

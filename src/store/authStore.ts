@@ -1,6 +1,7 @@
 "use client";
 
 import { create } from "zustand";
+import { persist } from "zustand/middleware";
 import type { User } from "firebase/auth";
 import {
   isProfileComplete,
@@ -29,48 +30,59 @@ interface AuthState {
   isProfileComplete: () => boolean;
 }
 
-export const useAuthStore = create<AuthState>((set, get) => ({
-  user: null,
-  profile: null,
-  authReady: false,
-  guestChemicalAdds: 0,
-  authGateOpen: false,
-  pendingSignup: null,
+export const useAuthStore = create<AuthState>()(
+  persist(
+    (set, get) => ({
+      user: null,
+      profile: null,
+      authReady: false,
+      guestChemicalAdds: 0,
+      authGateOpen: false,
+      pendingSignup: null,
 
-  setUser: (user) => set({ user }),
-  setProfile: (profile) => set({ profile }),
-  setAuthReady: (authReady) => set({ authReady }),
-  setPendingSignup: (pendingSignup) => set({ pendingSignup }),
-  takePendingSignup: () => {
-    const fields = get().pendingSignup;
-    if (fields) set({ pendingSignup: null });
-    return fields;
-  },
+      setUser: (user) => set({ user }),
+      setProfile: (profile) => set({ profile }),
+      setAuthReady: (authReady) => set({ authReady }),
+      setPendingSignup: (pendingSignup) => set({ pendingSignup }),
+      takePendingSignup: () => {
+        const fields = get().pendingSignup;
+        if (fields) set({ pendingSignup: null });
+        return fields;
+      },
 
-  recordGuestChemicalAdd: () => {
-    const { user } = get();
-    if (user) return;
-    set((s) => {
-      const guestChemicalAdds = s.guestChemicalAdds + 1;
-      return {
-        guestChemicalAdds,
-        authGateOpen: guestChemicalAdds >= 2 ? true : s.authGateOpen,
-      };
-    });
-  },
+      recordGuestChemicalAdd: () => {
+        const { user } = get();
+        if (user) return;
+        set((s) => {
+          const guestChemicalAdds = s.guestChemicalAdds + 1;
+          return {
+            guestChemicalAdds,
+            authGateOpen: guestChemicalAdds >= 2 ? true : s.authGateOpen,
+          };
+        });
+      },
 
-  openAuthGate: () => set({ authGateOpen: true }),
-  closeAuthGate: () => set({ authGateOpen: false }),
-  resetGuestProgress: () => set({ guestChemicalAdds: 0, authGateOpen: false }),
+      openAuthGate: () => set({ authGateOpen: true }),
+      closeAuthGate: () => set({ authGateOpen: false }),
+      resetGuestProgress: () =>
+        set({ guestChemicalAdds: 0, authGateOpen: false }),
 
-  isProfileComplete: () => isProfileComplete(get().profile),
+      isProfileComplete: () => isProfileComplete(get().profile),
 
-  isLabBlocked: () => {
-    const { user, profile, guestChemicalAdds } = get();
-    if (!user) return guestChemicalAdds >= 2;
-    return !isProfileComplete(profile);
-  },
-}));
+      isLabBlocked: () => {
+        const { user, profile, guestChemicalAdds } = get();
+        if (!user) return guestChemicalAdds >= 2;
+        return !isProfileComplete(profile);
+      },
+    }),
+    {
+      name: "chemlab-auth-guest",
+      partialize: (s) => ({
+        guestChemicalAdds: s.guestChemicalAdds,
+      }),
+    },
+  ),
+);
 
 export function assertLabActionAllowed(): boolean {
   const store = useAuthStore.getState();

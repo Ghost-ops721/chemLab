@@ -7,6 +7,7 @@ import { useGoalStore } from "@/store/goalStore";
 import { useAuthStore } from "@/store/authStore";
 import { getGoal } from "@/domains/chemistry/data/goals";
 import { currentStep, goalProgressPct } from "@/goals/goalProgress";
+import { labCopy } from "@/lab/labCopy";
 
 export function GamificationBar() {
   const xp = useProgressStore((s) => s.xp);
@@ -37,7 +38,7 @@ export function GamificationBar() {
     <div className="flex flex-col border-b border-white/10 bg-lab-ink text-lab-foam">
       {guestWarn ? (
         <div className="bg-lab-amber/90 px-3 py-1 text-center text-[11px] font-semibold text-lab-ink md:px-4">
-          One more chemical — then you&apos;ll need an account to Mix and earn XP.{" "}
+          {labCopy.guestBannerWarn}{" "}
           <Link href="/signup" className="underline">
             Sign up
           </Link>
@@ -45,7 +46,7 @@ export function GamificationBar() {
       ) : null}
       {guestBlocked ? (
         <div className="bg-lab-teal px-3 py-1 text-center text-[11px] font-semibold text-white md:px-4">
-          Sign up to Mix, react, and keep your discoveries.{" "}
+          {labCopy.guestBannerBlocked}{" "}
           <Link href="/signup" className="underline">
             Create account
           </Link>
@@ -63,6 +64,10 @@ export function GamificationBar() {
           </div>
           <div className="mt-0.5 h-1 w-16 overflow-hidden rounded-full bg-white/15">
             <div
+              role="progressbar"
+              aria-valuenow={intoLevel}
+              aria-valuemin={0}
+              aria-valuemax={100}
               className="h-full rounded-full bg-lab-glass"
               style={{ width: `${intoLevel}%` }}
             />
@@ -137,7 +142,7 @@ export function RecipeJournal() {
   const badges = useProgressStore((s) => s.badges);
 
   return (
-    <div className="hidden border-t border-lab-line/50 bg-lab-panel/95 md:block">
+    <div className="border-t border-lab-line/50 bg-lab-panel/95">
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}

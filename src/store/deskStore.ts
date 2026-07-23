@@ -9,6 +9,16 @@ import { getChemical } from "@/domains/chemistry/data/chemicals";
 import { labSound } from "@/desk/labSound";
 import { assertLabActionAllowed, useAuthStore } from "@/store/authStore";
 
+if (typeof window !== "undefined") {
+  try {
+    const next = window.localStorage.getItem("chemlab-desk");
+    const prev = window.localStorage.getItem("reactolab-desk");
+    if (!next && prev) window.localStorage.setItem("chemlab-desk", prev);
+  } catch {
+    /* ignore */
+  }
+}
+
 interface DeskState {
   vessels: DeskVessel[];
   activeVesselId: string | null;
@@ -421,7 +431,9 @@ export const useDeskStore = create<DeskState>()(
   },
     }),
     {
-      name: "reactolab-desk",
+      name: "chemlab-desk",
+      version: 1,
+      migrate: (persisted) => persisted as never,
       partialize: (s) => ({
         vessels: s.vessels.map((v) => ({ ...v, fx: {} })),
         activeVesselId: s.activeVesselId,

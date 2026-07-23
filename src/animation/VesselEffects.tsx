@@ -87,7 +87,7 @@ export function VesselEffects({
     : 0;
   const pptColor =
     ppt?.value && ppt.value !== "transparent" ? ppt.value : "#c4b5a0";
-  const splashColor = fx?.pourColor ?? fillColor ?? "#8fc0b5";
+  const splashColor = fx?.pourColor ?? fillColor ?? "var(--lab-glass, #8fc0b5)";
   const shapeId = resolveGlassShape(equipmentId).id;
   const stirDeg = STIR_SWING_DEG[shapeId] ?? 10;
   const stirInsetX = STIR_ROD_INSET_X[shapeId] ?? "18%";

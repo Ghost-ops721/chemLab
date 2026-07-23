@@ -43,7 +43,7 @@ export function GoalGuidePanel() {
       <button
         type="button"
         onClick={() => setGuideOpen(true)}
-        className="fixed bottom-16 left-2 z-40 rounded-xl border border-lab-teal/40 bg-lab-ink px-2.5 py-1.5 text-left text-lab-foam shadow-xl md:bottom-20"
+        className="fixed bottom-20 left-2 z-40 rounded-xl border border-lab-teal/40 bg-lab-ink px-2.5 py-1.5 text-left text-lab-foam shadow-xl md:bottom-20"
       >
         <p className="text-[9px] uppercase tracking-wider text-lab-glass">
           Goal · {doneCount}/{goal.steps.length}
@@ -96,6 +96,10 @@ export function GoalGuidePanel() {
         </div>
         <div className="mt-1 h-1 overflow-hidden rounded-full bg-lab-wash">
           <div
+            role="progressbar"
+            aria-valuenow={pct}
+            aria-valuemin={0}
+            aria-valuemax={100}
             className="h-full rounded-full bg-lab-teal transition-all duration-500"
             style={{ width: `${pct}%` }}
           />
@@ -151,9 +155,6 @@ export function GoalGuidePanel() {
           <p className="text-xs font-semibold text-lab-teal">Goal complete</p>
           <p className="mt-0.5 text-[11px] leading-snug text-lab-ink/85">
             {goal.successBlurb}
-          </p>
-          <p className="mt-1 text-[10px] font-semibold text-lab-ink">
-            Make more like this →
           </p>
           <button
             type="button"

@@ -68,6 +68,27 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           discoveredIds: finalProfile.discoveredIds,
           badgeIds: finalProfile.badgeIds,
         });
+        // Push any local/guest progress through Admin-validated API
+        const local = useProgressStore.getState();
+        const localBadges = local.badges
+          .filter((b) => b.earnedAt)
+          .map((b) => b.id);
+        if (
+          local.xp > 0 ||
+          local.discoveredIds.length > 0 ||
+          localBadges.length > 0
+        ) {
+          const { syncProgressToFirestore } = await import(
+            "@/lib/firebase/profile"
+          );
+          void syncProgressToFirestore(user.uid, {
+            xp: local.xp,
+            discoveredIds: local.discoveredIds,
+            badgeIds: localBadges,
+          }).catch(() => {
+            /* best-effort */
+          });
+        }
         resetGuestProgress();
         closeAuthGate();
       } catch {

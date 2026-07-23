@@ -1,4 +1,4 @@
-# ReactoLab Design System
+# Chem Lab Design System
 
 ## Memorable thing
 
@@ -14,7 +14,7 @@ A calm teaching lab at golden hour. Warm walnut desk, cool seafoam glassware, da
 
 | Role | Font | Use |
 |------|------|-----|
-| Display | Fraunces | ReactoLab wordmark, empty-state headline, XP |
+| Display | Fraunces | Chem Lab wordmark, empty-state headline, XP |
 | UI | DM Sans | Labels, buttons, body |
 | Formula | JetBrains Mono | Equations, chemical formulas |
 
@@ -78,6 +78,16 @@ Never inflate chrome with `text-3xl+` titles or `py-3+` list paddings outside mo
 ## Goals
 
 Product goals (perfume, soap, ink, antacid, rust remover) live in the top bar **Goals** picker. The desk stays free-play; the guide panel is a floating coach with openable hints — not a HUD on the wood.
+
+## Production UI states (tutor + OCR)
+
+| State | Behavior |
+|-------|----------|
+| Loading | Compact “Consulting the lab tutor…” / “Reading…” pulse — no skeleton cards |
+| Signed out | Offline/static notes + “Sign in to unlock the lab tutor” / OCR gate |
+| Rate limited | Keep last/fallback text; short muted banner; Retry-After respected |
+| OCR fallback | Always label sample/demo equations (never pretend vision succeeded) |
+| Error | Fallback explanation + “Offline notes”; Scan shows hazard-colored error line |
 
 ## Anti-patterns
 

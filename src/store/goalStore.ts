@@ -8,6 +8,17 @@ import {
   isGoalComplete,
   newlyCompletedSteps,
 } from "@/goals/goalProgress";
+import { track } from "@/lib/analytics/track";
+
+if (typeof window !== "undefined") {
+  try {
+    const next = window.localStorage.getItem("chemlab-goals");
+    const prev = window.localStorage.getItem("reactolab-goals");
+    if (!next && prev) window.localStorage.setItem("chemlab-goals", prev);
+  } catch {
+    /* ignore */
+  }
+}
 
 interface GoalState {
   activeGoalId: string | null;
@@ -70,6 +81,7 @@ export const useGoalStore = create<GoalState>()(
           rewardGoalId: null,
           rewardXp: 0,
         });
+        track("goal_start", { goalId });
       },
 
       abandonGoal: () =>
@@ -121,6 +133,10 @@ export const useGoalStore = create<GoalState>()(
             : s.completedGoalIds,
         }));
 
+        if (justDone) {
+          track("goal_complete", { goalId });
+        }
+
         return {
           newSteps: fresh,
           goalJustCompleted: justDone,
@@ -129,7 +145,8 @@ export const useGoalStore = create<GoalState>()(
       },
     }),
     {
-      name: "reactolab-goals",
+      name: "chemlab-goals",
+      version: 1,
       partialize: (s) => ({
         activeGoalId: s.activeGoalId,
         completedStepIds: s.completedStepIds,

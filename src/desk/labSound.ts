@@ -1,7 +1,11 @@
 /** Tiny Web Audio cues — no asset files, instant interactivity. */
 
+const MUTE_KEY = "chemlab-muted";
+
 let ctx: AudioContext | null = null;
-let muted = false;
+let muted =
+  typeof window !== "undefined" &&
+  window.localStorage?.getItem(MUTE_KEY) === "1";
 
 function ac(): AudioContext | null {
   if (typeof window === "undefined") return null;
@@ -38,15 +42,24 @@ function beep(
   osc.stop(t0 + duration + 0.02);
 }
 
+function persistMute(next: boolean) {
+  muted = next;
+  try {
+    window.localStorage?.setItem(MUTE_KEY, next ? "1" : "0");
+  } catch {
+    /* ignore */
+  }
+}
+
 export const labSound = {
   isMuted() {
     return muted;
   },
   setMuted(next: boolean) {
-    muted = next;
+    persistMute(next);
   },
   toggleMute() {
-    muted = !muted;
+    persistMute(!muted);
     return muted;
   },
   pour() {

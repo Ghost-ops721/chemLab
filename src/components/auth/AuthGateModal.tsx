@@ -1,9 +1,10 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import Link from "next/link";
 import { useAuthStore } from "@/store/authStore";
 import { isProfileComplete } from "@/lib/firebase/profile";
+import { track } from "@/lib/analytics/track";
 
 export function AuthGateModal() {
   const open = useAuthStore((s) => s.authGateOpen);
@@ -11,21 +12,28 @@ export function AuthGateModal() {
   const profile = useAuthStore((s) => s.profile);
   const guestChemicalAdds = useAuthStore((s) => s.guestChemicalAdds);
   const closeAuthGate = useAuthStore((s) => s.closeAuthGate);
+  const primaryRef = useRef<HTMLAnchorElement>(null);
 
   const guestBlocked = !user && guestChemicalAdds >= 2;
   const needsProfile = Boolean(user && !isProfileComplete(profile));
   const blocked = guestBlocked || needsProfile;
+  const visible = open || blocked;
 
   useEffect(() => {
-    if (!open && !blocked) return;
+    if (!visible) return;
+    track("auth_gate_shown", {
+      guestBlocked,
+      needsProfile,
+    });
+    primaryRef.current?.focus();
     function onKey(e: KeyboardEvent) {
       if (e.key === "Escape" && !blocked) closeAuthGate();
     }
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [open, blocked, closeAuthGate]);
+  }, [visible, blocked, closeAuthGate]);
 
-  if (!open && !blocked) return null;
+  if (!visible) return null;
   if (user && isProfileComplete(profile)) return null;
 
   return (
@@ -59,6 +67,7 @@ export function AuthGateModal() {
         <div className="mt-5 flex flex-col gap-2 sm:flex-row">
           {needsProfile ? (
             <Link
+              ref={primaryRef}
               href="/profile?onboarding=1"
               className="flex-1 rounded-lg bg-lab-teal px-3 py-2 text-center text-sm font-semibold text-white hover:bg-lab-teal/90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-lab-teal"
             >
@@ -67,6 +76,7 @@ export function AuthGateModal() {
           ) : (
             <>
               <Link
+                ref={primaryRef}
                 href="/signup"
                 className="flex-1 rounded-lg bg-lab-teal px-3 py-2 text-center text-sm font-semibold text-white hover:bg-lab-teal/90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-lab-teal"
               >

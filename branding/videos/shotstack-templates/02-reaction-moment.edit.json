@@ -1,0 +1,89 @@
+{
+  "timeline": {
+    "background": "#14241f",
+    "tracks": [
+      {
+        "clips": [
+          {
+            "asset": {
+              "type": "text",
+              "text": "ACID MEETS BASE",
+              "font": {
+                "family": "Montserrat",
+                "color": "#8fc0b5",
+                "size": 22
+              },
+              "alignment": { "horizontal": "center", "vertical": "middle" }
+            },
+            "start": 0,
+            "length": 6,
+            "offset": { "y": 0.14 },
+            "transition": { "in": "fade" }
+          },
+          {
+            "asset": {
+              "type": "text",
+              "text": "HCl + NaOH -> NaCl + H2O",
+              "font": {
+                "family": "Courier Prime",
+                "color": "#eaf4ef",
+                "size": 44
+              },
+              "alignment": { "horizontal": "center", "vertical": "middle" }
+            },
+            "start": 1,
+            "length": 5,
+            "transition": { "in": "fade", "out": "fade" }
+          },
+          {
+            "asset": {
+              "type": "text",
+              "text": "What happened",
+              "font": {
+                "family": "Montserrat ExtraBold",
+                "color": "#eaf4ef",
+                "size": 52
+              },
+              "alignment": { "horizontal": "center", "vertical": "middle" }
+            },
+            "start": 6,
+            "length": 5,
+            "offset": { "y": 0.12 },
+            "transition": { "in": "fade", "out": "fade" }
+          },
+          {
+            "asset": {
+              "type": "text",
+              "text": "An acid and a base reacted to form a salt and water \u2014 the H+ from the acid combined with OH- from the base to make H2O.",
+              "font": {
+                "family": "Montserrat",
+                "color": "#8fc0b5",
+                "size": 28
+              },
+              "alignment": { "horizontal": "center", "vertical": "middle" },
+              "width": 1400
+            },
+            "start": 7,
+            "length": 5,
+            "transition": { "in": "fade", "out": "fade" }
+          },
+          {
+            "asset": {
+              "type": "image",
+              "src": "REPLACE_WITH_PUBLIC_URL/logo-lockup.png"
+            },
+            "start": 13,
+            "length": 5,
+            "fit": "contain",
+            "transition": { "in": "fade", "out": "fade" }
+          }
+        ]
+      }
+    ]
+  },
+  "output": {
+    "format": "mp4",
+    "fps": 30,
+    "size": { "width": 1920, "height": 1080 }
+  }
+}

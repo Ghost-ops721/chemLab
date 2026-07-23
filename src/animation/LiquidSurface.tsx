@@ -277,8 +277,14 @@ export function LiquidSurface({
   if (fillPct <= 0 && frame.displayPct < 0.5) return null;
 
   const bodyPath = frame.surfacePath || staticSurface(wb, frame.displayPct);
-  const colorA = frame.colorA === "transparent" ? "#8fc0b5" : frame.colorA;
-  const colorB = frame.colorB === "transparent" ? "#8fc0b5" : frame.colorB;
+  const colorA =
+    frame.colorA === "transparent"
+      ? "var(--lab-glass, #8fc0b5)"
+      : frame.colorA;
+  const colorB =
+    frame.colorB === "transparent"
+      ? "var(--lab-glass, #8fc0b5)"
+      : frame.colorB;
   const showMorph = frame.morphT < 1 && colorA !== colorB;
 
   return (

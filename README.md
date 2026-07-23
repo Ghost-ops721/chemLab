@@ -1,36 +1,57 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Chem Lab
 
-## Getting Started
+Virtual chemistry desk: pour, stir, heat, and shake reactants; earn XP; scan notes with OCR; get a plain-language tutor explanation.
 
-First, run the development server:
+Design system: [DESIGN.md](./DESIGN.md). Deploy checklist: [DEPLOY.md](./DEPLOY.md).
+
+## Stack
+
+- Next.js 16 (App Router) + React 19
+- Firebase Auth + Firestore
+- Groq (AI tutor + vision OCR)
+- Zustand, Tailwind CSS 4, Vitest, Playwright
+
+## Local setup
 
 ```bash
+cp .env.example .env.local
+# Fill Firebase client keys + GROQ_API_KEY + Firebase Admin credentials
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000).
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### Required env
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+| Variable | Where used |
+|----------|------------|
+| `NEXT_PUBLIC_FIREBASE_*` | Client Auth + Firestore |
+| `GROQ_API_KEY` | `/api/explain`, `/api/ocr` |
+| `FIREBASE_SERVICE_ACCOUNT_JSON` **or** `FIREBASE_ADMIN_*` | Verify ID tokens; write progress |
+| `SENTRY_DSN` / `NEXT_PUBLIC_SENTRY_DSN` | Error tracking (optional) |
 
-## Learn More
+Without Admin credentials, AI and progress sync APIs return 503.
 
-To learn more about Next.js, take a look at the following resources:
+### Scripts
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+```bash
+npm run dev          # development
+npm run build        # production build
+npm run start        # serve build
+npm run lint
+npm run typecheck
+npm test             # Vitest unit tests
+npx playwright test  # smoke E2E
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Security notes (soft launch)
 
-## Deploy on Vercel
+- `/api/explain`, `/api/ocr`, and `/api/progress` require a Firebase ID token.
+- Rate limits: explain 30/min, OCR 10/min, progress 60/min (per user, in-memory).
+- Firestore rules block client writes to `xp` / `discoveredIds` / `badgeIds` — progress goes through `/api/progress`.
+- Deploy rules after pulling: `npx firebase-tools deploy --only firestore:rules`
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Auth funnel
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Guests can add 2 chemicals, then must sign up. Live tutor and OCR require a signed-in user.

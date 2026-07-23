@@ -2,7 +2,73 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     match /users/{userId} {
-      allow read, write: if request.auth != null && request.auth.uid == userId;
+      function isOwner() {
+        return request.auth != null && request.auth.uid == userId;
+      }
+
+      function allowedKeys() {
+        return [
+          'email',
+          'displayName',
+          'phone',
+          'gender',
+          'dob',
+          'age',
+          'address',
+          'pincode',
+          'xp',
+          'discoveredIds',
+          'badgeIds',
+          'createdAt',
+          'updatedAt',
+          'lastSeenAt'
+        ];
+      }
+
+      function hasOnlyAllowedKeys() {
+        return request.resource.data.keys().hasOnly(allowedKeys());
+      }
+
+      function progressEmpty() {
+        return request.resource.data.xp == 0
+          && request.resource.data.discoveredIds.size() == 0
+          && request.resource.data.badgeIds.size() == 0;
+      }
+
+      function progressUnchanged() {
+        return request.resource.data.xp == resource.data.xp
+          && request.resource.data.discoveredIds == resource.data.discoveredIds
+          && request.resource.data.badgeIds == resource.data.badgeIds;
+      }
+
+      allow read: if isOwner();
+
+      allow create: if isOwner()
+        && hasOnlyAllowedKeys()
+        && progressEmpty()
+        && request.resource.data.email is string
+        && request.resource.data.createdAt is number
+        && request.resource.data.updatedAt is number;
+
+      allow update: if isOwner()
+        && hasOnlyAllowedKeys()
+        && progressUnchanged()
+        && request.resource.data.email == resource.data.email
+        && request.resource.data.createdAt == resource.data.createdAt;
+    }
+
+    // Admin + analytics: server Admin SDK only (no client access)
+    match /admins/{uid} {
+      allow read, write: if false;
+    }
+    match /analytics_events/{id} {
+      allow read, write: if false;
+    }
+    match /llm_usage/{id} {
+      allow read, write: if false;
+    }
+    match /metrics_daily/{day} {
+      allow read, write: if false;
     }
   }
 }

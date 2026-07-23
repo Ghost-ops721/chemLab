@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { formatAuthError, signIn, signUp } from "@/lib/firebase/auth";
+import { track } from "@/lib/analytics/track";
 
 type Mode = "login" | "signup";
 
@@ -101,6 +102,7 @@ export function AuthForm({
           displayName: displayName.trim(),
           phone: phone.trim(),
         });
+        track("signup_complete");
         router.replace("/profile?onboarding=1");
       } else {
         await signIn(email, password);
@@ -195,7 +197,7 @@ export function AuthForm({
       <button
         type="submit"
         disabled={pending}
-        className="w-full rounded-lg bg-lab-teal px-3 py-2 text-sm font-semibold text-white outline-none ring-0 transition hover:bg-lab-teal/90 focus:outline-none focus:ring-0 disabled:opacity-60"
+        className="w-full rounded-lg bg-lab-teal px-3 py-2 text-sm font-semibold text-white transition hover:bg-lab-teal/90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-lab-teal disabled:opacity-60"
       >
         {pending
           ? "Please wait…"

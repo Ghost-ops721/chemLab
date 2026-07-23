@@ -35,6 +35,7 @@ export function NavChrome() {
         onClick={() => setMuted(labSound.toggleMute())}
         className="rounded-md px-2 py-1 font-semibold text-lab-muted hover:bg-lab-wash hover:text-lab-ink"
         aria-pressed={muted}
+        aria-label={muted ? "Unmute lab sounds" : "Mute lab sounds"}
         title={muted ? "Unmute lab sounds" : "Mute lab sounds"}
       >
         {muted ? "Unmute" : "Mute"}

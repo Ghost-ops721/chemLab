@@ -11,15 +11,14 @@ import { fxAlive, useFxClock } from "@/animation/useFxClock";
 import { useDeskStore } from "@/store/deskStore";
 import { useAuthStore } from "@/store/authStore";
 import { showToast } from "@/gamification/ToastHost";
+import { tryMixVessel, tryShakeVessel } from "@/lab/labActions";
+import { labCopy } from "@/lab/labCopy";
+import { VESSEL_CARD } from "@/desk/vesselLayout";
 
 interface Props {
   vessel: DeskVessel;
   deskRef: RefObject<HTMLElement | null>;
 }
-
-/** Approximate vessel card size for overlap tests (matches w-[12rem] layout). */
-const CARD_W = 192;
-const CARD_H = 280;
 
 export function VesselSlot({ vessel, deskRef }: Props) {
   const { setNodeRef, isOver } = useDroppable({
@@ -30,11 +29,9 @@ export function VesselSlot({ vessel, deskRef }: Props) {
   const activeVesselId = useDeskStore((s) => s.activeVesselId);
   const vessels = useDeskStore((s) => s.vessels);
   const setActiveVessel = useDeskStore((s) => s.setActiveVessel);
-  const mixVessel = useDeskStore((s) => s.mixVessel);
   const clearVessel = useDeskStore((s) => s.clearVessel);
   const removeVessel = useDeskStore((s) => s.removeVessel);
   const stirVessel = useDeskStore((s) => s.stirVessel);
-  const shakeVessel = useDeskStore((s) => s.shakeVessel);
   const toggleHeat = useDeskStore((s) => s.toggleHeat);
   const removeLastChemical = useDeskStore((s) => s.removeLastChemical);
   const moveVessel = useDeskStore((s) => s.moveVessel);
@@ -135,10 +132,11 @@ export function VesselSlot({ vessel, deskRef }: Props) {
     if (target && vessel.contentIds.length > 0) {
       const ok = transferVesselContents(vessel.instanceId, target.instanceId);
       if (ok) {
-        showToast({
-          title: "Pouring…",
-          detail: `Into ${EQUIPMENT_BY_ID[target.equipmentId]?.name ?? "vessel"}`,
-        });
+        showToast(
+          labCopy.pouringInto(
+            EQUIPMENT_BY_ID[target.equipmentId]?.name ?? "vessel",
+          ),
+        );
       }
     }
   }
@@ -158,7 +156,7 @@ export function VesselSlot({ vessel, deskRef }: Props) {
       onPointerCancel={onMovePointerUp}
       onDoubleClick={(e) => {
         e.stopPropagation();
-        if (canMix) mixVessel(vessel.instanceId);
+        if (canMix) tryMixVessel(vessel.instanceId);
         else stirVessel(vessel.instanceId);
       }}
       onClick={() => setActiveVessel(vessel.instanceId)}
@@ -167,7 +165,7 @@ export function VesselSlot({ vessel, deskRef }: Props) {
           setActiveVessel(vessel.instanceId);
         }
         if (e.key === "m" || e.key === "M") {
-          if (canMix) mixVessel(vessel.instanceId);
+          if (canMix) tryMixVessel(vessel.instanceId);
         }
         if (e.key === "s" || e.key === "S") {
           stirVessel(vessel.instanceId);
@@ -182,7 +180,7 @@ export function VesselSlot({ vessel, deskRef }: Props) {
         isSource ? "lab-vessel-pour-tilt" : ""
       } ${
         hazard
-          ? "border-lab-hazard bg-red-50/90 shadow-[0_0_28px_rgba(180,35,24,0.35)]"
+          ? "border-lab-hazard bg-lab-hazard/10 shadow-[0_0_28px_rgba(180,35,24,0.35)]"
           : isOver
             ? "scale-[1.04] border-lab-teal bg-white/95 shadow-xl"
             : isActive
@@ -216,7 +214,7 @@ export function VesselSlot({ vessel, deskRef }: Props) {
           <button
             type="button"
             aria-label="Remove vessel"
-            className="rounded-md px-1.5 py-0.5 text-[10px] text-lab-muted hover:bg-red-100 hover:text-lab-hazard"
+            className="rounded-md px-1.5 py-0.5 text-[10px] text-lab-muted hover:bg-lab-hazard/15 hover:text-lab-hazard"
             onClick={(e) => {
               e.stopPropagation();
               removeVessel(vessel.instanceId);
@@ -229,11 +227,11 @@ export function VesselSlot({ vessel, deskRef }: Props) {
 
       {/* Bunsen stand under glass */}
       {vessel.heatAttached ? (
-        <div className="lab-burner pointer-events-none absolute -bottom-2 left-1/2 z-0 h-5 w-16 -translate-x-1/2 rounded-b-md bg-stone-700/90">
+        <div className="lab-burner pointer-events-none absolute -bottom-2 left-1/2 z-0 h-5 w-16 -translate-x-1/2 rounded-b-md bg-lab-desk">
           <div className="absolute -top-3 left-1/2 flex -translate-x-1/2 gap-0.5">
-            <span className="lab-flame inline-block h-4 w-2 rounded-full bg-orange-500" />
-            <span className="lab-flame lab-flame-delay inline-block h-5 w-2.5 rounded-full bg-amber-300" />
-            <span className="lab-flame inline-block h-3.5 w-2 rounded-full bg-orange-400" />
+            <span className="lab-flame inline-block h-4 w-2 rounded-full bg-lab-amber" />
+            <span className="lab-flame lab-flame-delay inline-block h-5 w-2.5 rounded-full bg-lab-amber/70" />
+            <span className="lab-flame inline-block h-3.5 w-2 rounded-full bg-lab-amber/90" />
           </div>
         </div>
       ) : null}
@@ -335,7 +333,7 @@ export function VesselSlot({ vessel, deskRef }: Props) {
           }}
           className={`rounded-lg px-1 py-1.5 text-[10px] font-semibold ${
             vessel.heatAttached
-              ? "bg-orange-500 text-white"
+              ? "bg-lab-amber text-white"
               : "bg-lab-wash text-lab-ink hover:bg-white"
           }`}
           title="Heat (H)"
@@ -346,7 +344,7 @@ export function VesselSlot({ vessel, deskRef }: Props) {
           type="button"
           onClick={(e) => {
             e.stopPropagation();
-            shakeVessel(vessel.instanceId);
+            tryShakeVessel(vessel.instanceId);
           }}
           disabled={!canMix && vessel.contentIds.length < 1}
           className="rounded-lg bg-lab-wash px-1 py-1.5 text-[10px] font-semibold text-lab-ink hover:bg-white disabled:opacity-40"
@@ -359,15 +357,7 @@ export function VesselSlot({ vessel, deskRef }: Props) {
           disabled={!canMix && !labBlocked}
           onClick={(e) => {
             e.stopPropagation();
-            if (labBlocked) {
-              useAuthStore.getState().openAuthGate();
-              showToast({
-                title: "Sign up to Mix",
-                detail: "Create an account to run reactions and earn XP",
-              });
-              return;
-            }
-            mixVessel(vessel.instanceId);
+            tryMixVessel(vessel.instanceId);
           }}
           className={`rounded-lg px-1 py-1.5 text-[10px] font-semibold text-white ${
             labBlocked
@@ -399,12 +389,14 @@ function findOverlapTarget(
     const ox = other.position.x;
     const oy = other.position.y;
     const overlapW =
-      Math.min(sx + CARD_W, ox + CARD_W) - Math.max(sx, ox);
+      Math.min(sx + VESSEL_CARD.width, ox + VESSEL_CARD.width) -
+      Math.max(sx, ox);
     const overlapH =
-      Math.min(sy + CARD_H, oy + CARD_H) - Math.max(sy, oy);
+      Math.min(sy + VESSEL_CARD.height, oy + VESSEL_CARD.height) -
+      Math.max(sy, oy);
     if (overlapW <= 0 || overlapH <= 0) continue;
     const area = overlapW * overlapH;
-    const minArea = CARD_W * CARD_H * 0.28;
+    const minArea = VESSEL_CARD.width * VESSEL_CARD.height * 0.28;
     if (area >= minArea && area > bestArea) {
       bestArea = area;
       best = other;

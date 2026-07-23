@@ -3,6 +3,7 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import type { EngineResult } from "@/types";
+import { PRODUCT_GOALS } from "@/domains/chemistry/data/goals";
 import { useAuthStore } from "@/store/authStore";
 import { syncProgressToFirestore } from "@/lib/firebase/profile";
 
@@ -21,7 +22,7 @@ export interface Badge {
   earnedAt?: number;
 }
 
-const BADGE_DEFS: Omit<Badge, "earnedAt">[] = [
+const DISCOVERY_BADGES: Omit<Badge, "earnedAt">[] = [
   {
     id: "first-precipitate",
     title: "First Precipitate",
@@ -47,32 +48,29 @@ const BADGE_DEFS: Omit<Badge, "earnedAt">[] = [
     title: "Gas Producer",
     description: "Release a gas in a reaction",
   },
-  {
-    id: "made-perfume",
-    title: "Perfumer",
-    description: "Blend a citrus cologne",
-  },
-  {
-    id: "made-soap",
-    title: "Soapmaker",
-    description: "Saponify fat into soap",
-  },
-  {
-    id: "made-ink",
-    title: "Inkmaker",
-    description: "Precipitate a pigment ink",
-  },
-  {
-    id: "made-antacid",
-    title: "Antacid Chemist",
-    description: "Fizz an acid–carbonate antacid",
-  },
-  {
-    id: "made-rust-remover",
-    title: "Rust Buster",
-    description: "Dissolve rust with acid",
-  },
 ];
+
+/** Goal badges stay in sync with PRODUCT_GOALS badgeIds. */
+const GOAL_BADGES: Omit<Badge, "earnedAt">[] = PRODUCT_GOALS.map((g) => ({
+  id: g.badgeId,
+  title: g.title,
+  description: g.tagline,
+}));
+
+export const BADGE_DEFS: Omit<Badge, "earnedAt">[] = [
+  ...DISCOVERY_BADGES,
+  ...GOAL_BADGES,
+];
+
+function mergeBadges(saved?: Badge[]): Badge[] {
+  const earnedAt = new Map(
+    (saved ?? []).filter((b) => b.earnedAt).map((b) => [b.id, b.earnedAt!]),
+  );
+  return BADGE_DEFS.map((b) => ({
+    ...b,
+    ...(earnedAt.has(b.id) ? { earnedAt: earnedAt.get(b.id) } : {}),
+  }));
+}
 
 export const QUESTS = [
   {
@@ -156,7 +154,7 @@ export const useProgressStore = create<ProgressState>()(
       xp: 0,
       discoveredIds: [],
       journal: [],
-      badges: BADGE_DEFS.map((b) => ({ ...b })),
+      badges: mergeBadges(),
       questIndex: 0,
       completedQuests: [],
       explanationCache: {},
@@ -167,10 +165,12 @@ export const useProgressStore = create<ProgressState>()(
           discoveredIds: Array.from(
             new Set([...s.discoveredIds, ...discoveredIds]),
           ),
-          badges: s.badges.map((b) =>
-            badgeIds.includes(b.id) && !b.earnedAt
-              ? { ...b, earnedAt: Date.now() }
-              : b,
+          badges: mergeBadges(
+            s.badges.map((b) =>
+              badgeIds.includes(b.id) && !b.earnedAt
+                ? { ...b, earnedAt: Date.now() }
+                : b,
+            ),
           ),
         }));
       },
@@ -263,12 +263,24 @@ export const useProgressStore = create<ProgressState>()(
         const already = get().badges.find((b) => b.id === badgeId)?.earnedAt;
         const xpGained = already ? 10 : 40;
         set((s) => {
-          const badges = s.badges.map((b) => {
-            if (b.id === badgeId && !b.earnedAt) {
-              return { ...b, earnedAt: Date.now() };
-            }
-            return b;
-          });
+          const badges = mergeBadges(
+            s.badges.map((b) => {
+              if (b.id === badgeId && !b.earnedAt) {
+                return { ...b, earnedAt: Date.now() };
+              }
+              return b;
+            }),
+          );
+          // Ensure unknown badge ids from older data still mark earned
+          if (!badges.some((b) => b.id === badgeId)) {
+            const goal = PRODUCT_GOALS.find((g) => g.badgeId === badgeId);
+            badges.push({
+              id: badgeId,
+              title: goal?.title ?? badgeId,
+              description: goal?.tagline ?? "Goal complete",
+              earnedAt: Date.now(),
+            });
+          }
           return { xp: s.xp + xpGained, badges };
         });
         pushProgressToCloud();
@@ -277,6 +289,15 @@ export const useProgressStore = create<ProgressState>()(
     }),
     {
       name: "chemlab-progress",
+      version: 2,
+      merge: (persisted, current) => {
+        const p = (persisted ?? {}) as Partial<ProgressState>;
+        return {
+          ...current,
+          ...p,
+          badges: mergeBadges(p.badges),
+        };
+      },
       partialize: (s) => ({
         xp: s.xp,
         discoveredIds: s.discoveredIds,

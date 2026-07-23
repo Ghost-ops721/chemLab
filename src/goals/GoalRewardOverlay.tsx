@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect } from "react";
 import {
   getGoal,
   type GoalVisualKind,
@@ -251,6 +252,15 @@ export function GoalRewardOverlay() {
   const setPickerOpen = useGoalStore((s) => s.setPickerOpen);
   const abandonGoal = useGoalStore((s) => s.abandonGoal);
 
+  useEffect(() => {
+    if (!rewardGoalId) return;
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "Escape") dismissReward();
+    }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [rewardGoalId, dismissReward]);
+
   if (!rewardGoalId) return null;
   const goal = getGoal(rewardGoalId);
   if (!goal) return null;
@@ -265,7 +275,7 @@ export function GoalRewardOverlay() {
     <div
       className="fixed inset-0 z-[60] flex items-center justify-center bg-lab-ink/55 p-4 backdrop-blur-[3px]"
       role="dialog"
-      aria-modal
+      aria-modal="true"
       aria-label="Goal reward"
       onClick={() => dismissReward()}
     >

@@ -20,10 +20,10 @@ export function ToastHost() {
   useEffect(() => {
     pushToastExternal = (t) => {
       const id = `toast-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
-      setToasts((prev) => [...prev, { ...t, id }].slice(-3));
+      setToasts((prev) => [...prev, { ...t, id }].slice(-5));
       window.setTimeout(() => {
         setToasts((prev) => prev.filter((x) => x.id !== id));
-      }, 3200);
+      }, 3800);
     };
     return () => {
       pushToastExternal = null;
@@ -34,7 +34,7 @@ export function ToastHost() {
 
   return (
     <div
-      className="pointer-events-none fixed bottom-4 right-4 z-50 flex w-64 flex-col gap-1.5"
+      className="pointer-events-none fixed bottom-24 left-3 z-50 flex w-60 flex-col gap-1.5 md:bottom-4 md:left-auto md:right-4 md:w-64"
       aria-live="polite"
       aria-relevant="additions"
     >

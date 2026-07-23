@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   PRODUCT_GOALS,
   type GoalCategory,
@@ -20,6 +20,7 @@ export function GoalPicker() {
   const completedGoalIds = useGoalStore((s) => s.completedGoalIds);
   const activeGoalId = useGoalStore((s) => s.activeGoalId);
   const [filter, setFilter] = useState<"all" | GoalCategory>("all");
+  const closeRef = useRef<HTMLButtonElement>(null);
 
   const filtered = useMemo(
     () =>
@@ -33,13 +34,23 @@ export function GoalPicker() {
     PRODUCT_GOALS.some((g) => g.id === id),
   ).length;
 
+  useEffect(() => {
+    if (!open) return;
+    closeRef.current?.focus();
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "Escape") setPickerOpen(false);
+    }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [open, setPickerOpen]);
+
   if (!open) return null;
 
   return (
     <div
       className="fixed inset-0 z-50 flex items-start justify-center bg-lab-ink/45 p-3 pt-[8vh] backdrop-blur-[2px]"
       role="dialog"
-      aria-modal
+      aria-modal="true"
       aria-label="Choose a product goal"
       onClick={() => setPickerOpen(false)}
     >
@@ -60,8 +71,9 @@ export function GoalPicker() {
             </p>
           </div>
           <button
+            ref={closeRef}
             type="button"
-            className="rounded-md px-1.5 py-0.5 text-xs text-lab-muted hover:bg-lab-wash hover:text-lab-ink"
+            className="rounded-md px-1.5 py-0.5 text-xs text-lab-muted hover:bg-lab-wash hover:text-lab-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-lab-teal"
             onClick={() => setPickerOpen(false)}
           >
             ✕

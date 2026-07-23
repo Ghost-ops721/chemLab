@@ -1,0 +1,22 @@
+{
+  "name": "chemlab-brand-videos",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Remotion project rendering Chem Lab brand/promo videos.",
+  "scripts": {
+    "start": "remotion studio src/index.ts",
+    "render": "node render-all.mjs",
+    "upgrade": "remotion upgrade"
+  },
+  "dependencies": {
+    "@remotion/cli": "4.0.496",
+    "@remotion/google-fonts": "4.0.496",
+    "react": "19.0.0",
+    "react-dom": "19.0.0",
+    "remotion": "4.0.496"
+  },
+  "devDependencies": {
+    "@types/react": "19.0.0",
+    "typescript": "5.8.2"
+  }
+}

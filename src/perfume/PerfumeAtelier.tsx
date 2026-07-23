@@ -77,7 +77,12 @@ export function PerfumeAtelier({
   const [query, setQuery] = useState("");
   const [family, setFamily] = useState<"all" | ScentFamily>("all");
   const [difficulty, setDifficulty] = useState<"all" | GoalDifficulty>("all");
-  const [selected, setSelected] = useState<PerfumeRecipe | null>(null);
+  const [selected, setSelected] = useState<PerfumeRecipe | null>(
+    () =>
+      PERFUME_RECIPES.find((r) => r.id === DEFAULT_FEATURED_ID) ??
+      PERFUME_RECIPES[0] ??
+      null,
+  );
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -132,10 +137,10 @@ export function PerfumeAtelier({
       onClick={onClose}
     >
       <div
-        className="flex max-h-[88vh] w-full max-w-3xl flex-col overflow-hidden rounded-2xl border border-lab-line bg-lab-panel shadow-2xl"
+        className="flex max-h-[88vh] min-h-[min(560px,88vh)] w-full max-w-3xl flex-col overflow-hidden rounded-2xl border border-lab-line bg-lab-panel shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex items-start justify-between gap-2 border-b border-lab-line/50 px-4 py-3">
+        <div className="flex shrink-0 items-start justify-between gap-2 border-b border-lab-line/50 px-4 py-3">
           <div>
             <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-lab-teal">
               Perfume atelier
@@ -157,63 +162,83 @@ export function PerfumeAtelier({
           </button>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2 border-b border-lab-line/40 px-4 py-2">
-          <input
-            type="search"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search Havas, Dior, woody…"
-            aria-label="Search perfumes"
-            className="min-w-40 flex-1 rounded-lg border border-lab-line bg-white px-2.5 py-1.5 text-xs text-lab-ink outline-none focus:border-lab-teal"
-          />
-          <button
-            type="button"
-            onClick={() => {
-              onClose();
-              onOpenFreeform();
-            }}
-            className="rounded-lg border border-lab-teal/40 bg-lab-teal/10 px-2.5 py-1.5 text-[11px] font-semibold text-lab-teal hover:bg-lab-teal/20"
+        <div className="shrink-0 space-y-3.5 border-b border-lab-line/40 px-4 py-3.5">
+          <div className="flex flex-wrap items-center gap-2">
+            <input
+              type="search"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Search Havas, Dior, woody…"
+              aria-label="Search perfumes"
+              className="min-w-40 flex-1 rounded-lg border border-lab-line bg-white px-3 py-2 text-xs text-lab-ink outline-none focus:border-lab-teal"
+            />
+            <button
+              type="button"
+              onClick={() => {
+                onClose();
+                onOpenFreeform();
+              }}
+              className="rounded-lg border border-lab-teal/40 bg-lab-teal/10 px-3 py-2 text-[11px] font-semibold text-lab-teal hover:bg-lab-teal/20"
+            >
+              Freeform blend
+            </button>
+          </div>
+
+          <div
+            className="space-y-1"
+            role="group"
+            aria-label="Difficulty"
           >
-            Freeform blend
-          </button>
+            <p className="text-[10px] font-semibold uppercase tracking-wider text-lab-muted">
+              Level
+            </p>
+            <div className="flex flex-wrap gap-2">
+              {DIFFICULTY_FILTERS.map((f) => (
+                <button
+                  key={f.id}
+                  type="button"
+                  onClick={() => setDifficulty(f.id)}
+                  className={`min-h-9 shrink-0 rounded-lg px-3.5 py-2 text-[11px] font-semibold transition ${
+                    difficulty === f.id
+                      ? "bg-lab-teal text-white shadow-sm"
+                      : "bg-lab-wash text-lab-muted hover:bg-lab-line/40 hover:text-lab-ink"
+                  }`}
+                >
+                  {f.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div
+            className="space-y-1"
+            role="group"
+            aria-label="Fragrance family"
+          >
+            <p className="text-[10px] font-semibold uppercase tracking-wider text-lab-muted">
+              Family
+            </p>
+            <div className="flex flex-wrap gap-2">
+              {FAMILIES.map((f) => (
+                <button
+                  key={f.id}
+                  type="button"
+                  onClick={() => setFamily(f.id)}
+                  className={`min-h-9 shrink-0 rounded-lg px-3.5 py-2 text-[11px] font-semibold transition ${
+                    family === f.id
+                      ? "bg-lab-ink text-lab-foam shadow-sm"
+                      : "bg-lab-wash text-lab-muted hover:bg-lab-line/40 hover:text-lab-ink"
+                  }`}
+                >
+                  {f.label}
+                </button>
+              ))}
+            </div>
+          </div>
         </div>
 
-        <div className="scroll-thin flex gap-1 overflow-x-auto border-b border-lab-line/40 px-3 py-2">
-          {DIFFICULTY_FILTERS.map((f) => (
-            <button
-              key={f.id}
-              type="button"
-              onClick={() => setDifficulty(f.id)}
-              className={`shrink-0 rounded-full px-2.5 py-1 text-[10px] font-semibold ${
-                difficulty === f.id
-                  ? "bg-lab-teal text-white"
-                  : "bg-lab-wash text-lab-muted hover:text-lab-ink"
-              }`}
-            >
-              {f.label}
-            </button>
-          ))}
-        </div>
-
-        <div className="scroll-thin flex gap-1 overflow-x-auto border-b border-lab-line/40 px-3 py-2">
-          {FAMILIES.map((f) => (
-            <button
-              key={f.id}
-              type="button"
-              onClick={() => setFamily(f.id)}
-              className={`shrink-0 rounded-full px-2.5 py-1 text-[10px] font-semibold ${
-                family === f.id
-                  ? "bg-lab-ink text-lab-foam"
-                  : "bg-lab-wash text-lab-muted hover:text-lab-ink"
-              }`}
-            >
-              {f.label}
-            </button>
-          ))}
-        </div>
-
-        <div className="grid min-h-0 flex-1 grid-cols-1 md:grid-cols-[1fr_280px]">
-          <ul className="scroll-thin max-h-[50vh] space-y-1 overflow-y-auto p-3 md:max-h-none">
+        <div className="grid min-h-0 flex-1 grid-cols-1 overflow-hidden sm:grid-cols-[minmax(0,1fr)_260px]">
+          <ul className="scroll-thin min-h-0 space-y-1 overflow-y-auto p-3">
             {filtered.map((r) => {
               const done = completed.includes(r.id);
               const steps = getPerfumeGoal(r.id)?.steps.length;
@@ -222,7 +247,7 @@ export function PerfumeAtelier({
                   <button
                     type="button"
                     onClick={() => setSelected(r)}
-                    className={`flex w-full items-start gap-2 rounded-xl border px-2.5 py-2 text-left transition ${
+                    className={`flex w-full items-start gap-2 rounded-xl border px-2.5 py-2.5 text-left transition ${
                       selected?.id === r.id
                         ? "border-lab-teal bg-lab-teal/10"
                         : "border-transparent hover:bg-lab-wash/80"
@@ -275,17 +300,17 @@ export function PerfumeAtelier({
             ) : null}
           </ul>
 
-          <aside className="border-t border-lab-line/50 bg-lab-wash/30 p-4 md:border-l md:border-t-0">
+          <aside className="scroll-thin min-h-0 overflow-y-auto border-t border-lab-line/50 bg-lab-wash/30 p-4 sm:border-l sm:border-t-0">
             {selected ? (
               <>
                 <div
-                  className="mx-auto mb-3 flex h-24 w-16 flex-col items-center"
+                  className="mx-auto mb-3 flex h-20 w-14 flex-col items-center sm:h-24 sm:w-16"
                   aria-hidden
                 >
-                  <div className="h-2.5 w-3 rounded-t-sm bg-lab-ink/80" />
-                  <div className="h-1.5 w-5 rounded-sm bg-lab-amber/90" />
+                  <div className="h-2 w-2.5 rounded-t-sm bg-lab-ink/80 sm:h-2.5 sm:w-3" />
+                  <div className="h-1 w-4 rounded-sm bg-lab-amber/90 sm:h-1.5 sm:w-5" />
                   <div
-                    className="relative h-16 w-10 overflow-hidden rounded-b-xl rounded-t-md border border-lab-glass/50 shadow"
+                    className="relative h-14 w-9 overflow-hidden rounded-b-xl rounded-t-md border border-lab-glass/50 shadow sm:h-16 sm:w-10"
                     style={{
                       background: `linear-gradient(180deg, #f7faf8 0%, ${selected.bottleColor} 100%)`,
                     }}

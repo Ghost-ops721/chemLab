@@ -131,7 +131,7 @@ export function GoalPicker({
           <p className="mt-0.5 text-[11px] text-lab-muted">
             Easy → Very hard. Tap Havas or browse the full catalog.
           </p>
-          <div className="mt-2 flex gap-1.5 overflow-x-auto pb-0.5">
+          <div className="scroll-thin mt-2 flex gap-1.5 overflow-x-auto pb-0.5">
             {spotlight.map((r) => {
               const done = completedPerfumes.includes(r.id);
               const goal = getPerfumeGoal(r.id);

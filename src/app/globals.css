@@ -145,8 +145,14 @@ body {
 
 /* Hide scrollbar chrome but keep scroll */
 .scroll-thin {
-  scrollbar-width: thin;
-  scrollbar-color: var(--lab-line) transparent;
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.scroll-thin::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
 }
 
 /* ——— Extreme lab interactivity FX ——— */

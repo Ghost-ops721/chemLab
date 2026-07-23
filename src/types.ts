@@ -83,6 +83,7 @@ export interface VesselFx {
   shakeAt?: number;
   mixAt?: number;
   heatFlashAt?: number;
+  coolFlashAt?: number;
   /** Last poured chemical color for splash tint */
   pourColor?: string;
   /** Optional desk-local origin of a pour stream */
@@ -143,6 +144,8 @@ export interface DeskVessel {
   contentIds: string[];
   /** Heat source attached to this vessel */
   heatAttached: boolean;
+  /** Cold source (ice bath) attached to this vessel */
+  coolAttached: boolean;
   /** How vigorously the liquid has been stirred (0–3) */
   stirLevel: number;
   lastResult?: EngineResult;

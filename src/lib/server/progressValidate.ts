@@ -89,6 +89,7 @@ export type SanitizedInvention = {
       equipmentId: string;
       contentIds: string[];
       heatAttached: boolean;
+      coolAttached: boolean;
       stirLevel: number;
     };
   }[];
@@ -143,6 +144,7 @@ export function sanitizeInventionsInput(
           equipmentId: snap.equipmentId.slice(0, 40),
           contentIds,
           heatAttached: Boolean(snap.heatAttached),
+          coolAttached: Boolean(snap.coolAttached),
           stirLevel:
             typeof snap.stirLevel === "number"
               ? Math.max(0, Math.min(3, Math.floor(snap.stirLevel)))

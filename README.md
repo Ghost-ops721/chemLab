@@ -1,8 +1,13 @@
 # Chem Lab
 
+[![License: MIT](https://img.shields.io/badge/License-MIT-1a6b5c.svg)](./LICENSE)
+[![Demo](https://img.shields.io/badge/demo-live-1a6b5c.svg)](https://chemistry-nu-five.vercel.app)
+
 Virtual chemistry desk: pour, stir, heat, and shake reactants; earn XP; scan notes with OCR; get a plain-language tutor explanation.
 
-Design system: [DESIGN.md](./DESIGN.md). Deploy checklist: [DEPLOY.md](./DEPLOY.md).
+**The desk reacts to every move.** Open source (MIT) — [live demo](https://chemistry-nu-five.vercel.app).
+
+Design system: [DESIGN.md](./DESIGN.md). Deploy checklist: [DEPLOY.md](./DEPLOY.md). Marketing sprint: [marketing/oss-sprint/README.md](./marketing/oss-sprint/README.md).
 
 ## Stack
 

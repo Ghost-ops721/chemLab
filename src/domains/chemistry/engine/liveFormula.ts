@@ -24,6 +24,7 @@ export interface LiveFormulaInput {
   contents: VesselContent[];
   equipmentId: string;
   heatAttached?: boolean;
+  coolAttached?: boolean;
   /** IFRA product category; defaults to fine fragrance (cat4). */
   ifraCategory?: IfraProductCategoryId;
 }
@@ -127,7 +128,7 @@ function toLiveIfraSummary(
 }
 
 export function computeLivePreview(input: LiveFormulaInput): LiveVesselPreview {
-  const { contents, equipmentId, heatAttached, ifraCategory = "cat4" } = input;
+  const { contents, equipmentId, heatAttached, coolAttached, ifraCategory = "cat4" } = input;
   const total = totalMl(contents);
   const ethanol = contents.find((c) => c.chemicalId === "c2h5oh");
   const ethanolMl = ethanol?.amountMl ?? 0;
@@ -172,6 +173,7 @@ export function computeLivePreview(input: LiveFormulaInput): LiveVesselPreview {
   const hazards = assessLiveHazards({
     contents,
     heatAttached: Boolean(heatAttached),
+    coolAttached: Boolean(coolAttached),
     ethanolPct,
     oilLoadPct,
   });

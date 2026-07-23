@@ -20,10 +20,11 @@ function anyVessel(snap: GoalDeskSnapshot) {
 export function vesselHas(
   snap: GoalDeskSnapshot,
   chemicalIds: string[],
-  opts?: { heat?: boolean; equipmentIds?: string[] },
+  opts?: { heat?: boolean; cool?: boolean; equipmentIds?: string[] },
 ) {
   return anyVessel(snap).some((v) => {
     if (opts?.heat && !v.heatAttached) return false;
+    if (opts?.cool && !v.coolAttached) return false;
     if (
       opts?.equipmentIds &&
       !opts.equipmentIds.includes(v.equipmentId)
@@ -219,6 +220,31 @@ export function heatStep(
       opts.almost ?? "Turn Heat on for that beaker.",
     ),
     check: (s) => vesselHas(s, opts.chemicalIds, { heat: true }),
+  };
+}
+
+export function coolStep(
+  id: string,
+  opts: {
+    title?: string;
+    instruction?: string;
+    chemicalIds: string[];
+    nudge?: string;
+    clue?: string;
+    almost?: string;
+  },
+): GoalStep {
+  return {
+    id,
+    title: opts.title ?? "Cool the vessel",
+    instruction:
+      opts.instruction ?? "Attach an ice bath — this step needs cooling.",
+    hints: hints(
+      opts.nudge ?? "Heat won’t finish this step — cool it down.",
+      opts.clue ?? "Drop an Ice Bath onto the vessel or tap Cool.",
+      opts.almost ?? "Turn Cool on for that beaker.",
+    ),
+    check: (s) => vesselHas(s, opts.chemicalIds, { cool: true }),
   };
 }
 

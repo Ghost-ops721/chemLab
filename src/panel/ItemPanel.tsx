@@ -12,12 +12,18 @@ import { useGoalStore } from "@/store/goalStore";
 import { getGoal } from "@/domains/chemistry/data/goals";
 import { useAuthStore } from "@/store/authStore";
 import { labCopy } from "@/lab/labCopy";
+import {
+  capacityMlForEquipment,
+  getVesselContents,
+  totalMl,
+} from "@/desk/vesselContents";
 import { isOilItem } from "@/domains/chemistry/perfume/oilMeta";
 
-type ModalKind = "equipment" | "chemicals" | "oils" | null;
+type BrowseKind = "equipment" | "chemicals" | "oils";
 
 export function ItemPanel() {
-  const [modal, setModal] = useState<ModalKind>(null);
+  const [browse, setBrowse] = useState<BrowseKind>("equipment");
+  const [expanded, setExpanded] = useState(false);
   const [query, setQuery] = useState("");
   const [category, setCategory] = useState<string>("all");
   const [mounted] = useState(() => typeof window !== "undefined");
@@ -27,7 +33,10 @@ export function ItemPanel() {
   const placeEquipment = useDeskStore((s) => s.placeEquipment);
   const addChemicalToVessel = useDeskStore((s) => s.addChemicalToVessel);
   const attachHeat = useDeskStore((s) => s.attachHeat);
+  const attachCool = useDeskStore((s) => s.attachCool);
   const stirVessel = useDeskStore((s) => s.stirVessel);
+  const pourAmountMl = useDeskStore((s) => s.pourAmountMl);
+  const setPourAmountMl = useDeskStore((s) => s.setPourAmountMl);
 
   const activeGoalId = useGoalStore((s) => s.activeGoalId);
   const goal = activeGoalId ? getGoal(activeGoalId) : undefined;
@@ -40,9 +49,9 @@ export function ItemPanel() {
   const equipment = getAllEquipment("chemistry");
 
   useEffect(() => {
-    if (!modal) return;
+    if (!expanded) return;
     function onKey(e: KeyboardEvent) {
-      if (e.key === "Escape") setModal(null);
+      if (e.key === "Escape") setExpanded(false);
     }
     const prev = document.body.style.overflow;
     document.body.style.overflow = "hidden";
@@ -51,12 +60,17 @@ export function ItemPanel() {
       document.body.style.overflow = prev;
       window.removeEventListener("keydown", onKey);
     };
-  }, [modal]);
+  }, [expanded]);
 
-  function openModal(kind: Exclude<ModalKind, null>) {
+  function selectBrowse(kind: BrowseKind) {
     setQuery("");
     setCategory("all");
-    setModal(kind);
+    setBrowse(kind);
+  }
+
+  function openExpanded(kind: BrowseKind) {
+    selectBrowse(kind);
+    setExpanded(true);
   }
 
   const categories = useMemo(() => {
@@ -117,13 +131,95 @@ export function ItemPanel() {
   const targetVessel =
     vessels.find((v) => v.instanceId === activeVesselId) ?? vessels[0];
 
+  const pourCap = targetVessel
+    ? capacityMlForEquipment(targetVessel.equipmentId)
+    : 50;
+  const pourRoom = targetVessel
+    ? Math.max(
+        0.1,
+        Math.round(
+          (pourCap - totalMl(getVesselContents(targetVessel))) * 10,
+        ) / 10,
+      )
+    : pourCap;
+  const pourMax = Math.min(pourCap, Math.max(pourRoom, 0.1));
+  const pourPct = Math.min(100, (pourAmountMl / pourMax) * 100);
+
+  function PourAmountControl({ compact = false }: { compact?: boolean }) {
+    return (
+      <div
+        className={
+          compact
+            ? "mt-1.5 space-y-1 rounded-md border border-lab-line/50 bg-white/70 px-1.5 py-1.5"
+            : "space-y-1.5 rounded-lg border border-lab-line/50 bg-white/80 px-2.5 py-2"
+        }
+      >
+        <div className="flex items-center justify-between gap-2">
+          <p
+            className={`font-medium text-lab-ink ${
+              compact ? "text-[10px]" : "text-[11px]"
+            }`}
+          >
+            Pour amount
+          </p>
+          <span
+            className={`font-mono text-lab-muted ${
+              compact ? "text-[9px]" : "text-[10px]"
+            }`}
+          >
+            of {pourMax} ml room
+          </span>
+        </div>
+        <div className="relative h-2 overflow-hidden rounded-full bg-lab-wash">
+          <div
+            className="absolute inset-y-0 left-0 rounded-full bg-lab-teal/85 transition-[width] duration-150"
+            style={{ width: `${pourPct}%` }}
+          />
+          <input
+            type="range"
+            min={0.1}
+            max={pourMax}
+            step={0.1}
+            value={Math.min(pourAmountMl, pourMax)}
+            onChange={(e) => setPourAmountMl(Number(e.target.value))}
+            className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
+            aria-label="Pour amount in milliliters"
+          />
+        </div>
+        <label className="flex items-center gap-1.5">
+          <input
+            type="number"
+            min={0.1}
+            max={pourMax}
+            step={0.1}
+            value={Number(Math.min(pourAmountMl, pourMax).toFixed(1))}
+            onChange={(e) => {
+              const raw = Number(e.target.value);
+              if (!Number.isFinite(raw)) return;
+              setPourAmountMl(Math.min(raw, pourMax));
+            }}
+            className={`rounded border border-lab-line/60 bg-white px-1.5 py-0.5 font-mono text-lab-ink outline-none focus:border-lab-teal focus:ring-1 focus:ring-lab-teal/30 ${
+              compact ? "w-12 text-[10px]" : "w-14 text-xs"
+            }`}
+            aria-label="Custom pour amount"
+          />
+          <span
+            className={`text-lab-muted ${compact ? "text-[9px]" : "text-[10px]"}`}
+          >
+            ml each +
+          </span>
+        </label>
+      </div>
+    );
+  }
+
   function quickChemical(id: string) {
     if (!targetVessel) {
       showToast({
         title: "Need glassware first",
         detail: "Place a beaker, then tap + to pour.",
       });
-      setModal("equipment");
+      selectBrowse("equipment");
       return;
     }
     const beforeBlocked = useAuthStore.getState().isLabBlocked();
@@ -138,7 +234,6 @@ export function ItemPanel() {
     }
     const chem = getChemical(id);
     showToast(labCopy.pourOk(chem?.formula ?? id));
-    setModal(null);
   }
 
   function quickEquipment(id: string) {
@@ -154,7 +249,18 @@ export function ItemPanel() {
       }
       attachHeat(targetVessel.instanceId);
       showToast(labCopy.burnerOn);
-      setModal(null);
+      return;
+    }
+    if (eq.function === "cold-source") {
+      if (!targetVessel) {
+        showToast({
+          title: "Place a vessel first",
+          detail: "Then set the ice bath under it.",
+        });
+        return;
+      }
+      attachCool(targetVessel.instanceId);
+      showToast(labCopy.iceBathOn);
       return;
     }
     if (eq.function === "stirring") {
@@ -166,7 +272,6 @@ export function ItemPanel() {
         return;
       }
       stirVessel(targetVessel.instanceId, true);
-      setModal(null);
       return;
     }
     const n = vessels.length;
@@ -174,27 +279,26 @@ export function ItemPanel() {
       x: 48 + (n % 4) * 190,
       y: 48 + Math.floor(n / 4) * 210,
     });
-    setModal(null);
   }
 
   const list =
-    modal === "chemicals"
+    browse === "chemicals"
       ? filteredChemicals
-      : modal === "oils"
+      : browse === "oils"
         ? filteredOils
         : filteredEquipment;
 
-  const modalTitle =
-    modal === "equipment"
+  const browseTitle =
+    browse === "equipment"
       ? "Equipment"
-      : modal === "oils"
+      : browse === "oils"
         ? "Oils"
         : "Chemicals";
 
-  const modalHint =
-    modal === "equipment"
-      ? "Place glassware on the desk, or use heat and stir on the active vessel."
-      : modal === "oils"
+  const browseHint =
+    browse === "equipment"
+      ? "Place glassware on the desk, or use heat and cool on the active vessel."
+      : browse === "oils"
         ? targetVessel
           ? `Pour fragrance oils into ${EQUIPMENT_BY_ID[targetVessel.equipmentId]?.name ?? "vessel"} — adjust ml on the vessel.`
           : "Place glassware first, then pour oils and ethanol."
@@ -208,8 +312,107 @@ export function ItemPanel() {
 
   const oilRoles = ["all", "carrier", "top", "heart", "base"];
 
-  const modalUi =
-    mounted && modal
+  const searchPlaceholder =
+    browse === "equipment"
+      ? "Search glassware, heat, cool…"
+      : browse === "oils"
+        ? "Search oils…"
+        : "Search name or formula…";
+
+  function FilterChips({
+    options,
+    compact = false,
+  }: {
+    options: string[];
+    compact?: boolean;
+  }) {
+    return (
+      <div
+        className={`flex gap-1 overflow-x-auto [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden ${
+          compact ? "pb-0.5" : "pb-0.5"
+        }`}
+      >
+        {options.map((c) => {
+          const active = category === c;
+          return (
+            <button
+              key={c}
+              type="button"
+              onClick={() => setCategory(c)}
+              className={`shrink-0 rounded-full font-medium capitalize transition ${
+                compact
+                  ? "px-1.5 py-0.5 text-[9px]"
+                  : "px-2 py-0.5 text-[10px]"
+              } ${
+                active
+                  ? "bg-lab-teal text-lab-foam"
+                  : "bg-white/80 text-lab-muted ring-1 ring-lab-line/60 hover:text-lab-ink"
+              }`}
+            >
+              {c === "all" ? "All" : c}
+            </button>
+          );
+        })}
+      </div>
+    );
+  }
+
+  function InlineBrowseList() {
+    if (list.length === 0) {
+      return (
+        <p className="rounded-lg border border-dashed border-lab-line/70 bg-white/40 px-2 py-4 text-center text-[10px] text-lab-muted">
+          Nothing matched. Try another search.
+        </p>
+      );
+    }
+
+    if (browse === "equipment") {
+      return (
+        <>
+          {filteredEquipment.map((item) => (
+            <DraggableItem
+              key={item.id}
+              item={item}
+              payload={{ type: "equipment", itemId: item.id }}
+              subtitle={item.subcategory}
+              onQuickAdd={() => quickEquipment(item.id)}
+              hint="Place or use on active vessel"
+              highlighted={highlightIds.has(item.id)}
+              dragIdPrefix="browse-eq"
+            />
+          ))}
+        </>
+      );
+    }
+
+    return (
+      <>
+        {list.map((item) => {
+          const chem = getChemical(item.id);
+          return (
+            <DraggableItem
+              key={item.id}
+              item={item}
+              payload={{ type: "chemical", itemId: item.id }}
+              subtitle={chem?.formula ?? item.subcategory}
+              accentColor={chem?.color}
+              onQuickAdd={() => quickChemical(item.id)}
+              hint={
+                browse === "oils"
+                  ? "Pour oil into active vessel"
+                  : "Pour into active vessel"
+              }
+              highlighted={highlightIds.has(item.id)}
+              dragIdPrefix={browse === "oils" ? "browse-oil" : "browse-chem"}
+            />
+          );
+        })}
+      </>
+    );
+  }
+
+  const expandedUi =
+    mounted && expanded
       ? createPortal(
           <div
             role="dialog"
@@ -232,16 +435,16 @@ export function ItemPanel() {
                       id="inventory-modal-title"
                       className="font-display text-lg leading-none tracking-tight text-lab-ink"
                     >
-                      {modalTitle}
+                      {browseTitle}
                     </h2>
                   </div>
                   <p className="mt-0.5 max-w-xl truncate text-[11px] text-lab-muted">
-                    {modalHint}
+                    {browseHint}
                   </p>
                 </div>
                 <button
                   type="button"
-                  onClick={() => setModal(null)}
+                  onClick={() => setExpanded(false)}
                   className="shrink-0 rounded-md bg-lab-ink px-2.5 py-1 text-[11px] font-medium text-lab-foam transition hover:bg-lab-teal"
                 >
                   Done
@@ -251,64 +454,51 @@ export function ItemPanel() {
 
             <div className="shrink-0 border-b border-lab-line/40 bg-lab-panel/55 px-3 py-1.5 sm:px-4">
               <div className="mx-auto w-full max-w-5xl space-y-1.5">
+                <div className="flex gap-1.5">
+                  {(
+                    [
+                      ["equipment", "Equipment"],
+                      ["oils", "Oils"],
+                      ["chemicals", "Chemicals"],
+                    ] as const
+                  ).map(([kind, label]) => (
+                    <button
+                      key={kind}
+                      type="button"
+                      onClick={() => selectBrowse(kind)}
+                      className={`rounded-lg px-2.5 py-1 text-[11px] font-medium transition ${
+                        browse === kind
+                          ? kind === "oils"
+                            ? "bg-lab-amber text-white"
+                            : "bg-lab-teal text-lab-foam"
+                          : "bg-white/80 text-lab-muted ring-1 ring-lab-line/60 hover:text-lab-ink"
+                      }`}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
+
                 <label className="relative block">
                   <span className="sr-only">Search</span>
                   <input
                     autoFocus
                     value={query}
                     onChange={(e) => setQuery(e.target.value)}
-                    placeholder={
-                      modal === "equipment"
-                        ? "Search glassware, heat, tools…"
-                        : modal === "oils"
-                          ? "Search oils — bergamot, lavender, musk…"
-                          : "Search by name or formula — HCl, NaOH, ethanol…"
-                    }
+                    placeholder={searchPlaceholder}
                     className="w-full rounded-lg border border-lab-line/70 bg-white px-2.5 py-1.5 text-xs text-lab-ink outline-none ring-lab-teal/30 placeholder:text-lab-muted focus:ring-2"
                   />
                 </label>
 
-                {modal === "chemicals" ? (
-                  <div className="flex gap-1 overflow-x-auto pb-0.5 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-                    {categories.map((c) => {
-                      const active = category === c;
-                      return (
-                        <button
-                          key={c}
-                          type="button"
-                          onClick={() => setCategory(c)}
-                          className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-medium capitalize transition ${
-                            active
-                              ? "bg-lab-teal text-lab-foam"
-                              : "bg-white/80 text-lab-muted ring-1 ring-lab-line/60 hover:text-lab-ink"
-                          }`}
-                        >
-                          {c === "all" ? "All" : c}
-                        </button>
-                      );
-                    })}
-                  </div>
+                {browse === "chemicals" ? (
+                  <FilterChips options={categories} />
                 ) : null}
-                {modal === "oils" ? (
-                  <div className="flex gap-1 overflow-x-auto pb-0.5 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-                    {oilRoles.map((c) => {
-                      const active = category === c;
-                      return (
-                        <button
-                          key={c}
-                          type="button"
-                          onClick={() => setCategory(c)}
-                          className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-medium capitalize transition ${
-                            active
-                              ? "bg-lab-teal text-lab-foam"
-                              : "bg-white/80 text-lab-muted ring-1 ring-lab-line/60 hover:text-lab-ink"
-                          }`}
-                        >
-                          {c === "all" ? "All" : c}
-                        </button>
-                      );
-                    })}
-                  </div>
+                {browse === "oils" ? (
+                  <FilterChips options={oilRoles} />
+                ) : null}
+
+                {browse === "chemicals" || browse === "oils" ? (
+                  <PourAmountControl />
                 ) : null}
               </div>
             </div>
@@ -317,9 +507,9 @@ export function ItemPanel() {
               <div className="mx-auto w-full max-w-5xl">
                 <p className="mb-1.5 text-[10px] text-lab-muted">
                   {list.length}{" "}
-                  {modal === "equipment"
+                  {browse === "equipment"
                     ? "tools"
-                    : modal === "oils"
+                    : browse === "oils"
                       ? "oils"
                       : "chemicals"}
                   {query.trim() ? ` matching “${query.trim()}”` : ""}
@@ -329,10 +519,9 @@ export function ItemPanel() {
                   <p className="rounded-lg border border-dashed border-lab-line/70 bg-white/40 px-3 py-6 text-center text-[11px] text-lab-muted">
                     Nothing matched. Try another formula or clear the search.
                   </p>
-                ) : modal === "chemicals" || modal === "oils" ? (
+                ) : browse === "chemicals" || browse === "oils" ? (
                   <div className="grid grid-cols-1 gap-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-                    {(modal === "oils" ? filteredOils : filteredChemicals).map(
-                      (item) => {
+                    {list.map((item) => {
                       const chem = getChemical(item.id);
                       const highlighted = highlightIds.has(item.id);
                       return (
@@ -428,132 +617,179 @@ export function ItemPanel() {
 
   return (
     <>
-      {/* Mobile inventory FAB — above tool dock / toasts */}
+      {/* Mobile inventory FAB — opens full-screen (no left rail on small screens) */}
       <div className="pointer-events-none absolute bottom-16 right-3 z-40 flex flex-col gap-1.5 md:hidden">
         <button
           type="button"
-          onClick={() => openModal("oils")}
+          onClick={() => openExpanded("oils")}
           className="pointer-events-auto rounded-full bg-lab-amber px-3 py-2 text-[11px] font-semibold text-white shadow-lg"
         >
           Oils
         </button>
         <button
           type="button"
-          onClick={() => openModal("chemicals")}
+          onClick={() => openExpanded("chemicals")}
           className="pointer-events-auto rounded-full bg-lab-teal px-3 py-2 text-[11px] font-semibold text-white shadow-lg"
         >
           Chemicals
         </button>
         <button
           type="button"
-          onClick={() => openModal("equipment")}
+          onClick={() => openExpanded("equipment")}
           className="pointer-events-auto rounded-full border border-lab-line bg-lab-panel px-3 py-2 text-[11px] font-semibold text-lab-ink shadow-lg"
         >
           Equipment
         </button>
       </div>
 
-    <aside className="panel-glass hidden w-full shrink-0 flex-col border-b border-lab-line/60 md:flex md:h-full md:max-h-none md:w-[14rem] md:border-b-0 md:border-r xl:w-[15.5rem]">
-      <div className="border-b border-lab-line/50 px-2.5 pb-2 pt-2.5">
-        <p className="font-display text-[10px] uppercase tracking-[0.2em] text-lab-teal">
-          Inventory
-        </p>
-        <div className="mt-1.5 flex gap-1.5">
-          <button
-            type="button"
-            onClick={() => openModal("equipment")}
-            className="flex-1 rounded-lg border border-lab-line/60 bg-white/90 px-1.5 py-1 text-[11px] font-medium text-lab-ink shadow-sm transition hover:border-lab-teal/50 hover:bg-white"
-          >
-            Equipment
-          </button>
-          <button
-            type="button"
-            onClick={() => openModal("oils")}
-            className="flex-1 rounded-lg border border-lab-amber/40 bg-lab-amber/10 px-1.5 py-1 text-[11px] font-medium text-lab-amber shadow-sm transition hover:bg-lab-amber/15"
-          >
-            Oils
-          </button>
-          <button
-            type="button"
-            onClick={() => openModal("chemicals")}
-            className="flex-1 rounded-lg border border-lab-teal/35 bg-lab-teal/10 px-1.5 py-1 text-[11px] font-medium text-lab-teal shadow-sm transition hover:bg-lab-teal/15"
-          >
-            Chemicals
-          </button>
-        </div>
-        <p className="mt-1.5 text-[10px] leading-snug text-lab-muted">
-          Drag onto desk, or tap{" "}
-          <span className="font-semibold text-lab-teal">+</span> to place / use.
-        </p>
-        {targetVessel ? (
-          <p className="mt-1.5 truncate rounded-md bg-lab-teal/10 px-1.5 py-0.5 text-[10px] text-lab-teal">
-            Pour target:{" "}
-            {EQUIPMENT_BY_ID[targetVessel.equipmentId]?.name ?? "vessel"}
-            {targetVessel.contentIds.length
-              ? ` · ${targetVessel.contentIds.length} inside`
-              : ""}
+      <aside className="panel-glass hidden w-full shrink-0 flex-col border-b border-lab-line/60 md:flex md:h-full md:max-h-none md:w-[14rem] md:border-b-0 md:border-r xl:w-[15.5rem]">
+        <div className="border-b border-lab-line/50 px-2.5 pb-2 pt-2.5">
+          <p className="font-display text-[10px] uppercase tracking-[0.2em] text-lab-teal">
+            Inventory
           </p>
-        ) : null}
-        {goal ? (
-          <p className="mt-1.5 rounded-md border border-lab-amber/30 bg-lab-amber/10 px-1.5 py-1 text-[10px] leading-snug text-lab-ink/80">
-            <span className="font-semibold text-lab-amber">For this goal:</span>{" "}
-            {goal.icon} {goal.title} — highlighted items below match the recipe.
-          </p>
-        ) : null}
-      </div>
+          <div className="mt-1.5 flex gap-1.5">
+            <button
+              type="button"
+              onClick={() => selectBrowse("equipment")}
+              className={`flex-1 rounded-lg border px-1.5 py-1 text-[11px] font-medium shadow-sm transition ${
+                browse === "equipment"
+                  ? "border-lab-ink/20 bg-lab-ink text-lab-foam"
+                  : "border-lab-line/60 bg-white/90 text-lab-ink hover:border-lab-teal/50 hover:bg-white"
+              }`}
+            >
+              Equipment
+            </button>
+            <button
+              type="button"
+              onClick={() => selectBrowse("oils")}
+              className={`flex-1 rounded-lg border px-1.5 py-1 text-[11px] font-medium shadow-sm transition ${
+                browse === "oils"
+                  ? "border-lab-amber bg-lab-amber text-white"
+                  : "border-lab-amber/40 bg-lab-amber/10 text-lab-amber hover:bg-lab-amber/15"
+              }`}
+            >
+              Oils
+            </button>
+            <button
+              type="button"
+              onClick={() => selectBrowse("chemicals")}
+              className={`flex-1 rounded-lg border px-1.5 py-1 text-[11px] font-medium shadow-sm transition ${
+                browse === "chemicals"
+                  ? "border-lab-teal bg-lab-teal text-lab-foam"
+                  : "border-lab-teal/35 bg-lab-teal/10 text-lab-teal hover:bg-lab-teal/15"
+              }`}
+            >
+              Chemicals
+            </button>
+          </div>
 
-      <div className="scroll-thin flex-1 space-y-1 overflow-y-auto px-2 py-1.5">
-        {goal
-          ? equipment
-              .filter((item) => highlightIds.has(item.id))
-              .map((item) => (
-                <DraggableItem
-                  key={`goal-${item.id}`}
-                  item={item}
-                  payload={{ type: "equipment", itemId: item.id }}
-                  subtitle={item.subcategory}
-                  onQuickAdd={() => quickEquipment(item.id)}
-                  hint="Needed for your goal"
-                  highlighted
-                  dragIdPrefix="goal-eq"
-                />
-              ))
-          : null}
-        {goal
-          ? items
-              .filter((item) => highlightIds.has(item.id))
-              .map((item) => {
-                const chem = getChemical(item.id);
-                return (
+          <p className="mt-1.5 text-[10px] leading-snug text-lab-muted">
+            {browseHint}
+          </p>
+
+          {targetVessel ? (
+            <p className="mt-1.5 truncate rounded-md bg-lab-teal/10 px-1.5 py-0.5 text-[10px] text-lab-teal">
+              Pour target:{" "}
+              {EQUIPMENT_BY_ID[targetVessel.equipmentId]?.name ?? "vessel"}
+              {targetVessel.contentIds.length
+                ? ` · ${targetVessel.contentIds.length} inside`
+                : ""}
+            </p>
+          ) : null}
+
+          {(browse === "chemicals" || browse === "oils") && (
+            <PourAmountControl compact />
+          )}
+
+          {goal ? (
+            <p className="mt-1.5 rounded-md border border-lab-amber/30 bg-lab-amber/10 px-1.5 py-1 text-[10px] leading-snug text-lab-ink/80">
+              <span className="font-semibold text-lab-amber">For this goal:</span>{" "}
+              {goal.icon} {goal.title} — highlighted items match the recipe.
+            </p>
+          ) : null}
+
+          <label className="mt-1.5 block">
+            <span className="sr-only">Search {browseTitle}</span>
+            <input
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder={searchPlaceholder}
+              className="w-full rounded-md border border-lab-line/60 bg-white px-1.5 py-1 text-[10px] text-lab-ink outline-none placeholder:text-lab-muted focus:border-lab-teal focus:ring-1 focus:ring-lab-teal/30"
+            />
+          </label>
+
+          {browse === "chemicals" ? (
+            <div className="mt-1.5">
+              <FilterChips options={categories} compact />
+            </div>
+          ) : null}
+          {browse === "oils" ? (
+            <div className="mt-1.5">
+              <FilterChips options={oilRoles} compact />
+            </div>
+          ) : null}
+
+          <div className="mt-1.5 flex items-center justify-between gap-1">
+            <p className="text-[9px] text-lab-muted">
+              {list.length}{" "}
+              {browse === "equipment"
+                ? "tools"
+                : browse === "oils"
+                  ? "oils"
+                  : "chemicals"}
+            </p>
+            <button
+              type="button"
+              onClick={() => setExpanded(true)}
+              className="rounded-md border border-lab-line/60 bg-white/90 px-1.5 py-0.5 text-[10px] font-semibold text-lab-teal transition hover:border-lab-teal/50 hover:bg-lab-teal/10"
+            >
+              Show more
+            </button>
+          </div>
+        </div>
+
+        <div className="scroll-thin flex-1 space-y-1 overflow-y-auto px-2 py-1.5">
+          {goal
+            ? equipment
+                .filter((item) => highlightIds.has(item.id))
+                .map((item) => (
                   <DraggableItem
-                    key={`goal-chem-${item.id}`}
+                    key={`goal-${item.id}`}
                     item={item}
-                    payload={{ type: "chemical", itemId: item.id }}
-                    subtitle={chem?.formula}
-                    accentColor={chem?.color}
-                    onQuickAdd={() => quickChemical(item.id)}
+                    payload={{ type: "equipment", itemId: item.id }}
+                    subtitle={item.subcategory}
+                    onQuickAdd={() => quickEquipment(item.id)}
                     hint="Needed for your goal"
                     highlighted
-                    dragIdPrefix="goal-chem"
+                    dragIdPrefix="goal-eq"
                   />
-                );
-              })
-          : null}
-        {equipment.map((item) => (
-          <DraggableItem
-            key={item.id}
-            item={item}
-            payload={{ type: "equipment", itemId: item.id }}
-            subtitle={item.subcategory}
-            onQuickAdd={() => quickEquipment(item.id)}
-            hint="Place or use on active vessel"
-            highlighted={highlightIds.has(item.id)}
-          />
-        ))}
-      </div>
+                ))
+            : null}
+          {goal
+            ? items
+                .filter((item) => highlightIds.has(item.id))
+                .map((item) => {
+                  const chem = getChemical(item.id);
+                  return (
+                    <DraggableItem
+                      key={`goal-chem-${item.id}`}
+                      item={item}
+                      payload={{ type: "chemical", itemId: item.id }}
+                      subtitle={chem?.formula}
+                      accentColor={chem?.color}
+                      onQuickAdd={() => quickChemical(item.id)}
+                      hint="Needed for your goal"
+                      highlighted
+                      dragIdPrefix="goal-chem"
+                    />
+                  );
+                })
+            : null}
+          <InlineBrowseList />
+        </div>
 
-      {modalUi}
-    </aside>
+        {expandedUi}
+      </aside>
     </>
   );
 }

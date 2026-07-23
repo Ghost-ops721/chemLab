@@ -13,7 +13,7 @@ import { useAuthStore } from "@/store/authStore";
 import { showToast } from "@/gamification/ToastHost";
 import { tryMixVessel, tryShakeVessel } from "@/lab/labActions";
 import { labCopy } from "@/lab/labCopy";
-import { VESSEL_CARD } from "@/desk/vesselLayout";
+import { snapAlignPosition, VESSEL_CARD } from "@/desk/vesselLayout";
 import {
   capacityMlForEquipment,
   getVesselContents,
@@ -32,12 +32,12 @@ export function VesselSlot({ vessel, deskRef }: Props) {
   });
 
   const activeVesselId = useDeskStore((s) => s.activeVesselId);
-  const vessels = useDeskStore((s) => s.vessels);
   const setActiveVessel = useDeskStore((s) => s.setActiveVessel);
   const clearVessel = useDeskStore((s) => s.clearVessel);
   const removeVessel = useDeskStore((s) => s.removeVessel);
   const stirVessel = useDeskStore((s) => s.stirVessel);
   const toggleHeat = useDeskStore((s) => s.toggleHeat);
+  const toggleCool = useDeskStore((s) => s.toggleCool);
   const removeLastChemical = useDeskStore((s) => s.removeLastChemical);
   const moveVessel = useDeskStore((s) => s.moveVessel);
   const transferVesselContents = useDeskStore((s) => s.transferVesselContents);
@@ -158,9 +158,18 @@ export function VesselSlot({ vessel, deskRef }: Props) {
 
     if (!wasDragging) return;
 
+    const latest =
+      useDeskStore.getState().vessels.find(
+        (v) => v.instanceId === vessel.instanceId,
+      ) ?? vessel;
+    const latestContents = getVesselContents(latest);
+
     // Vessel→vessel pour: if released overlapping another vessel, transfer
-    const target = findOverlapTarget(vessel, vessels);
-    if (target && contents.length > 0) {
+    const others = useDeskStore
+      .getState()
+      .vessels.filter((v) => v.instanceId !== vessel.instanceId);
+    const target = findOverlapTarget(latest, others);
+    if (target && latestContents.length > 0) {
       const ok = transferVesselContents(vessel.instanceId, target.instanceId);
       if (ok) {
         showToast(
@@ -168,7 +177,17 @@ export function VesselSlot({ vessel, deskRef }: Props) {
             EQUIPMENT_BY_ID[target.equipmentId]?.name ?? "vessel",
           ),
         );
+        return;
       }
+    }
+
+    // Otherwise snap / align with a nearby card when close enough
+    const snapped = snapAlignPosition(
+      latest.position,
+      others.map((v) => v.position),
+    );
+    if (snapped) {
+      moveVessel(vessel.instanceId, snapped);
     }
   }
 
@@ -204,9 +223,14 @@ export function VesselSlot({ vessel, deskRef }: Props) {
         if (e.key === "h" || e.key === "H") {
           toggleHeat(vessel.instanceId);
         }
+        if (e.key === "c" || e.key === "C") {
+          toggleCool(vessel.instanceId);
+        }
       }}
-      className={`group absolute z-10 w-[11.5rem] select-none rounded-2xl border p-2.5 transition duration-200 touch-none ${
-        dragging ? "z-30 cursor-grabbing scale-[1.03] shadow-2xl" : "cursor-grab"
+      className={`group absolute z-10 w-[11.5rem] select-none rounded-2xl border p-2.5 touch-none ${
+        dragging
+          ? "z-30 cursor-grabbing scale-[1.03] shadow-2xl"
+          : "cursor-grab transition-[left,top,box-shadow,transform,border-color,background-color] duration-200"
       } ${shaking ? "lab-vessel-shake" : ""} ${mixing ? "lab-vessel-pop" : ""} ${
         isSource ? "lab-vessel-pour-tilt" : ""
       } ${
@@ -267,6 +291,17 @@ export function VesselSlot({ vessel, deskRef }: Props) {
         </div>
       ) : null}
 
+      {/* Ice bath under glass */}
+      {vessel.coolAttached ? (
+        <div className="lab-ice-bath pointer-events-none absolute -bottom-2 left-1/2 z-0 h-5 w-16 -translate-x-1/2 rounded-b-md bg-sky-900/80">
+          <div className="absolute -top-2 left-1/2 flex -translate-x-1/2 gap-0.5">
+            <span className="lab-ice-cube inline-block h-2.5 w-2.5 rounded-sm bg-sky-200/90" />
+            <span className="lab-ice-cube lab-ice-delay inline-block h-3 w-3 rounded-sm bg-sky-100/80" />
+            <span className="lab-ice-cube inline-block h-2 w-2.5 rounded-sm bg-sky-200/70" />
+          </div>
+        </div>
+      ) : null}
+
       <div data-no-drag className="relative mt-1">
         <GlassVessel
           equipmentId={vessel.equipmentId}
@@ -285,6 +320,7 @@ export function VesselSlot({ vessel, deskRef }: Props) {
           layerColors={preview?.layerColors}
           stirLevel={vessel.stirLevel}
           heatAttached={vessel.heatAttached}
+          coolAttached={vessel.coolAttached}
           pouringCue={isOver}
           tiltDeg={tiltDeg}
           onGlassClick={(e) => {
@@ -314,6 +350,15 @@ export function VesselSlot({ vessel, deskRef }: Props) {
           contents.map((entry, idx) => {
             const c = getChemical(entry.chemicalId);
             const isLast = idx === contents.length - 1;
+            const othersMl = usedMl - entry.amountMl;
+            const maxForThis = Math.max(
+              0.1,
+              Math.round((capacityMl - Math.max(0, othersMl)) * 10) / 10,
+            );
+            const amountPct = Math.min(
+              100,
+              (entry.amountMl / capacityMl) * 100,
+            );
             return (
               <li key={entry.chemicalId} className="space-y-0.5">
                 <div className="flex items-center gap-1 truncate">
@@ -342,29 +387,60 @@ export function VesselSlot({ vessel, deskRef }: Props) {
                   ) : null}
                 </div>
                 {isActive ? (
-                  <label className="flex items-center gap-1 pl-3">
-                    <input
-                      type="range"
-                      min={0.1}
-                      max={capacityMl}
-                      step={0.1}
-                      value={Math.min(entry.amountMl, capacityMl)}
-                      onChange={(e) => {
-                        e.stopPropagation();
-                        setChemicalAmount(
-                          vessel.instanceId,
-                          entry.chemicalId,
-                          Number(e.target.value),
-                        );
-                      }}
-                      onPointerDown={(e) => e.stopPropagation()}
-                      className="h-1 w-full accent-[var(--lab-teal)]"
-                      aria-label={`Amount of ${c?.name ?? entry.chemicalId}`}
-                    />
-                    <span className="w-8 shrink-0 text-right font-mono text-[9px] text-lab-ink">
-                      {entry.amountMl.toFixed(1)}
-                    </span>
-                  </label>
+                  <div
+                    className="space-y-1 pl-3"
+                    data-no-drag
+                    onPointerDown={(e) => e.stopPropagation()}
+                  >
+                    <div className="relative h-1.5 overflow-hidden rounded-full bg-lab-wash">
+                      <div
+                        className="absolute inset-y-0 left-0 rounded-full bg-lab-teal/80 transition-[width] duration-150"
+                        style={{ width: `${amountPct}%` }}
+                      />
+                      <input
+                        type="range"
+                        min={0.1}
+                        max={maxForThis}
+                        step={0.1}
+                        value={Math.min(entry.amountMl, maxForThis)}
+                        onChange={(e) => {
+                          e.stopPropagation();
+                          setChemicalAmount(
+                            vessel.instanceId,
+                            entry.chemicalId,
+                            Number(e.target.value),
+                          );
+                        }}
+                        className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
+                        aria-label={`Amount of ${c?.name ?? entry.chemicalId}`}
+                      />
+                    </div>
+                    <label className="flex items-center gap-1">
+                      <input
+                        type="number"
+                        min={0.1}
+                        max={maxForThis}
+                        step={0.1}
+                        value={Number(entry.amountMl.toFixed(1))}
+                        onChange={(e) => {
+                          e.stopPropagation();
+                          const raw = Number(e.target.value);
+                          if (!Number.isFinite(raw)) return;
+                          setChemicalAmount(
+                            vessel.instanceId,
+                            entry.chemicalId,
+                            raw,
+                          );
+                        }}
+                        onClick={(e) => e.stopPropagation()}
+                        className="w-12 rounded border border-lab-line/60 bg-white px-1 py-0.5 font-mono text-[10px] text-lab-ink outline-none focus:border-lab-teal focus:ring-1 focus:ring-lab-teal/30"
+                        aria-label={`Custom ml for ${c?.name ?? entry.chemicalId}`}
+                      />
+                      <span className="text-[9px] text-lab-muted">
+                        ml · max {maxForThis}
+                      </span>
+                    </label>
+                  </div>
                 ) : (
                   <p className="pl-3 font-mono text-[9px] text-lab-muted">
                     {entry.amountMl.toFixed(1)} ml
@@ -382,7 +458,7 @@ export function VesselSlot({ vessel, deskRef }: Props) {
         </p>
       ) : null}
 
-      <div className="mt-2 grid grid-cols-4 gap-1" data-no-drag>
+      <div className="mt-2 grid grid-cols-5 gap-1" data-no-drag>
         <button
           type="button"
           onClick={(e) => {
@@ -408,6 +484,21 @@ export function VesselSlot({ vessel, deskRef }: Props) {
           title="Heat (H)"
         >
           Heat
+        </button>
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            toggleCool(vessel.instanceId);
+          }}
+          className={`rounded-lg px-1 py-1.5 text-[10px] font-semibold ${
+            vessel.coolAttached
+              ? "bg-sky-600 text-white"
+              : "bg-lab-wash text-lab-ink hover:bg-white"
+          }`}
+          title="Cool (C)"
+        >
+          Cool
         </button>
         <button
           type="button"

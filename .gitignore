@@ -50,3 +50,9 @@ next-env.d.ts
 
 # Local secrets (never commit)
 .secrets/
+
+# OSS marketing sprint runtime (ntfy dispatch)
+/marketing/oss-sprint/sent.log
+/marketing/oss-sprint/state.json
+/marketing/oss-sprint/launchd.out.log
+/marketing/oss-sprint/launchd.err.log

@@ -21,6 +21,7 @@ export interface FormulaSnapshot {
   equipmentId: string;
   contentIds: string[];
   heatAttached: boolean;
+  coolAttached: boolean;
   stirLevel: number;
   /** Optional note pyramid for perfume freeform */
   perfumeNotes?: {
@@ -67,6 +68,7 @@ export function snapshotFromVessel(vessel: DeskVessel): FormulaSnapshot {
     equipmentId: vessel.equipmentId,
     contentIds: [...vessel.contentIds],
     heatAttached: vessel.heatAttached,
+    coolAttached: vessel.coolAttached,
     stirLevel: vessel.stirLevel,
     lastResult: vessel.lastResult
       ? {

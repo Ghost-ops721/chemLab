@@ -1,0 +1,8 @@
+{
+  "start_date": "2026-07-24",
+  "timezone": "Asia/Kolkata",
+  "ntfy_url": "https://ntfy.sh/chemistry",
+  "weekday_slots": { "a": "13:00", "b": "18:30" },
+  "weekend_slots": { "a": "00:30", "b": "00:45" },
+  "repo_root_hint": "Scripts resolve paths relative to this directory's parent chain."
+}

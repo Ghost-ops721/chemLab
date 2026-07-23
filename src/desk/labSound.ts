@@ -85,6 +85,10 @@ export const labSound = {
     beep(90, 0.28, "sawtooth", 0.022);
     beep(70, 0.2, "sawtooth", 0.015, 0.1);
   },
+  cool() {
+    beep(420, 0.12, "sine", 0.03);
+    beep(520, 0.16, "triangle", 0.022, 0.08);
+  },
   hazard() {
     beep(140, 0.18, "square", 0.05);
     beep(110, 0.22, "square", 0.04, 0.12);

@@ -30,6 +30,7 @@ interface Props {
   fx?: VesselFx;
   stirLevel?: number;
   heatAttached?: boolean;
+  coolAttached?: boolean;
   fillColor?: string;
   boiling?: boolean;
   equipmentId?: string;
@@ -40,12 +41,13 @@ export function VesselEffects({
   fx,
   stirLevel = 0,
   heatAttached,
+  coolAttached,
   fillColor,
   boiling = false,
   equipmentId = "beaker",
 }: Props) {
   const now = useFxClock(
-    [fx?.pourAt, fx?.stirAt, fx?.shakeAt, fx?.mixAt, fx?.heatFlashAt, fx?.transferAt],
+    [fx?.pourAt, fx?.stirAt, fx?.shakeAt, fx?.mixAt, fx?.heatFlashAt, fx?.coolFlashAt, fx?.transferAt],
     2400,
   );
 
@@ -53,6 +55,7 @@ export function VesselEffects({
   const stirring = fxAlive(fx?.stirAt, 1100, now) || stirLevel > 0;
   const mixing = fxAlive(fx?.mixAt, 1400, now);
   const heatFlash = fxAlive(fx?.heatFlashAt, 800, now);
+  const coolFlash = fxAlive(fx?.coolFlashAt, 800, now);
   const transferringIn =
     fxAlive(fx?.transferAt, 1100, now) && fx?.transferRole === "target";
   const stirActive = fxAlive(fx?.stirAt, 1100, now);
@@ -402,7 +405,7 @@ export function VesselEffects({
       {heat?.intensity === "exo" ? (
         <div className="lab-heat-haze absolute inset-x-2 top-2 h-10" />
       ) : null}
-      {heat?.intensity === "endo" ? (
+      {heat?.intensity === "endo" || coolAttached ? (
         <div className="lab-heat-endo absolute inset-0">
           <div className="lab-frost absolute inset-x-1 top-1 h-4 rounded-t-lg" />
         </div>
@@ -412,6 +415,13 @@ export function VesselEffects({
         <div
           key={fx?.heatFlashAt}
           className="lab-heat-ignite absolute inset-x-4 bottom-0 h-10"
+        />
+      ) : null}
+
+      {coolFlash ? (
+        <div
+          key={fx?.coolFlashAt}
+          className="lab-cool-flash absolute inset-x-3 bottom-0 h-8"
         />
       ) : null}
 

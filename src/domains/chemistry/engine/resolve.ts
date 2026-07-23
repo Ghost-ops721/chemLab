@@ -10,7 +10,7 @@ import { tryPerfumeCraft } from "./perfumeCraft";
 
 export function resolveChemistry(
   chemicals: Chemical[],
-  opts: { hasHeat?: boolean } = {},
+  opts: { hasHeat?: boolean; hasCool?: boolean } = {},
 ): ReactionResult {
   if (chemicals.length < 2) {
     return {

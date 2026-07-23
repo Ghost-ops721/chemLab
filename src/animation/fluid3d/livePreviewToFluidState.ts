@@ -122,8 +122,10 @@ function impulsesFromEffects(
 
 export type FluidVesselInput = Pick<
   DeskVessel,
-  "fx" | "heatAttached" | "stirLevel" | "lastResult"
+  "fx" | "stirLevel" | "lastResult"
 > & {
+  heatAttached?: boolean;
+  coolAttached?: boolean;
   /** Optional resolved fill when preview is partial */
   fillColorOverride?: string;
   fillPctOverride?: number;
@@ -170,9 +172,13 @@ export function livePreviewToFluidState(
 
   const temperature = Math.min(
     1,
-    (vessel.heatAttached ? 0.55 : 0) +
-      (heatFx ? intensityStrength(heatFx.intensity) * 0.45 : 0) +
-      (boilFx ? 0.35 : 0),
+    Math.max(
+      0,
+      (vessel.heatAttached ? 0.55 : 0) +
+        (heatFx ? intensityStrength(heatFx.intensity) * 0.45 : 0) +
+        (boilFx ? 0.35 : 0) -
+        (vessel.coolAttached ? 0.45 : 0),
+    ),
   );
 
   const impulses = [

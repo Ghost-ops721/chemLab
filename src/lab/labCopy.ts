@@ -32,6 +32,10 @@ export const labCopy = {
     title: "Burner on",
     detail: "Heat attached to vessel",
   },
+  iceBathOn: {
+    title: "Ice bath on",
+    detail: "Cooling attached to vessel",
+  },
   stirring: {
     title: "Stirring",
     detail: "Keep stirring — Mix fires after enough swirls",

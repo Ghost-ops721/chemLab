@@ -17,8 +17,11 @@ export const chemistryDomain: DomainModule = {
     const hasHeat = Boolean(
       input.equipmentFunctions?.includes("heat-source"),
     );
+    const hasCool = Boolean(
+      input.equipmentFunctions?.includes("cold-source"),
+    );
 
-    const result = resolveChemistry(chemicals, { hasHeat });
+    const result = resolveChemistry(chemicals, { hasHeat, hasCool });
     return adaptReactionResult(
       result,
       chemicals.map((c) => c.id),

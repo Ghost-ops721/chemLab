@@ -14,10 +14,11 @@ export interface LiveHazard {
 export function assessLiveHazards(input: {
   contents: VesselContent[];
   heatAttached: boolean;
+  coolAttached?: boolean;
   ethanolPct: number;
   oilLoadPct: number;
 }): LiveHazard[] {
-  const { contents, heatAttached, ethanolPct } = input;
+  const { contents, heatAttached, coolAttached, ethanolPct } = input;
   const out: LiveHazard[] = [];
   const ids = new Set(contents.map((c) => c.chemicalId));
   const chems = contents
@@ -110,6 +111,20 @@ export function assessLiveHazards(input: {
       level: "info",
       message: "Aqueous mix on heat — boiling / steam expected.",
       effect: "boil",
+    });
+  }
+
+  if (coolAttached && hasWater) {
+    out.push({
+      level: "info",
+      message: "Ice bath on — crystallization or slower reaction expected.",
+      effect: "crystal",
+    });
+  } else if (coolAttached) {
+    out.push({
+      level: "info",
+      message: "Cooling bath attached — temperature dropping.",
+      effect: "solidify",
     });
   }
 

@@ -48,6 +48,15 @@ export const EQUIPMENT: Equipment[] = [
     function: "heat-source",
   }),
   eq({
+    id: "ice-bath",
+    name: "Ice Bath",
+    category: "equipment",
+    subcategory: "cool",
+    icon: "🧊",
+    capacity: 0,
+    function: "cold-source",
+  }),
+  eq({
     id: "graduated-cylinder",
     name: "Graduated Cylinder",
     category: "equipment",

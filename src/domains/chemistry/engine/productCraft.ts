@@ -12,7 +12,7 @@ function hasIds(inputs: Chemical[], ids: string[]) {
  */
 export function tryProductCraft(
   chemicals: Chemical[],
-  opts: { hasHeat?: boolean } = {},
+  opts: { hasHeat?: boolean; hasCool?: boolean } = {},
 ): ReactionResult | null {
   // Perfume / cologne: ethanol + citrus oil (± ester)
   if (

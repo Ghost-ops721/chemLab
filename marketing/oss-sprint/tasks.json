@@ -1,0 +1,458 @@
+{
+  "meta": {
+    "product": "Chem Lab",
+    "ntfy_topic": "chemistry",
+    "live": "https://chemistry-nu-five.vercel.app",
+    "repo": "https://github.com/Ghost-ops721/chemLab"
+  },
+  "tasks": [
+    {
+      "day": 1,
+      "slot": "a",
+      "title": "Day 1A · MIT LICENSE + badge",
+      "body": "Chem Lab · Day 1 A · 10 min\n1. Add MIT LICENSE at repo root (copyright Ghost-ops721 / your name, year 2026).\n2. Add license badge to top of README.md.\nDone when: LICENSE committed locally and badge visible in README.",
+      "done_hint": "LICENSE exists + README has MIT badge",
+      "copy_file": null
+    },
+    {
+      "day": 1,
+      "slot": "b",
+      "title": "Day 1B · GitHub topics + description",
+      "body": "Chem Lab · Day 1 B · 10 min\nOpen https://github.com/Ghost-ops721/chemLab\nSettings → scroll to topics OR use gh:\ngh repo edit Ghost-ops721/chemLab --add-topic chemistry --add-topic education --add-topic nextjs --add-topic open-source --add-topic science --add-topic threejs\ngh repo edit Ghost-ops721/chemLab -d \"Tactile virtual chemistry desk — real reactions, perfume atelier, AI tutor. MIT.\"\nDone when: topics + description show on the repo page.",
+      "done_hint": "Repo description + 6 topics live",
+      "copy_file": null
+    },
+    {
+      "day": 2,
+      "slot": "a",
+      "title": "Day 2A · CONTRIBUTING.md",
+      "body": "Chem Lab · Day 2 A · 10 min\nCreate CONTRIBUTING.md: local setup (npm i, .env.example), how to run tests, PR rules, point to good first issues.\nDone when: file linked from README.",
+      "done_hint": "CONTRIBUTING.md linked in README",
+      "copy_file": null
+    },
+    {
+      "day": 2,
+      "slot": "b",
+      "title": "Day 2B · 3 good first issues",
+      "body": "Chem Lab · Day 2 B · 10 min\nOpen marketing/oss-sprint/copy/good-first-issues.md\nCreate 3 GitHub issues with label good first issue (gh label create if needed).\nDone when: 3 open issues labeled.",
+      "done_hint": "3 labeled issues on GitHub",
+      "copy_file": "copy/good-first-issues.md"
+    },
+    {
+      "day": 3,
+      "slot": "a",
+      "title": "Day 3A · README hero + demo link",
+      "body": "Chem Lab · Day 3 A · 10 min\nAt top of README after title: embed branding/screenshots/01-desk-hero.png and link Demo → https://chemistry-nu-five.vercel.app\nDone when: hero image + demo link at top of README.",
+      "done_hint": "Hero screenshot + demo URL in README",
+      "copy_file": null
+    },
+    {
+      "day": 3,
+      "slot": "b",
+      "title": "Day 3B · Demo video in README",
+      "body": "Chem Lab · Day 3 B · 10 min\nAdd README Demo section linking branding/videos/final/remotion-01-HeroIntro.mp4 (raw GitHub URL or hosted clip).\nDone when: Demo section has a playable/downloadable hero video link.",
+      "done_hint": "HeroIntro linked from README",
+      "copy_file": null
+    },
+    {
+      "day": 4,
+      "slot": "a",
+      "title": "Day 4A · CODE_OF_CONDUCT.md",
+      "body": "Chem Lab · Day 4 A · 10 min\nAdd CODE_OF_CONDUCT.md (Contributor Covenant 2.1 paste). Link from README + CONTRIBUTING.\nDone when: CoC file exists and is linked.",
+      "done_hint": "CODE_OF_CONDUCT.md linked",
+      "copy_file": null
+    },
+    {
+      "day": 4,
+      "slot": "b",
+      "title": "Day 4B · Pin README · star · Discussions",
+      "body": "Chem Lab · Day 4 B · 10 min\nOn GitHub: star the repo. Settings → General → Features → enable Discussions. Pin README if not default.\nDone when: Discussions tab visible + you starred.",
+      "done_hint": "Discussions on + starred",
+      "copy_file": null
+    },
+    {
+      "day": 5,
+      "slot": "a",
+      "title": "Day 5A · LinkedIn OSS post",
+      "body": "Chem Lab · Day 5 A · 10 min\nPaste marketing/oss-sprint/copy/linkedin-oss.md to LinkedIn. Attach desk screenshot or HeroIntro clip.\nDone when: post is public.",
+      "done_hint": "LinkedIn post live",
+      "copy_file": "copy/linkedin-oss.md"
+    },
+    {
+      "day": 5,
+      "slot": "b",
+      "title": "Day 5B · 5 replies",
+      "body": "Chem Lab · Day 5 B · 10 min\nReply to 5 comments/DMs on your post OR leave 5 helpful comments on chemistry-education posts (no spam links unless relevant).\nDone when: 5 replies sent.",
+      "done_hint": "5 replies done",
+      "copy_file": null
+    },
+    {
+      "day": 6,
+      "slot": "a",
+      "title": "Day 6A · Click every README link",
+      "body": "Chem Lab · Day 6 A · 10 min\nOpen README on GitHub. Click every link. Fix any 404s in a commit.\nDone when: all README links resolve.",
+      "done_hint": "No broken README links",
+      "copy_file": null
+    },
+    {
+      "day": 6,
+      "slot": "b",
+      "title": "Day 6B · Awesome-list PR",
+      "body": "Chem Lab · Day 6 B · 10 min\nFork one awesome-* list (education/nextjs/opensource). Add Chem Lab line with demo + repo. Open PR.\nDone when: PR URL exists.",
+      "done_hint": "Awesome-list PR opened",
+      "copy_file": null
+    },
+    {
+      "day": 7,
+      "slot": "a",
+      "title": "Day 7A · Record 45s reaction clip",
+      "body": "Chem Lab · Day 7 A · 10 min\nPhone screen-record /lab: pour HCl + NaOH (or equivalent), catch equation banner. Save clip to Desktop.\nDone when: 45s file exists.",
+      "done_hint": "Reaction screen recording saved",
+      "copy_file": null
+    },
+    {
+      "day": 7,
+      "slot": "b",
+      "title": "Day 7B · Post clip to X/LinkedIn",
+      "body": "Chem Lab · Day 7 B · 10 min\nPost the clip with: The desk reacts to every move. Demo + repo links.\nDone when: post live on at least one network.",
+      "done_hint": "Clip posted socially",
+      "copy_file": null
+    },
+    {
+      "day": 8,
+      "slot": "a",
+      "title": "Day 8A · Show HN",
+      "body": "Chem Lab · Day 8 A · 10 min\nOpen https://news.ycombinator.com/submit\nTitle: Show HN: Chem Lab – tactile virtual chemistry desk (MIT)\nURL: https://chemistry-nu-five.vercel.app\nPaste first comment from marketing/oss-sprint/copy/show-hn.md\nDone when: Show HN is live + first comment posted.",
+      "done_hint": "Show HN live",
+      "copy_file": "copy/show-hn.md"
+    },
+    {
+      "day": 8,
+      "slot": "b",
+      "title": "Day 8B · Reply to HN comments",
+      "body": "Chem Lab · Day 8 B · 10 min\nOpen your Show HN thread. Reply to every unanswered comment.\nDone when: inbox zero on that thread.",
+      "done_hint": "All HN comments answered",
+      "copy_file": null
+    },
+    {
+      "day": 9,
+      "slot": "a",
+      "title": "Day 9A · r/opensource",
+      "body": "Chem Lab · Day 9 A · 10 min\nPost to r/opensource using marketing/oss-sprint/copy/reddit-opensource.md (follow sub rules/flair).\nDone when: post URL exists.",
+      "done_hint": "r/opensource post live",
+      "copy_file": "copy/reddit-opensource.md"
+    },
+    {
+      "day": 9,
+      "slot": "b",
+      "title": "Day 9B · r/chemistry",
+      "body": "Chem Lab · Day 9 B · 10 min\nPost to r/chemistry or r/ChemicalEngineering using marketing/oss-sprint/copy/reddit-chemistry.md\nDone when: post URL exists.",
+      "done_hint": "Chemistry subreddit post live",
+      "copy_file": "copy/reddit-chemistry.md"
+    },
+    {
+      "day": 10,
+      "slot": "a",
+      "title": "Day 10A · r/nextjs or r/webdev",
+      "body": "Chem Lab · Day 10 A · 10 min\nPost using marketing/oss-sprint/copy/reddit-nextjs.md\nDone when: post URL exists.",
+      "done_hint": "r/nextjs or r/webdev post live",
+      "copy_file": "copy/reddit-nextjs.md"
+    },
+    {
+      "day": 10,
+      "slot": "b",
+      "title": "Day 10B · Discord share",
+      "body": "Chem Lab · Day 10 B · 10 min\nPaste marketing/oss-sprint/copy/discord-blurb.md into one Discord (Next.js / IH / teachers) where self-promo is allowed.\nDone when: message sent.",
+      "done_hint": "Discord blurb posted",
+      "copy_file": "copy/discord-blurb.md"
+    },
+    {
+      "day": 11,
+      "slot": "a",
+      "title": "Day 11A · 3 teacher DMs",
+      "body": "Chem Lab · Day 11 A · 10 min\nSend personalized DMs to 3 science-teacher creators using marketing/oss-sprint/copy/teacher-dm.md\nDone when: 3 messages sent.",
+      "done_hint": "3 teacher DMs sent",
+      "copy_file": "copy/teacher-dm.md"
+    },
+    {
+      "day": 11,
+      "slot": "b",
+      "title": "Day 11B · Footer Open Source link",
+      "body": "Chem Lab · Day 11 B · 10 min\nOn landing `/`, add footer (or nav) link Open Source → https://github.com/Ghost-ops721/chemLab if missing. Deploy.\nDone when: link visible on production homepage.",
+      "done_hint": "GitHub link on production landing",
+      "copy_file": null
+    },
+    {
+      "day": 12,
+      "slot": "a",
+      "title": "Day 12A · FeatureDemo video social",
+      "body": "Chem Lab · Day 12 A · 10 min\nPost branding/videos/final/remotion-02-FeatureDemo.mp4 to LinkedIn + X with demo + repo links.\nDone when: posted on both (or the one you use).",
+      "done_hint": "FeatureDemo posted",
+      "copy_file": null
+    },
+    {
+      "day": 12,
+      "slot": "b",
+      "title": "Day 12B · Ask 3 people to star",
+      "body": "Chem Lab · Day 12 B · 10 min\nText/DM 3 friends or colleagues: please star https://github.com/Ghost-ops721/chemLab and try one reaction on https://chemistry-nu-five.vercel.app/lab\nDone when: 3 asks sent.",
+      "done_hint": "3 star/try asks sent",
+      "copy_file": null
+    },
+    {
+      "day": 13,
+      "slot": "a",
+      "title": "Day 13A · Directory submit",
+      "body": "Chem Lab · Day 13 A · 10 min\nSubmit Chem Lab to ONE of: AlternativeTo, Toolify, or SaaSHub. Use live URL + MIT + education tags.\nDone when: submission confirmation saved.",
+      "done_hint": "One directory submission done",
+      "copy_file": null
+    },
+    {
+      "day": 13,
+      "slot": "b",
+      "title": "Day 13B · README milestones",
+      "body": "Chem Lab · Day 13 B · 10 min\nAdd a short Changelog or Traction note to README: Show HN/Reddit links + star count.\nDone when: README mentions Week 1–2 milestones.",
+      "done_hint": "Milestones in README",
+      "copy_file": null
+    },
+    {
+      "day": 14,
+      "slot": "a",
+      "title": "Day 14A · Clear comment debt",
+      "body": "Chem Lab · Day 14 A · 10 min\nReply to every unanswered comment on Week 2 posts (HN/Reddit/LinkedIn).\nDone when: no unanswered threads from this sprint.",
+      "done_hint": "Week 2 comments cleared",
+      "copy_file": null
+    },
+    {
+      "day": 14,
+      "slot": "b",
+      "title": "Day 14B · One tiny UX fix",
+      "body": "Chem Lab · Day 14 B · 10 min\nShip one tiny UX fix someone asked for OR open an issue explaining why not.\nDone when: PR merged or issue filed.",
+      "done_hint": "Fix shipped or documented",
+      "copy_file": null
+    },
+    {
+      "day": 15,
+      "slot": "a",
+      "title": "Day 15A · Teacher group post",
+      "body": "Chem Lab · Day 15 A · 10 min\nPost in one teacher Facebook/Reddit group: free OSS lab for class demos + demo link. Follow group rules.\nDone when: post live.",
+      "done_hint": "Teacher group post live",
+      "copy_file": "copy/teacher-dm.md"
+    },
+    {
+      "day": 15,
+      "slot": "b",
+      "title": "Day 15B · Class join screenshot",
+      "body": "Chem Lab · Day 15 B · 10 min\nCreate a class join code on /teacher, screenshot /join?code=…, send to 1 teacher contact.\nDone when: screenshot sent to one person.",
+      "done_hint": "Join-code screenshot shared",
+      "copy_file": null
+    },
+    {
+      "day": 16,
+      "slot": "a",
+      "title": "Day 16A · Publish Dev.to article",
+      "body": "Chem Lab · Day 16 A · 10 min\nWrite ~400 words from marketing/oss-sprint/copy/devto-outline.md and publish on Dev.to or Hashnode.\nDone when: public article URL.",
+      "done_hint": "Article published",
+      "copy_file": "copy/devto-outline.md"
+    },
+    {
+      "day": 16,
+      "slot": "b",
+      "title": "Day 16B · Article CTA polish",
+      "body": "Chem Lab · Day 16 B · 10 min\nEdit article ending: star repo + try perfume atelier CTA. Share article link once on social.\nDone when: CTA live + shared.",
+      "done_hint": "CTA + share done",
+      "copy_file": null
+    },
+    {
+      "day": 17,
+      "slot": "a",
+      "title": "Day 17A · 10 helpful thread replies",
+      "body": "Chem Lab · Day 17 A · 10 min\nFind HN/Reddit threads about chemistry learning tools. Leave 10 helpful replies; include Chem Lab link only when relevant.\nDone when: 10 replies posted.",
+      "done_hint": "10 thread replies",
+      "copy_file": null
+    },
+    {
+      "day": 17,
+      "slot": "b",
+      "title": "Day 17B · UTM + traffic note",
+      "body": "Chem Lab · Day 17 B · 10 min\nUse ?ref=oss on links in today's posts. Append a line to marketing/oss-sprint/metrics.md noting channel + date.\nDone when: metrics.md updated.",
+      "done_hint": "metrics.md has today's note",
+      "copy_file": null
+    },
+    {
+      "day": 18,
+      "slot": "a",
+      "title": "Day 18A · Gamification clip",
+      "body": "Chem Lab · Day 18 A · 10 min\nPost remotion-04-Gamification.mp4 to X/LinkedIn with try-for-free CTA + /lab link.\nDone when: post live.",
+      "done_hint": "Gamification post live",
+      "copy_file": null
+    },
+    {
+      "day": 18,
+      "slot": "b",
+      "title": "Day 18B · Waitlist share",
+      "body": "Chem Lab · Day 18 B · 10 min\nShare waitlist / signup CTA from the marketing site in one community with ?ref=oss.\nDone when: one community share done.",
+      "done_hint": "Waitlist shared once",
+      "copy_file": null
+    },
+    {
+      "day": 19,
+      "slot": "a",
+      "title": "Day 19A · Record Loom walkthrough",
+      "body": "Chem Lab · Day 19 A · 10 min\nRecord Loom: first pour → reaction banner → tutor. Keep under 3 minutes.\nDone when: Loom URL copied.",
+      "done_hint": "Loom URL ready",
+      "copy_file": null
+    },
+    {
+      "day": 19,
+      "slot": "b",
+      "title": "Day 19B · Send Loom to 5 people",
+      "body": "Chem Lab · Day 19 B · 10 min\nSend Loom to 5 people who starred, forked, or commented.\nDone when: 5 sends done.",
+      "done_hint": "Loom sent to 5",
+      "copy_file": null
+    },
+    {
+      "day": 20,
+      "slot": "a",
+      "title": "Day 20A · GitHub office hours",
+      "body": "Chem Lab · Day 20 A · 10 min\nReply to GitHub Issues + Discussions for 10 minutes.\nDone when: timer ends and queue reduced.",
+      "done_hint": "10 min GH replies",
+      "copy_file": null
+    },
+    {
+      "day": 20,
+      "slot": "b",
+      "title": "Day 20B · Clear GH queue",
+      "body": "Chem Lab · Day 20 B · 10 min\nContinue Issues/Discussions until unanswered count is zero or timer ends.\nDone when: no urgent unanswered items.",
+      "done_hint": "GH queue clear",
+      "copy_file": null
+    },
+    {
+      "day": 21,
+      "slot": "a",
+      "title": "Day 21A · Metrics compile",
+      "body": "Chem Lab · Day 21 A · 10 min\nFill marketing/oss-sprint/metrics.md: stars, forks, waitlist count, best post URL.\nDone when: file has Week 3 numbers.",
+      "done_hint": "metrics.md filled",
+      "copy_file": null
+    },
+    {
+      "day": 21,
+      "slot": "b",
+      "title": "Day 21B · Double-down post",
+      "body": "Chem Lab · Day 21 B · 10 min\nFrom metrics, pick the best channel. Draft + post ONE more piece there only.\nDone when: one post live on best channel.",
+      "done_hint": "Best-channel follow-up posted",
+      "copy_file": null
+    },
+    {
+      "day": 22,
+      "slot": "a",
+      "title": "Day 22A · Product Hunt assets",
+      "body": "Chem Lab · Day 22 A · 10 min\nPrep PH gallery: logo 03-icon-lockup + screenshots 01/03. Tagline: The desk reacts to every move.\nDone when: assets folder or PH draft gallery filled.",
+      "done_hint": "PH assets ready",
+      "copy_file": null
+    },
+    {
+      "day": 22,
+      "slot": "b",
+      "title": "Day 22B · PH submit/schedule",
+      "body": "Chem Lab · Day 22 B · 10 min\nSubmit Product Hunt draft or schedule launch (soft-launch if timing is bad).\nDone when: PH draft saved or launch scheduled.",
+      "done_hint": "PH draft/schedule done",
+      "copy_file": null
+    },
+    {
+      "day": 23,
+      "slot": "a",
+      "title": "Day 23A · SignupCTA everywhere",
+      "body": "Chem Lab · Day 23 A · 10 min\nPost remotion-05-SignupCTA.mp4 (or reel) on every account you already use + PH if live.\nDone when: posted on all active accounts.",
+      "done_hint": "SignupCTA distributed",
+      "copy_file": null
+    },
+    {
+      "day": 23,
+      "slot": "b",
+      "title": "Day 23B · Maker replies only",
+      "body": "Chem Lab · Day 23 B · 10 min\nOnly reply to hunters/makers/comments — no new posts.\nDone when: 10 minutes of replies done.",
+      "done_hint": "Reply-only session done",
+      "copy_file": null
+    },
+    {
+      "day": 24,
+      "slot": "a",
+      "title": "Day 24A · 5 maker cross-shares",
+      "body": "Chem Lab · Day 24 A · 10 min\nDM 5 PH/Indie Hackers edtech makers; offer honest cross-share.\nDone when: 5 DMs sent.",
+      "done_hint": "5 maker DMs sent",
+      "copy_file": null
+    },
+    {
+      "day": 24,
+      "slot": "b",
+      "title": "Day 24B · Built-in-public note",
+      "body": "Chem Lab · Day 24 B · 10 min\nPost a short Built in public weekly note in GitHub Discussions (wins + next).\nDone when: Discussion published.",
+      "done_hint": "Discussions weekly note live",
+      "copy_file": null
+    },
+    {
+      "day": 25,
+      "slot": "a",
+      "title": "Day 25A · GitHub Release v0.1.0",
+      "body": "Chem Lab · Day 25 A · 10 min\ngh release create v0.1.0 --title \"v0.1.0\" --notes \"MIT OSS soft launch. Demo: https://chemistry-nu-five.vercel.app\"\nAttach or link a demo GIF/screenshot.\nDone when: release page live.",
+      "done_hint": "v0.1.0 release published",
+      "copy_file": null
+    },
+    {
+      "day": 25,
+      "slot": "b",
+      "title": "Day 25B · Post the release",
+      "body": "Chem Lab · Day 25 B · 10 min\nTweet/LinkedIn the v0.1.0 release URL + demo.\nDone when: social post live.",
+      "done_hint": "Release announced",
+      "copy_file": null
+    },
+    {
+      "day": 26,
+      "slot": "a",
+      "title": "Day 26A · Fix #1 OSS friction",
+      "body": "Chem Lab · Day 26 A · 10 min\nFix the #1 onboarding friction from feedback (env docs, first-run, or mobile).\nDone when: PR or commit pushed.",
+      "done_hint": "Friction #1 fixed",
+      "copy_file": null
+    },
+    {
+      "day": 26,
+      "slot": "b",
+      "title": "Day 26B · Friction #2 or close issue",
+      "body": "Chem Lab · Day 26 B · 10 min\nFix second friction OR close one issue with a clear comment.\nDone when: fix shipped or issue closed.",
+      "done_hint": "Second friction handled",
+      "copy_file": null
+    },
+    {
+      "day": 27,
+      "slot": "a",
+      "title": "Day 27A · Thank-you post",
+      "body": "Chem Lab · Day 27 A · 10 min\nPublic thank-you listing early stargazers/commenters; invite forks.\nDone when: post live.",
+      "done_hint": "Thank-you post live",
+      "copy_file": null
+    },
+    {
+      "day": 27,
+      "slot": "b",
+      "title": "Day 27B · Social proof in README",
+      "body": "Chem Lab · Day 27 B · 10 min\nUpdate README with star/fork counts and best testimonial line.\nDone when: README shows proof.",
+      "done_hint": "Social proof in README",
+      "copy_file": null
+    },
+    {
+      "day": 28,
+      "slot": "a",
+      "title": "Day 28A · Write RETRO.md",
+      "body": "Chem Lab · Day 28 A · 10 min\nWrite marketing/oss-sprint/RETRO.md: what worked, what flopped, keep/kill channels.\nDone when: file saved.",
+      "done_hint": "RETRO.md written",
+      "copy_file": null
+    },
+    {
+      "day": 28,
+      "slot": "b",
+      "title": "Day 28B · Lock Mon+Thu habit",
+      "body": "Chem Lab · Day 28 B · 10 min\nUnload daily launchd; keep only Mon+Thu 13:00 IST reminders (edit plist or calendar). Note steps in RETRO.md.\nDone when: reduced schedule active.",
+      "done_hint": "Mon+Thu-only reminders set",
+      "copy_file": null
+    }
+  ]
+}

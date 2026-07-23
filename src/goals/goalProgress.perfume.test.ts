@@ -17,6 +17,7 @@ function vessel(
     equipmentId: string;
     contentIds: string[];
     heatAttached: boolean;
+    coolAttached: boolean;
     stirLevel: number;
     shakeAt?: number;
     lastResult?: unknown;
@@ -26,7 +27,12 @@ function vessel(
     instanceId: partial.instanceId ?? "v1",
     equipmentId: partial.equipmentId ?? "beaker",
     contentIds: partial.contentIds ?? [],
+    contents: (partial.contentIds ?? []).map((chemicalId) => ({
+      chemicalId,
+      amountMl: 2,
+    })),
     heatAttached: partial.heatAttached ?? false,
+    coolAttached: partial.coolAttached ?? false,
     position: { x: 0, y: 0 },
     stirLevel: partial.stirLevel ?? 0,
     fx: { ...emptyFx(), ...(partial.shakeAt ? { shakeAt: partial.shakeAt } : {}) },

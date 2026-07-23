@@ -63,6 +63,7 @@ export function LabShell() {
   const placeEquipment = useDeskStore((s) => s.placeEquipment);
   const addChemicalToVessel = useDeskStore((s) => s.addChemicalToVessel);
   const attachHeat = useDeskStore((s) => s.attachHeat);
+  const attachCool = useDeskStore((s) => s.attachCool);
   const stirVessel = useDeskStore((s) => s.stirVessel);
   const activeVesselId = useDeskStore((s) => s.activeVesselId);
   const vessels = useDeskStore((s) => s.vessels);
@@ -254,6 +255,14 @@ export function LabShell() {
         if (vesselId) {
           attachHeat(vesselId);
           showToast(labCopy.burnerOn);
+        }
+        return;
+      }
+      if (eq.function === "cold-source") {
+        const vesselId = parseVesselId(overId) ?? activeVesselId;
+        if (vesselId) {
+          attachCool(vesselId);
+          showToast(labCopy.iceBathOn);
         }
         return;
       }

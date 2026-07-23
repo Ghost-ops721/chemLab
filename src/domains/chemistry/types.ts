@@ -17,6 +17,7 @@ export type ReactionType =
 export type EquipmentFunction =
   | "container"
   | "heat-source"
+  | "cold-source"
   | "measuring"
   | "stirring";
 

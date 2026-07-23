@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  Chem Lab OSS sprint ntfy reminders (IST wall clock — set Mac timezone to Asia/Kolkata).
+
+  Install:
+    cp marketing/oss-sprint/launchd/com.chemlab.ntfy.plist ~/Library/LaunchAgents/
+    # Edit ProgramArguments path if repo is not at /Users/neil/Desktop/chemistry
+    launchctl unload ~/Library/LaunchAgents/com.chemlab.ntfy.plist 2>/dev/null || true
+    launchctl load ~/Library/LaunchAgents/com.chemlab.ntfy.plist
+
+  Uninstall:
+    launchctl unload ~/Library/LaunchAgents/com.chemlab.ntfy.plist
+    rm ~/Library/LaunchAgents/com.chemlab.ntfy.plist
+
+  Schedules:
+    Weekdays Mon–Fri: 13:00 (slot a), 18:30 (slot b)
+    Weekends Sat–Sun: 00:30 (slot a), 00:45 (slot b)
+-->
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>com.chemlab.ntfy</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>/Users/neil/Desktop/chemistry/marketing/oss-sprint/launchd-tick.sh</string>
+  </array>
+  <key>WorkingDirectory</key>
+  <string>/Users/neil/Desktop/chemistry/marketing/oss-sprint</string>
+  <key>StandardOutPath</key>
+  <string>/Users/neil/Desktop/chemistry/marketing/oss-sprint/launchd.out.log</string>
+  <key>StandardErrorPath</key>
+  <string>/Users/neil/Desktop/chemistry/marketing/oss-sprint/launchd.err.log</string>
+  <key>StartCalendarInterval</key>
+  <array>
+    <!-- Weekday slot A: Mon–Fri 13:00 (launchd Weekday: 0=Sun … 6=Sat) -->
+    <dict><key>Weekday</key><integer>1</integer><key>Hour</key><integer>13</integer><key>Minute</key><integer>0</integer></dict>
+    <dict><key>Weekday</key><integer>2</integer><key>Hour</key><integer>13</integer><key>Minute</key><integer>0</integer></dict>
+    <dict><key>Weekday</key><integer>3</integer><key>Hour</key><integer>13</integer><key>Minute</key><integer>0</integer></dict>
+    <dict><key>Weekday</key><integer>4</integer><key>Hour</key><integer>13</integer><key>Minute</key><integer>0</integer></dict>
+    <dict><key>Weekday</key><integer>5</integer><key>Hour</key><integer>13</integer><key>Minute</key><integer>0</integer></dict>
+    <!-- Weekday slot B: Mon–Fri 18:30 -->
+    <dict><key>Weekday</key><integer>1</integer><key>Hour</key><integer>18</integer><key>Minute</key><integer>30</integer></dict>
+    <dict><key>Weekday</key><integer>2</integer><key>Hour</key><integer>18</integer><key>Minute</key><integer>30</integer></dict>
+    <dict><key>Weekday</key><integer>3</integer><key>Hour</key><integer>18</integer><key>Minute</key><integer>30</integer></dict>
+    <dict><key>Weekday</key><integer>4</integer><key>Hour</key><integer>18</integer><key>Minute</key><integer>30</integer></dict>
+    <dict><key>Weekday</key><integer>5</integer><key>Hour</key><integer>18</integer><key>Minute</key><integer>30</integer></dict>
+    <!-- Weekend slot A: Sat+Sun 00:30 -->
+    <dict><key>Weekday</key><integer>6</integer><key>Hour</key><integer>0</integer><key>Minute</key><integer>30</integer></dict>
+    <dict><key>Weekday</key><integer>0</integer><key>Hour</key><integer>0</integer><key>Minute</key><integer>30</integer></dict>
+    <!-- Weekend slot B: Sat+Sun 00:45 -->
+    <dict><key>Weekday</key><integer>6</integer><key>Hour</key><integer>0</integer><key>Minute</key><integer>45</integer></dict>
+    <dict><key>Weekday</key><integer>0</integer><key>Hour</key><integer>0</integer><key>Minute</key><integer>45</integer></dict>
+  </array>
+</dict>
+</plist>

@@ -246,6 +246,7 @@ export function InventionShelf() {
       equipmentId: latest.snapshot.equipmentId || "beaker",
       contentIds: latest.snapshot.contentIds,
       heatAttached: latest.snapshot.heatAttached,
+      coolAttached: latest.snapshot.coolAttached,
       stirLevel: latest.snapshot.stirLevel,
       autoMix: false,
     });

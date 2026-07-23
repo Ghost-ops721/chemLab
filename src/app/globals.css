@@ -510,6 +510,49 @@ body {
   animation-delay: 0.12s;
 }
 
+@keyframes ice-shimmer {
+  0%,
+  100% {
+    opacity: 0.75;
+    transform: translateY(0);
+  }
+  50% {
+    opacity: 1;
+    transform: translateY(-1px);
+  }
+}
+
+.lab-ice-cube {
+  animation: ice-shimmer 1.4s ease-in-out infinite;
+  box-shadow: 0 0 4px rgba(186, 230, 253, 0.8);
+}
+
+.lab-ice-delay {
+  animation-delay: 0.35s;
+}
+
+@keyframes cool-flash {
+  0% {
+    opacity: 0;
+    background: radial-gradient(
+      ellipse at bottom,
+      rgba(125, 211, 252, 0.55),
+      transparent 70%
+    );
+  }
+  35% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+.lab-cool-flash {
+  animation: cool-flash 0.8s ease-out forwards;
+  pointer-events: none;
+}
+
 @keyframes hazard-pulse {
   0%,
   100% {
@@ -948,6 +991,8 @@ body {
   .lab-liquid-bob,
   .lab-meniscus,
   .lab-flame,
+  .lab-ice-cube,
+  .lab-cool-flash,
   .lab-hazard-pulse,
   .lab-pour-ribbon,
   .lab-pour-drop,

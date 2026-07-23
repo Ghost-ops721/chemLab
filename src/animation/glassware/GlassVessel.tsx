@@ -27,6 +27,7 @@ interface Props {
   layerColors?: string[];
   stirLevel?: number;
   heatAttached?: boolean;
+  coolAttached?: boolean;
   className?: string;
   pouringCue?: boolean;
   tiltDeg?: number;
@@ -46,6 +47,7 @@ export function GlassVessel({
   layerColors,
   stirLevel = 0,
   heatAttached,
+  coolAttached,
   className = "",
   pouringCue,
   tiltDeg = 0,
@@ -93,6 +95,7 @@ export function GlassVessel({
   const fluidState = livePreviewToFluidState(preview, {
     fx: fx ?? {},
     heatAttached: Boolean(heatAttached),
+    coolAttached: Boolean(coolAttached),
     stirLevel,
     lastResult: result,
     fillColorOverride: fillColor,
@@ -254,6 +257,7 @@ export function GlassVessel({
           fx={fx}
           stirLevel={stirLevel}
           heatAttached={heatAttached}
+          coolAttached={coolAttached}
           fillColor={fillColor === "transparent" ? undefined : fillColor}
           boiling={motion.boiling}
           equipmentId={equipmentId}

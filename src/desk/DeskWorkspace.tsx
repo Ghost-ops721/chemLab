@@ -29,6 +29,7 @@ export function DeskWorkspace({
   const placeEquipment = useDeskStore((s) => s.placeEquipment);
   const stirVessel = useDeskStore((s) => s.stirVessel);
   const toggleHeat = useDeskStore((s) => s.toggleHeat);
+  const toggleCool = useDeskStore((s) => s.toggleCool);
   const clearDesk = useDeskStore((s) => s.clearDesk);
   const setPickerOpen = useGoalStore((s) => s.setPickerOpen);
   const deskRef = useRef<HTMLElement | null>(null);
@@ -164,6 +165,14 @@ export function DeskWorkspace({
                 run: () => {
                   if (!active) return;
                   toggleHeat(active.instanceId);
+                },
+              },
+              {
+                id: "cool",
+                label: "Cool",
+                run: () => {
+                  if (!active) return;
+                  toggleCool(active.instanceId);
                 },
               },
               {

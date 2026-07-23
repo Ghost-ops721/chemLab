@@ -33,6 +33,9 @@ interface DeskState {
   vessels: DeskVessel[];
   activeVesselId: string | null;
   lastExplanationVesselId: string | null;
+  /** Preferred pour volume when adding chemicals (ml). */
+  pourAmountMl: number;
+  setPourAmountMl: (ml: number) => void;
   placeEquipment: (
     equipmentId: string,
     position?: { x: number; y: number },
@@ -53,6 +56,9 @@ interface DeskState {
   attachHeat: (vesselId: string) => void;
   detachHeat: (vesselId: string) => void;
   toggleHeat: (vesselId: string) => void;
+  attachCool: (vesselId: string) => void;
+  detachCool: (vesselId: string) => void;
+  toggleCool: (vesselId: string) => void;
   stirVessel: (vesselId: string, autoMix?: boolean) => EngineResult | null;
   removeLastChemical: (vesselId: string) => void;
   removeVessel: (vesselId: string) => void;
@@ -75,6 +81,7 @@ interface DeskState {
     contentIds: string[];
     contents?: VesselContent[];
     heatAttached?: boolean;
+    coolAttached?: boolean;
     stirLevel?: number;
     autoMix?: boolean;
   }) => string | null;
@@ -97,6 +104,7 @@ function withLivePreview(vessel: DeskVessel): DeskVessel {
           contents: synced.contents,
           equipmentId: vessel.equipmentId,
           heatAttached: vessel.heatAttached,
+          coolAttached: vessel.coolAttached,
         })
       : undefined;
   return {
@@ -108,7 +116,9 @@ function withLivePreview(vessel: DeskVessel): DeskVessel {
 
 function resolveMix(vessel: DeskVessel): EngineResult {
   const contents = getVesselContents(vessel);
-  const functions = vessel.heatAttached ? ["heat-source"] : [];
+  const functions: string[] = [];
+  if (vessel.heatAttached) functions.push("heat-source");
+  if (vessel.coolAttached) functions.push("cold-source");
   const amounts: Record<string, number> = {};
   for (const c of contents) amounts[c.chemicalId] = c.amountMl;
   return resolveDomain("chemistry", {
@@ -128,6 +138,12 @@ export const useDeskStore = create<DeskState>()(
       vessels: [],
       activeVesselId: null,
       lastExplanationVesselId: null,
+      pourAmountMl: 2,
+
+      setPourAmountMl: (ml) => {
+        const clamped = Math.round(Math.max(0.1, Math.min(50, ml)) * 10) / 10;
+        set({ pourAmountMl: clamped });
+      },
 
       placeEquipment: (equipmentId, position) => {
         const eq = EQUIPMENT_BY_ID[equipmentId];
@@ -137,6 +153,15 @@ export const useDeskStore = create<DeskState>()(
           const active = get().activeVesselId;
           if (active) {
             get().attachHeat(active);
+            return active;
+          }
+          return null;
+        }
+
+        if (eq.function === "cold-source") {
+          const active = get().activeVesselId;
+          if (active) {
+            get().attachCool(active);
             return active;
           }
           return null;
@@ -163,6 +188,7 @@ export const useDeskStore = create<DeskState>()(
           contents: [],
           contentIds: [],
           heatAttached: false,
+          coolAttached: false,
           stirLevel: 0,
           fx: {},
           position: position ?? {
@@ -199,7 +225,8 @@ export const useDeskStore = create<DeskState>()(
 
         let added = false;
         const color = getChemical(chemicalId)?.color;
-        const pour = amountMl ?? defaultPourMl(chemicalId);
+        const pour =
+          amountMl ?? get().pourAmountMl ?? defaultPourMl(chemicalId);
         set((s) => ({
           vessels: s.vessels.map((v) => {
             if (v.instanceId !== vesselId) return v;
@@ -325,6 +352,7 @@ export const useDeskStore = create<DeskState>()(
               ? withLivePreview({
                   ...v,
                   heatAttached: true,
+                  coolAttached: false,
                   fx: patchFx(v.fx, { heatFlashAt: Date.now() }),
                 })
               : v,
@@ -348,6 +376,40 @@ export const useDeskStore = create<DeskState>()(
         if (!v) return;
         if (v.heatAttached) get().detachHeat(vesselId);
         else get().attachHeat(vesselId);
+      },
+
+      attachCool: (vesselId) => {
+        labSound.cool();
+        set((s) => ({
+          vessels: s.vessels.map((v) =>
+            v.instanceId === vesselId
+              ? withLivePreview({
+                  ...v,
+                  coolAttached: true,
+                  heatAttached: false,
+                  fx: patchFx(v.fx, { coolFlashAt: Date.now() }),
+                })
+              : v,
+          ),
+          activeVesselId: vesselId,
+        }));
+      },
+
+      detachCool: (vesselId) => {
+        set((s) => ({
+          vessels: s.vessels.map((v) =>
+            v.instanceId === vesselId
+              ? withLivePreview({ ...v, coolAttached: false })
+              : v,
+          ),
+        }));
+      },
+
+      toggleCool: (vesselId) => {
+        const v = get().vessels.find((x) => x.instanceId === vesselId);
+        if (!v) return;
+        if (v.coolAttached) get().detachCool(vesselId);
+        else get().attachCool(vesselId);
       },
 
       stirVessel: (vesselId, autoMix = false) => {
@@ -419,6 +481,7 @@ export const useDeskStore = create<DeskState>()(
                   lastResult: undefined,
                   livePreview: undefined,
                   heatAttached: false,
+                  coolAttached: false,
                   stirLevel: 0,
                   fx: {},
                 }
@@ -520,6 +583,7 @@ export const useDeskStore = create<DeskState>()(
         contentIds,
         contents,
         heatAttached = false,
+        coolAttached = false,
         stirLevel = 0,
         autoMix = false,
       }) => {
@@ -540,6 +604,7 @@ export const useDeskStore = create<DeskState>()(
           }
         }
         if (heatAttached) get().attachHeat(id);
+        if (coolAttached) get().attachCool(id);
         const stirTimes = Math.max(0, Math.min(3, stirLevel));
         for (let i = 0; i < stirTimes; i += 1) {
           get().stirVessel(id, false);
@@ -571,6 +636,7 @@ export const useDeskStore = create<DeskState>()(
             equipmentId: v.equipmentId ?? "beaker",
             ...synced,
             heatAttached: Boolean(v.heatAttached),
+            coolAttached: Boolean(v.coolAttached),
             stirLevel: v.stirLevel ?? 0,
             lastResult: v.lastResult,
             position: v.position ?? { x: 48, y: 56 },
@@ -582,6 +648,11 @@ export const useDeskStore = create<DeskState>()(
           vessels,
           activeVesselId: state.activeVesselId ?? null,
           lastExplanationVesselId: state.lastExplanationVesselId ?? null,
+          pourAmountMl:
+            typeof (state as { pourAmountMl?: unknown }).pourAmountMl ===
+            "number"
+              ? (state as { pourAmountMl: number }).pourAmountMl
+              : 2,
         } as never;
       },
       partialize: (s) => ({
@@ -593,6 +664,7 @@ export const useDeskStore = create<DeskState>()(
         })),
         activeVesselId: s.activeVesselId,
         lastExplanationVesselId: s.lastExplanationVesselId,
+        pourAmountMl: s.pourAmountMl,
       }),
     },
   ),

@@ -1,9 +1,8 @@
 "use client";
 
 import { Suspense, useEffect } from "react";
-import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { NavChrome } from "@/components/auth/NavChrome";
+import { AppHeader } from "@/components/auth/AppHeader";
 import { ProfileForm } from "@/components/profile/ProfileForm";
 import { useAuthStore } from "@/store/authStore";
 
@@ -21,14 +20,9 @@ function ProfilePageInner() {
   }, [authReady, user, router]);
 
   return (
-    <div className="min-h-dvh bg-lab-wash px-4 py-8">
-      <div className="mx-auto flex max-w-lg items-center justify-between">
-        <Link href="/lab" className="font-display text-2xl text-lab-ink">
-          Chem Lab
-        </Link>
-        <NavChrome />
-      </div>
-      <div className="mx-auto mt-10 max-w-md">
+    <div className="flex min-h-dvh flex-col bg-lab-wash">
+      <AppHeader subtitle="Your account and lab profile." />
+      <div className="mx-auto w-full max-w-md flex-1 px-4 py-8">
         <h1 className="font-display text-3xl text-lab-ink">
           {onboarding ? "Complete your profile" : "Profile"}
         </h1>
@@ -53,8 +47,11 @@ export default function ProfilePage() {
   return (
     <Suspense
       fallback={
-        <div className="flex min-h-dvh items-center justify-center bg-lab-wash text-sm text-lab-muted">
-          Loading profile…
+        <div className="flex min-h-dvh flex-col bg-lab-wash">
+          <AppHeader />
+          <div className="flex flex-1 items-center justify-center text-sm text-lab-muted">
+            Loading profile…
+          </div>
         </div>
       }
     >

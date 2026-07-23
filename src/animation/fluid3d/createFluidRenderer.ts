@@ -114,7 +114,6 @@ export async function createFluidRenderer(
       }
     `,
     fragmentShader: /* glsl */ `
-      precision mediump float;
       varying vec2 vUv;
       varying float vY;
       uniform vec3 uColor;

@@ -14,6 +14,11 @@ import { showToast } from "@/gamification/ToastHost";
 import { tryMixVessel, tryShakeVessel } from "@/lab/labActions";
 import { labCopy } from "@/lab/labCopy";
 import { VESSEL_CARD } from "@/desk/vesselLayout";
+import {
+  capacityMlForEquipment,
+  getVesselContents,
+  totalMl,
+} from "@/desk/vesselContents";
 
 interface Props {
   vessel: DeskVessel;
@@ -36,6 +41,7 @@ export function VesselSlot({ vessel, deskRef }: Props) {
   const removeLastChemical = useDeskStore((s) => s.removeLastChemical);
   const moveVessel = useDeskStore((s) => s.moveVessel);
   const transferVesselContents = useDeskStore((s) => s.transferVesselContents);
+  const setChemicalAmount = useDeskStore((s) => s.setChemicalAmount);
 
   const dragOffset = useRef<{ dx: number; dy: number } | null>(null);
   const [dragging, setDragging] = useState(false);
@@ -48,35 +54,60 @@ export function VesselSlot({ vessel, deskRef }: Props) {
   const eq = EQUIPMENT_BY_ID[vessel.equipmentId];
   const isActive = activeVesselId === vessel.instanceId;
   const result = vessel.lastResult;
-  const hazard = result?.effects.some((e) => e.kind === "hazard");
+  const contents = getVesselContents(vessel);
+  const preview = vessel.livePreview;
+  const hazard =
+    result?.effects.some(
+      (e) =>
+        e.kind === "hazard" ||
+        e.kind === "blast" ||
+        e.kind === "flash" ||
+        e.kind === "burst",
+    ) || preview?.hazards.some((h) => h.level === "danger");
   const canMix =
-    vessel.contentIds.length >= 2 ||
-    (vessel.contentIds.length >= 1 && vessel.heatAttached);
+    contents.length >= 2 || (contents.length >= 1 && vessel.heatAttached);
   const labBlocked = useAuthStore((s) => s.isLabBlocked());
 
-  const hasBoilable = vessel.contentIds.some((id) => {
-    const c = getChemical(id);
+  const hasBoilable = contents.some((c) => {
+    const chem = getChemical(c.chemicalId);
     return (
-      c?.state === "aqueous" ||
-      c?.state === "liquid" ||
-      c?.id === "h2o" ||
-      Boolean(c?.isFuel)
+      chem?.state === "aqueous" ||
+      chem?.state === "liquid" ||
+      chem?.id === "h2o" ||
+      Boolean(chem?.isFuel)
     );
   });
-  const boiling = Boolean(vessel.heatAttached && hasBoilable);
+  const boiling =
+    Boolean(vessel.heatAttached && hasBoilable) ||
+    Boolean(preview?.effects.some((e) => e.kind === "boil"));
 
   const fillColor =
     result?.effects.find((e) => e.kind === "color")?.value ??
-    (vessel.contentIds.length
-      ? getChemical(vessel.contentIds[vessel.contentIds.length - 1]!)?.color
+    preview?.fillColor ??
+    (contents.length
+      ? getChemical(contents[contents.length - 1]!.chemicalId)?.color
       : undefined) ??
     "transparent";
 
-  const capacity = eq?.capacity ?? 3;
+  const capacityMl = capacityMlForEquipment(vessel.equipmentId);
+  const usedMl = totalMl(contents);
   const fillPct =
-    vessel.contentIds.length === 0
+    preview?.fillPct ??
+    (contents.length === 0
       ? 0
-      : Math.min(82, 18 + (vessel.contentIds.length / capacity) * 64);
+      : Math.min(82, 12 + (usedMl / capacityMl) * 70));
+
+  // Merge live FX into a synthetic result for VesselEffects when not yet mixed
+  const fxResult =
+    result ??
+    (preview?.effects.length
+      ? {
+          ok: true,
+          products: [],
+          effects: preview.effects,
+          discoveryId: "live-preview",
+        }
+      : undefined);
 
   const shaking = fxAlive(vessel.fx.shakeAt, 700, now);
   const mixing = fxAlive(vessel.fx.mixAt, 900, now);
@@ -129,7 +160,7 @@ export function VesselSlot({ vessel, deskRef }: Props) {
 
     // Vessel→vessel pour: if released overlapping another vessel, transfer
     const target = findOverlapTarget(vessel, vessels);
-    if (target && vessel.contentIds.length > 0) {
+    if (target && contents.length > 0) {
       const ok = transferVesselContents(vessel.instanceId, target.instanceId);
       if (ok) {
         showToast(
@@ -248,8 +279,10 @@ export function VesselSlot({ vessel, deskRef }: Props) {
             boiling,
             transferringOut: Boolean(isSource),
           }}
-          result={result}
+          result={fxResult}
           fx={vessel.fx}
+          livePreview={preview}
+          layerColors={preview?.layerColors}
           stirLevel={vessel.stirLevel}
           heatAttached={vessel.heatAttached}
           pouringCue={isOver}
@@ -264,43 +297,79 @@ export function VesselSlot({ vessel, deskRef }: Props) {
             Stir ×{vessel.stirLevel}
           </div>
         ) : null}
+        {usedMl > 0 ? (
+          <div className="absolute left-1 top-1 rounded-full bg-black/35 px-1.5 py-0.5 font-mono text-[9px] text-lab-foam">
+            {usedMl.toFixed(1)}/{capacityMl} ml
+          </div>
+        ) : null}
       </div>
 
       <ul
-        className="mt-1.5 min-h-[2rem] space-y-0.5 text-[11px] text-lab-muted"
+        className="mt-1.5 min-h-[2rem] space-y-1 text-[11px] text-lab-muted"
         data-no-drag
       >
-        {vessel.contentIds.length === 0 ? (
+        {contents.length === 0 ? (
           <li className="italic text-lab-muted/80">Awaiting chemicals…</li>
         ) : (
-          vessel.contentIds.map((id, idx) => {
-            const c = getChemical(id);
-            const isLast = idx === vessel.contentIds.length - 1;
+          contents.map((entry, idx) => {
+            const c = getChemical(entry.chemicalId);
+            const isLast = idx === contents.length - 1;
             return (
-              <li key={id} className="flex items-center gap-1 truncate">
-                <span
-                  className="h-2 w-2 shrink-0 rounded-full"
-                  style={{ background: c?.color ?? "#888" }}
-                />
-                <span className="min-w-0 flex-1 truncate font-mono text-lab-ink/85">
-                  {c?.formula ?? id}
-                  <span className="ml-1 font-sans text-[10px] text-lab-muted">
-                    {c?.name}
+              <li key={entry.chemicalId} className="space-y-0.5">
+                <div className="flex items-center gap-1 truncate">
+                  <span
+                    className="h-2 w-2 shrink-0 rounded-full"
+                    style={{ background: c?.color ?? "#888" }}
+                  />
+                  <span className="min-w-0 flex-1 truncate font-mono text-lab-ink/85">
+                    {c?.formula ?? entry.chemicalId}
+                    <span className="ml-1 font-sans text-[10px] text-lab-muted">
+                      {c?.name}
+                    </span>
                   </span>
-                </span>
-                {isLast ? (
-                  <button
-                    type="button"
-                    className="rounded px-1 text-[9px] text-lab-muted hover:bg-lab-wash hover:text-lab-hazard"
-                    title="Remove last chemical"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      removeLastChemical(vessel.instanceId);
-                    }}
-                  >
-                    undo
-                  </button>
-                ) : null}
+                  {isLast ? (
+                    <button
+                      type="button"
+                      className="rounded px-1 text-[9px] text-lab-muted hover:bg-lab-wash hover:text-lab-hazard"
+                      title="Remove last chemical"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        removeLastChemical(vessel.instanceId);
+                      }}
+                    >
+                      undo
+                    </button>
+                  ) : null}
+                </div>
+                {isActive ? (
+                  <label className="flex items-center gap-1 pl-3">
+                    <input
+                      type="range"
+                      min={0.1}
+                      max={capacityMl}
+                      step={0.1}
+                      value={Math.min(entry.amountMl, capacityMl)}
+                      onChange={(e) => {
+                        e.stopPropagation();
+                        setChemicalAmount(
+                          vessel.instanceId,
+                          entry.chemicalId,
+                          Number(e.target.value),
+                        );
+                      }}
+                      onPointerDown={(e) => e.stopPropagation()}
+                      className="h-1 w-full accent-[var(--lab-teal)]"
+                      aria-label={`Amount of ${c?.name ?? entry.chemicalId}`}
+                    />
+                    <span className="w-8 shrink-0 text-right font-mono text-[9px] text-lab-ink">
+                      {entry.amountMl.toFixed(1)}
+                    </span>
+                  </label>
+                ) : (
+                  <p className="pl-3 font-mono text-[9px] text-lab-muted">
+                    {entry.amountMl.toFixed(1)} ml
+                  </p>
+                )}
               </li>
             );
           })
@@ -346,7 +415,7 @@ export function VesselSlot({ vessel, deskRef }: Props) {
             e.stopPropagation();
             tryShakeVessel(vessel.instanceId);
           }}
-          disabled={!canMix && vessel.contentIds.length < 1}
+          disabled={!canMix && contents.length < 1}
           className="rounded-lg bg-lab-wash px-1 py-1.5 text-[10px] font-semibold text-lab-ink hover:bg-white disabled:opacity-40"
           title="Shake to agitate (then Mix)"
         >

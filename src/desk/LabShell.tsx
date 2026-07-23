@@ -36,6 +36,7 @@ import { labCopy } from "@/lab/labCopy";
 import { VESSEL_CARD } from "@/desk/vesselLayout";
 import { track } from "@/lib/analytics/track";
 import { PerfumeAtelier } from "@/perfume/PerfumeAtelier";
+import { MarketPanel } from "@/perfume/MarketPanel";
 import { StarShopModal } from "@/perfume/StarShopModal";
 import { FreeformPerfumeBuilder } from "@/perfume/FreeformPerfumeBuilder";
 import { getPerfumeRecipe } from "@/domains/chemistry/perfume";
@@ -73,6 +74,7 @@ export function LabShell() {
   const [hydrated, setHydrated] = useState(false);
   const [atelierOpen, setAtelierOpen] = useState(false);
   const [shopOpen, setShopOpen] = useState(false);
+  const [marketOpen, setMarketOpen] = useState(false);
   const [freeformOpen, setFreeformOpen] = useState(false);
   const lastRecorded = useRef<string | null>(null);
   const deskPointer = useRef<{ x: number; y: number } | null>(null);
@@ -382,19 +384,30 @@ export function LabShell() {
         <GamificationBar
           onOpenAtelier={() => {
             setShopOpen(false);
+            setMarketOpen(false);
             setFreeformOpen(false);
             useInventionStore.getState().setShelfOpen(false);
             setAtelierOpen(true);
           }}
           onOpenShop={() => {
             setAtelierOpen(false);
+            setMarketOpen(false);
             setFreeformOpen(false);
             useInventionStore.getState().setShelfOpen(false);
             setShopOpen(true);
           }}
+          onOpenMarket={() => {
+            setAtelierOpen(false);
+            setShopOpen(false);
+            setFreeformOpen(false);
+            useInventionStore.getState().setShelfOpen(false);
+            setMarketOpen(true);
+            track("market_open", { from: "bar" });
+          }}
           onOpenShelf={() => {
             setAtelierOpen(false);
             setShopOpen(false);
+            setMarketOpen(false);
             setFreeformOpen(false);
             useInventionStore.getState().setShelfOpen(true);
             track("shelf_open", { from: "bar" });
@@ -475,6 +488,7 @@ export function LabShell() {
               <DeskWorkspace
                 onOpenAtelier={() => {
                   setShopOpen(false);
+                  setMarketOpen(false);
                   setFreeformOpen(false);
                   useInventionStore.getState().setShelfOpen(false);
                   setAtelierOpen(true);
@@ -497,6 +511,7 @@ export function LabShell() {
         <GoalPicker
           onOpenAtelier={() => {
             setShopOpen(false);
+            setMarketOpen(false);
             setFreeformOpen(false);
             useInventionStore.getState().setShelfOpen(false);
             setAtelierOpen(true);
@@ -515,6 +530,7 @@ export function LabShell() {
           onClose={() => setFreeformOpen(false)}
         />
         <StarShopModal open={shopOpen} onClose={() => setShopOpen(false)} />
+        <MarketPanel open={marketOpen} onClose={() => setMarketOpen(false)} />
         <InventionShelf />
         <GoalRewardOverlay />
         <GoalProgressWatcher />

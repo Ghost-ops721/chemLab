@@ -38,4 +38,7 @@ export const RATE_LIMITS = {
   progress: { limit: 60, windowMs: 60_000 },
   "daily-star": { limit: 20, windowMs: 60_000 },
   "stars-unlock": { limit: 30, windowMs: 60_000 },
+  "study-rate": { limit: 20, windowMs: 60_000 },
+  "ifra-check": { limit: 60, windowMs: 60_000 },
+  waitlist: { limit: 8, windowMs: 60_000 },
 } as const;

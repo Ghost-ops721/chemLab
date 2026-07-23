@@ -1,5 +1,5 @@
 import type { Chemical, ReactionResult } from "../types";
-import { tryHazard } from "./hazards";
+import { tryHazard, tryHeatFlammableHazard } from "./hazards";
 import { tryNeutralization } from "./neutralization";
 import { tryCombustion } from "./combustion";
 import { tryRedox } from "./redox";
@@ -24,6 +24,9 @@ export function resolveChemistry(
 
   const hazard = tryHazard(chemicals);
   if (hazard) return hazard;
+
+  const flash = tryHeatFlammableHazard(chemicals, Boolean(opts.hasHeat));
+  if (flash) return flash;
 
   // Perfume atelier crafts before generic product crafts
   const perfume = tryPerfumeCraft(chemicals);

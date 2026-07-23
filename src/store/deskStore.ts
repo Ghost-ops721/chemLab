@@ -2,12 +2,22 @@
 
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-import type { DeskVessel, EngineResult, VesselFx } from "@/types";
+import type { DeskVessel, EngineResult, VesselContent, VesselFx } from "@/types";
 import { resolveDomain } from "@/domains/registry";
 import { EQUIPMENT_BY_ID } from "@/domains/chemistry/data/equipment";
 import { getChemical } from "@/domains/chemistry/data/chemicals";
+import { computeLivePreview } from "@/domains/chemistry/engine/liveFormula";
 import { labSound } from "@/desk/labSound";
 import { assertLabActionAllowed, useAuthStore } from "@/store/authStore";
+import {
+  capacityMlForEquipment,
+  defaultPourMl,
+  getVesselContents,
+  pourIntoContents,
+  setContentAmount,
+  syncVesselContents,
+  transferContents,
+} from "@/desk/vesselContents";
 
 if (typeof window !== "undefined") {
   try {
@@ -28,7 +38,16 @@ interface DeskState {
     position?: { x: number; y: number },
   ) => string | null;
   moveVessel: (vesselId: string, position: { x: number; y: number }) => void;
-  addChemicalToVessel: (vesselId: string, chemicalId: string) => boolean;
+  addChemicalToVessel: (
+    vesselId: string,
+    chemicalId: string,
+    amountMl?: number,
+  ) => boolean;
+  setChemicalAmount: (
+    vesselId: string,
+    chemicalId: string,
+    amountMl: number,
+  ) => void;
   /** Pour contents from one vessel into another (up to capacity). */
   transferVesselContents: (fromId: string, toId: string) => boolean;
   attachHeat: (vesselId: string) => void;
@@ -54,6 +73,7 @@ interface DeskState {
   loadFormula: (input: {
     equipmentId: string;
     contentIds: string[];
+    contents?: VesselContent[];
     heatAttached?: boolean;
     stirLevel?: number;
     autoMix?: boolean;
@@ -68,408 +88,509 @@ function patchFx(fx: VesselFx | undefined, patch: VesselFx): VesselFx {
   return { ...fx, ...patch };
 }
 
+function withLivePreview(vessel: DeskVessel): DeskVessel {
+  const contents = getVesselContents(vessel);
+  const synced = syncVesselContents(contents);
+  const livePreview =
+    synced.contents.length > 0
+      ? computeLivePreview({
+          contents: synced.contents,
+          equipmentId: vessel.equipmentId,
+          heatAttached: vessel.heatAttached,
+        })
+      : undefined;
+  return {
+    ...vessel,
+    ...synced,
+    livePreview,
+  };
+}
+
 function resolveMix(vessel: DeskVessel): EngineResult {
+  const contents = getVesselContents(vessel);
   const functions = vessel.heatAttached ? ["heat-source"] : [];
+  const amounts: Record<string, number> = {};
+  for (const c of contents) amounts[c.chemicalId] = c.amountMl;
   return resolveDomain("chemistry", {
-    itemIds: vessel.contentIds,
+    itemIds: syncedIds(contents),
+    amounts,
     equipmentFunctions: functions,
   });
+}
+
+function syncedIds(contents: VesselContent[]): string[] {
+  return contents.map((c) => c.chemicalId);
 }
 
 export const useDeskStore = create<DeskState>()(
   persist(
     (set, get) => ({
-  vessels: [],
-  activeVesselId: null,
-  lastExplanationVesselId: null,
-
-  placeEquipment: (equipmentId, position) => {
-    const eq = EQUIPMENT_BY_ID[equipmentId];
-    if (!eq) return null;
-
-    if (eq.function === "heat-source") {
-      const active = get().activeVesselId;
-      if (active) {
-        get().attachHeat(active);
-        return active;
-      }
-      return null;
-    }
-
-    if (eq.function === "stirring") {
-      const active = get().activeVesselId;
-      if (active) {
-        get().stirVessel(active, true);
-        return active;
-      }
-      return null;
-    }
-
-    if (eq.function !== "container" && eq.function !== "measuring") {
-      return null;
-    }
-
-    const instanceId = uid();
-    const n = get().vessels.length;
-    const vessel: DeskVessel = {
-      instanceId,
-      equipmentId,
-      contentIds: [],
-      heatAttached: false,
-      stirLevel: 0,
-      fx: {},
-      position: position ?? {
-        x: 48 + (n % 4) * 200,
-        y: 56 + Math.floor(n / 4) * 220,
-      },
-    };
-    labSound.place();
-    set((s) => ({
-      vessels: [...s.vessels, vessel],
-      activeVesselId: instanceId,
-    }));
-    return instanceId;
-  },
-
-  moveVessel: (vesselId, position) => {
-    set((s) => ({
-      vessels: s.vessels.map((v) =>
-        v.instanceId === vesselId
-          ? {
-              ...v,
-              position: {
-                x: Math.max(8, position.x),
-                y: Math.max(8, position.y),
-              },
-            }
-          : v,
-      ),
-    }));
-  },
-
-  addChemicalToVessel: (vesselId, chemicalId) => {
-    if (!assertLabActionAllowed()) return false;
-
-    let added = false;
-    const color = getChemical(chemicalId)?.color;
-    set((s) => ({
-      vessels: s.vessels.map((v) => {
-        if (v.instanceId !== vesselId) return v;
-        const eq = EQUIPMENT_BY_ID[v.equipmentId];
-        const cap = eq?.capacity ?? 3;
-        if (v.contentIds.length >= cap) return v;
-        if (v.contentIds.includes(chemicalId)) return v;
-        added = true;
-        return {
-          ...v,
-          contentIds: [...v.contentIds, chemicalId],
-          lastResult: undefined,
-          stirLevel: 0,
-          fx: patchFx(v.fx, {
-            pourAt: Date.now(),
-            pourColor: color,
-          }),
-        };
-      }),
-      activeVesselId: vesselId,
-    }));
-    if (added) {
-      labSound.pour();
-      const auth = useAuthStore.getState();
-      if (!auth.user) {
-        auth.recordGuestChemicalAdd();
-      }
-    }
-    return added;
-  },
-
-  transferVesselContents: (fromId, toId) => {
-    if (!assertLabActionAllowed()) return false;
-    if (fromId === toId) return false;
-    const state = get();
-    const from = state.vessels.find((v) => v.instanceId === fromId);
-    const to = state.vessels.find((v) => v.instanceId === toId);
-    if (!from || !to) return false;
-    if (from.contentIds.length === 0) return false;
-
-    const toEq = EQUIPMENT_BY_ID[to.equipmentId];
-    const cap = toEq?.capacity ?? 3;
-    const room = Math.max(0, cap - to.contentIds.length);
-    if (room <= 0) return false;
-
-    const moving = from.contentIds
-      .filter((id) => !to.contentIds.includes(id))
-      .slice(0, room);
-    if (moving.length === 0) return false;
-
-    const remaining = from.contentIds.filter((id) => !moving.includes(id));
-    const pourColor =
-      getChemical(moving[moving.length - 1]!)?.color ??
-      getChemical(from.contentIds[from.contentIds.length - 1]!)?.color;
-    const now = Date.now();
-
-    labSound.pour();
-    set((s) => ({
-      vessels: s.vessels.map((v) => {
-        if (v.instanceId === fromId) {
-          return {
-            ...v,
-            contentIds: remaining,
-            lastResult: undefined,
-            stirLevel: 0,
-            fx: patchFx(v.fx, {
-              transferAt: now,
-              transferFromId: fromId,
-              transferToId: toId,
-              transferRole: "source",
-              pourColor,
-            }),
-          };
-        }
-        if (v.instanceId === toId) {
-          return {
-            ...v,
-            contentIds: [...v.contentIds, ...moving],
-            lastResult: undefined,
-            stirLevel: 0,
-            fx: patchFx(v.fx, {
-              pourAt: now,
-              pourColor,
-              transferAt: now,
-              transferFromId: fromId,
-              transferToId: toId,
-              transferRole: "target",
-            }),
-          };
-        }
-        return v;
-      }),
-      activeVesselId: toId,
-    }));
-    return true;
-  },
-
-  attachHeat: (vesselId) => {
-    labSound.heat();
-    set((s) => ({
-      vessels: s.vessels.map((v) =>
-        v.instanceId === vesselId
-          ? {
-              ...v,
-              heatAttached: true,
-              fx: patchFx(v.fx, { heatFlashAt: Date.now() }),
-            }
-          : v,
-      ),
-      activeVesselId: vesselId,
-    }));
-  },
-
-  detachHeat: (vesselId) => {
-    set((s) => ({
-      vessels: s.vessels.map((v) =>
-        v.instanceId === vesselId ? { ...v, heatAttached: false } : v,
-      ),
-    }));
-  },
-
-  toggleHeat: (vesselId) => {
-    const v = get().vessels.find((x) => x.instanceId === vesselId);
-    if (!v) return;
-    if (v.heatAttached) get().detachHeat(vesselId);
-    else get().attachHeat(vesselId);
-  },
-
-  stirVessel: (vesselId, autoMix = false) => {
-    if (!assertLabActionAllowed()) return null;
-    labSound.stir();
-    const vessel = get().vessels.find((v) => v.instanceId === vesselId);
-    if (!vessel) return null;
-
-    const nextLevel = Math.min(3, vessel.stirLevel + 1);
-    set((s) => ({
-      vessels: s.vessels.map((v) =>
-        v.instanceId === vesselId
-          ? {
-              ...v,
-              stirLevel: nextLevel,
-              fx: patchFx(v.fx, { stirAt: Date.now() }),
-            }
-          : v,
-      ),
-      activeVesselId: vesselId,
-    }));
-
-    const canMix =
-      vessel.contentIds.length >= 2 ||
-      (vessel.contentIds.length >= 1 && vessel.heatAttached);
-
-    if (autoMix && canMix && nextLevel >= 2) {
-      return get().mixVessel(vesselId);
-    }
-    return null;
-  },
-
-  removeLastChemical: (vesselId) => {
-    labSound.clear();
-    set((s) => ({
-      vessels: s.vessels.map((v) => {
-        if (v.instanceId !== vesselId || v.contentIds.length === 0) return v;
-        return {
-          ...v,
-          contentIds: v.contentIds.slice(0, -1),
-          lastResult: undefined,
-          stirLevel: 0,
-        };
-      }),
-    }));
-  },
-
-  removeVessel: (vesselId) => {
-    labSound.clear();
-    set((s) => ({
-      vessels: s.vessels.filter((v) => v.instanceId !== vesselId),
-      activeVesselId:
-        s.activeVesselId === vesselId ? null : s.activeVesselId,
-    }));
-  },
-
-  clearVessel: (vesselId) => {
-    labSound.clear();
-    set((s) => ({
-      vessels: s.vessels.map((v) =>
-        v.instanceId === vesselId
-          ? {
-              ...v,
-              contentIds: [],
-              lastResult: undefined,
-              heatAttached: false,
-              stirLevel: 0,
-              fx: {},
-            }
-          : v,
-      ),
-    }));
-  },
-
-  clearDesk: () => {
-    labSound.clear();
-    set({
       vessels: [],
       activeVesselId: null,
       lastExplanationVesselId: null,
-    });
-  },
 
-  setActiveVessel: (id) => set({ activeVesselId: id }),
+      placeEquipment: (equipmentId, position) => {
+        const eq = EQUIPMENT_BY_ID[equipmentId];
+        if (!eq) return null;
 
-  mixVessel: (vesselId) => {
-    if (!assertLabActionAllowed()) return null;
-    const vessel = get().vessels.find((v) => v.instanceId === vesselId);
-    if (!vessel || vessel.contentIds.length < 1) return null;
+        if (eq.function === "heat-source") {
+          const active = get().activeVesselId;
+          if (active) {
+            get().attachHeat(active);
+            return active;
+          }
+          return null;
+        }
 
-    const result = resolveMix(vessel);
-    if (result.effects.some((e) => e.kind === "hazard")) labSound.hazard();
-    else labSound.mix();
+        if (eq.function === "stirring") {
+          const active = get().activeVesselId;
+          if (active) {
+            get().stirVessel(active, true);
+            return active;
+          }
+          return null;
+        }
 
-    set((s) => ({
-      vessels: s.vessels.map((v) =>
-        v.instanceId === vesselId
-          ? {
+        if (eq.function !== "container" && eq.function !== "measuring") {
+          return null;
+        }
+
+        const instanceId = uid();
+        const n = get().vessels.length;
+        const vessel: DeskVessel = {
+          instanceId,
+          equipmentId,
+          contents: [],
+          contentIds: [],
+          heatAttached: false,
+          stirLevel: 0,
+          fx: {},
+          position: position ?? {
+            x: 48 + (n % 4) * 200,
+            y: 56 + Math.floor(n / 4) * 220,
+          },
+        };
+        labSound.place();
+        set((s) => ({
+          vessels: [...s.vessels, vessel],
+          activeVesselId: instanceId,
+        }));
+        return instanceId;
+      },
+
+      moveVessel: (vesselId, position) => {
+        set((s) => ({
+          vessels: s.vessels.map((v) =>
+            v.instanceId === vesselId
+              ? {
+                  ...v,
+                  position: {
+                    x: Math.max(8, position.x),
+                    y: Math.max(8, position.y),
+                  },
+                }
+              : v,
+          ),
+        }));
+      },
+
+      addChemicalToVessel: (vesselId, chemicalId, amountMl) => {
+        if (!assertLabActionAllowed()) return false;
+
+        let added = false;
+        const color = getChemical(chemicalId)?.color;
+        const pour = amountMl ?? defaultPourMl(chemicalId);
+        set((s) => ({
+          vessels: s.vessels.map((v) => {
+            if (v.instanceId !== vesselId) return v;
+            const contents = getVesselContents(v);
+            const cap = capacityMlForEquipment(v.equipmentId);
+            const next = pourIntoContents(contents, chemicalId, pour, cap);
+            if (!next) return v;
+            added = true;
+            return withLivePreview({
               ...v,
-              lastResult: result,
-              stirLevel: Math.max(v.stirLevel, 1),
+              ...syncVesselContents(next),
+              lastResult: undefined,
+              stirLevel: 0,
               fx: patchFx(v.fx, {
-                mixAt: Date.now(),
-                shakeAt: Date.now(),
-                stirAt: Date.now(),
+                pourAt: Date.now(),
+                pourColor: color,
               }),
-            }
-          : v,
-      ),
-      lastExplanationVesselId: vesselId,
-      activeVesselId: vesselId,
-    }));
+            });
+          }),
+          activeVesselId: vesselId,
+        }));
+        if (added) {
+          labSound.pour();
+          const auth = useAuthStore.getState();
+          if (!auth.user) {
+            auth.recordGuestChemicalAdd();
+          }
+        }
+        return added;
+      },
 
-    return result;
-  },
-
-  shakeVessel: (vesselId) => {
-    if (!assertLabActionAllowed()) return null;
-    const vessel = get().vessels.find((v) => v.instanceId === vesselId);
-    if (!vessel) return null;
-    labSound.shake();
-    set((s) => ({
-      vessels: s.vessels.map((v) =>
-        v.instanceId === vesselId
-          ? {
+      setChemicalAmount: (vesselId, chemicalId, amountMl) => {
+        if (!assertLabActionAllowed()) return;
+        set((s) => ({
+          vessels: s.vessels.map((v) => {
+            if (v.instanceId !== vesselId) return v;
+            const contents = getVesselContents(v);
+            const cap = capacityMlForEquipment(v.equipmentId);
+            const next = setContentAmount(
+              contents,
+              chemicalId,
+              amountMl,
+              cap,
+            );
+            return withLivePreview({
               ...v,
-              fx: patchFx(v.fx, { shakeAt: Date.now() }),
-              stirLevel: Math.min(3, v.stirLevel + 1),
+              ...syncVesselContents(next),
+              lastResult: undefined,
+            });
+          }),
+          activeVesselId: vesselId,
+        }));
+      },
+
+      transferVesselContents: (fromId, toId) => {
+        if (!assertLabActionAllowed()) return false;
+        if (fromId === toId) return false;
+        const state = get();
+        const from = state.vessels.find((v) => v.instanceId === fromId);
+        const to = state.vessels.find((v) => v.instanceId === toId);
+        if (!from || !to) return false;
+        const fromContents = getVesselContents(from);
+        if (fromContents.length === 0) return false;
+
+        const toContents = getVesselContents(to);
+        const cap = capacityMlForEquipment(to.equipmentId);
+        const result = transferContents(fromContents, toContents, cap);
+        if (!result) return false;
+
+        const pourColor =
+          getChemical(
+            result.to[result.to.length - 1]?.chemicalId ??
+              fromContents[fromContents.length - 1]!.chemicalId,
+          )?.color;
+        const now = Date.now();
+
+        labSound.pour();
+        set((s) => ({
+          vessels: s.vessels.map((v) => {
+            if (v.instanceId === fromId) {
+              return withLivePreview({
+                ...v,
+                ...syncVesselContents(result.from),
+                lastResult: undefined,
+                stirLevel: 0,
+                fx: patchFx(v.fx, {
+                  transferAt: now,
+                  transferFromId: fromId,
+                  transferToId: toId,
+                  transferRole: "source",
+                  pourColor,
+                }),
+              });
             }
-          : v,
-      ),
-      activeVesselId: vesselId,
-    }));
-    // Shake agitates only — press Mix to react
-    return null;
-  },
+            if (v.instanceId === toId) {
+              return withLivePreview({
+                ...v,
+                ...syncVesselContents(result.to),
+                lastResult: undefined,
+                stirLevel: 0,
+                fx: patchFx(v.fx, {
+                  pourAt: now,
+                  pourColor,
+                  transferAt: now,
+                  transferFromId: fromId,
+                  transferToId: toId,
+                  transferRole: "target",
+                }),
+              });
+            }
+            return v;
+          }),
+          activeVesselId: toId,
+        }));
+        return true;
+      },
 
-  seedDemoReaction: () => {
-    if (!assertLabActionAllowed()) return null;
-    set({ vessels: [], activeVesselId: null, lastExplanationVesselId: null });
-    const id = get().placeEquipment("beaker", { x: 140, y: 90 });
-    if (!id) return null;
-    get().addChemicalToVessel(id, "hcl");
-    get().addChemicalToVessel(id, "naoh");
-    get().stirVessel(id);
-    return get().mixVessel(id);
-  },
+      attachHeat: (vesselId) => {
+        labSound.heat();
+        set((s) => ({
+          vessels: s.vessels.map((v) =>
+            v.instanceId === vesselId
+              ? withLivePreview({
+                  ...v,
+                  heatAttached: true,
+                  fx: patchFx(v.fx, { heatFlashAt: Date.now() }),
+                })
+              : v,
+          ),
+          activeVesselId: vesselId,
+        }));
+      },
 
-  runPair: (equipmentId: string, a: string, b: string, heat = false) => {
-    if (!assertLabActionAllowed()) return null;
-    set({ vessels: [], activeVesselId: null, lastExplanationVesselId: null });
-    const id = get().placeEquipment(equipmentId, { x: 140, y: 90 });
-    if (!id) return null;
-    get().addChemicalToVessel(id, a);
-    get().addChemicalToVessel(id, b);
-    if (heat) get().attachHeat(id);
-    get().stirVessel(id);
-    return get().mixVessel(id);
-  },
+      detachHeat: (vesselId) => {
+        set((s) => ({
+          vessels: s.vessels.map((v) =>
+            v.instanceId === vesselId
+              ? withLivePreview({ ...v, heatAttached: false })
+              : v,
+          ),
+        }));
+      },
 
-  loadFormula: ({
-    equipmentId,
-    contentIds,
-    heatAttached = false,
-    stirLevel = 0,
-    autoMix = false,
-  }) => {
-    if (!assertLabActionAllowed()) return null;
-    set({ vessels: [], activeVesselId: null, lastExplanationVesselId: null });
-    const id = get().placeEquipment(equipmentId || "beaker", {
-      x: 140,
-      y: 100,
-    });
-    if (!id) return null;
-    for (const chemId of contentIds) {
-      get().addChemicalToVessel(id, chemId);
-    }
-    if (heatAttached) get().attachHeat(id);
-    const stirTimes = Math.max(0, Math.min(3, stirLevel));
-    for (let i = 0; i < stirTimes; i += 1) {
-      get().stirVessel(id, false);
-    }
-    if (autoMix) get().mixVessel(id);
-    return id;
-  },
+      toggleHeat: (vesselId) => {
+        const v = get().vessels.find((x) => x.instanceId === vesselId);
+        if (!v) return;
+        if (v.heatAttached) get().detachHeat(vesselId);
+        else get().attachHeat(vesselId);
+      },
+
+      stirVessel: (vesselId, autoMix = false) => {
+        if (!assertLabActionAllowed()) return null;
+        labSound.stir();
+        const vessel = get().vessels.find((v) => v.instanceId === vesselId);
+        if (!vessel) return null;
+
+        const contents = getVesselContents(vessel);
+        const nextLevel = Math.min(3, vessel.stirLevel + 1);
+        set((s) => ({
+          vessels: s.vessels.map((v) =>
+            v.instanceId === vesselId
+              ? {
+                  ...v,
+                  stirLevel: nextLevel,
+                  fx: patchFx(v.fx, { stirAt: Date.now() }),
+                }
+              : v,
+          ),
+          activeVesselId: vesselId,
+        }));
+
+        const canMix =
+          contents.length >= 2 ||
+          (contents.length >= 1 && vessel.heatAttached);
+
+        if (autoMix && canMix && nextLevel >= 2) {
+          return get().mixVessel(vesselId);
+        }
+        return null;
+      },
+
+      removeLastChemical: (vesselId) => {
+        labSound.clear();
+        set((s) => ({
+          vessels: s.vessels.map((v) => {
+            if (v.instanceId !== vesselId) return v;
+            const contents = getVesselContents(v);
+            if (contents.length === 0) return v;
+            return withLivePreview({
+              ...v,
+              ...syncVesselContents(contents.slice(0, -1)),
+              lastResult: undefined,
+              stirLevel: 0,
+            });
+          }),
+        }));
+      },
+
+      removeVessel: (vesselId) => {
+        labSound.clear();
+        set((s) => ({
+          vessels: s.vessels.filter((v) => v.instanceId !== vesselId),
+          activeVesselId:
+            s.activeVesselId === vesselId ? null : s.activeVesselId,
+        }));
+      },
+
+      clearVessel: (vesselId) => {
+        labSound.clear();
+        set((s) => ({
+          vessels: s.vessels.map((v) =>
+            v.instanceId === vesselId
+              ? {
+                  ...v,
+                  contents: [],
+                  contentIds: [],
+                  lastResult: undefined,
+                  livePreview: undefined,
+                  heatAttached: false,
+                  stirLevel: 0,
+                  fx: {},
+                }
+              : v,
+          ),
+        }));
+      },
+
+      clearDesk: () => {
+        labSound.clear();
+        set({
+          vessels: [],
+          activeVesselId: null,
+          lastExplanationVesselId: null,
+        });
+      },
+
+      setActiveVessel: (id) => set({ activeVesselId: id }),
+
+      mixVessel: (vesselId) => {
+        if (!assertLabActionAllowed()) return null;
+        const vessel = get().vessels.find((v) => v.instanceId === vesselId);
+        if (!vessel) return null;
+        const contents = getVesselContents(vessel);
+        if (contents.length < 1) return null;
+
+        const result = resolveMix(vessel);
+        if (result.effects.some((e) => e.kind === "hazard" || e.kind === "blast" || e.kind === "flash")) {
+          labSound.hazard();
+        } else labSound.mix();
+
+        set((s) => ({
+          vessels: s.vessels.map((v) =>
+            v.instanceId === vesselId
+              ? withLivePreview({
+                  ...v,
+                  lastResult: result,
+                  stirLevel: Math.max(v.stirLevel, 1),
+                  fx: patchFx(v.fx, {
+                    mixAt: Date.now(),
+                    shakeAt: Date.now(),
+                    stirAt: Date.now(),
+                  }),
+                })
+              : v,
+          ),
+          lastExplanationVesselId: vesselId,
+          activeVesselId: vesselId,
+        }));
+
+        return result;
+      },
+
+      shakeVessel: (vesselId) => {
+        if (!assertLabActionAllowed()) return null;
+        const vessel = get().vessels.find((v) => v.instanceId === vesselId);
+        if (!vessel) return null;
+        labSound.shake();
+        set((s) => ({
+          vessels: s.vessels.map((v) =>
+            v.instanceId === vesselId
+              ? {
+                  ...v,
+                  fx: patchFx(v.fx, { shakeAt: Date.now() }),
+                  stirLevel: Math.min(3, v.stirLevel + 1),
+                }
+              : v,
+          ),
+          activeVesselId: vesselId,
+        }));
+        return null;
+      },
+
+      seedDemoReaction: () => {
+        if (!assertLabActionAllowed()) return null;
+        set({ vessels: [], activeVesselId: null, lastExplanationVesselId: null });
+        const id = get().placeEquipment("beaker", { x: 140, y: 90 });
+        if (!id) return null;
+        get().addChemicalToVessel(id, "hcl");
+        get().addChemicalToVessel(id, "naoh");
+        get().stirVessel(id);
+        return get().mixVessel(id);
+      },
+
+      runPair: (equipmentId: string, a: string, b: string, heat = false) => {
+        if (!assertLabActionAllowed()) return null;
+        set({ vessels: [], activeVesselId: null, lastExplanationVesselId: null });
+        const id = get().placeEquipment(equipmentId, { x: 140, y: 90 });
+        if (!id) return null;
+        get().addChemicalToVessel(id, a);
+        get().addChemicalToVessel(id, b);
+        if (heat) get().attachHeat(id);
+        get().stirVessel(id);
+        return get().mixVessel(id);
+      },
+
+      loadFormula: ({
+        equipmentId,
+        contentIds,
+        contents,
+        heatAttached = false,
+        stirLevel = 0,
+        autoMix = false,
+      }) => {
+        if (!assertLabActionAllowed()) return null;
+        set({ vessels: [], activeVesselId: null, lastExplanationVesselId: null });
+        const id = get().placeEquipment(equipmentId || "beaker", {
+          x: 140,
+          y: 100,
+        });
+        if (!id) return null;
+        if (contents?.length) {
+          for (const c of contents) {
+            get().addChemicalToVessel(id, c.chemicalId, c.amountMl);
+          }
+        } else {
+          for (const chemId of contentIds) {
+            get().addChemicalToVessel(id, chemId);
+          }
+        }
+        if (heatAttached) get().attachHeat(id);
+        const stirTimes = Math.max(0, Math.min(3, stirLevel));
+        for (let i = 0; i < stirTimes; i += 1) {
+          get().stirVessel(id, false);
+        }
+        if (autoMix) get().mixVessel(id);
+        return id;
+      },
     }),
     {
       name: "chemlab-desk",
-      version: 1,
-      migrate: (persisted) => persisted as never,
+      version: 2,
+      migrate: (persisted) => {
+        const state = persisted as {
+          vessels?: Array<Partial<DeskVessel> & { contentIds?: string[] }>;
+          activeVesselId?: string | null;
+          lastExplanationVesselId?: string | null;
+        };
+        const vessels = (state.vessels ?? []).map((v) => {
+          const contents =
+            v.contents?.length
+              ? v.contents
+              : (v.contentIds ?? []).map((chemicalId) => ({
+                  chemicalId,
+                  amountMl: defaultPourMl(chemicalId),
+                }));
+          const synced = syncVesselContents(contents);
+          const base: DeskVessel = {
+            instanceId: v.instanceId ?? uid(),
+            equipmentId: v.equipmentId ?? "beaker",
+            ...synced,
+            heatAttached: Boolean(v.heatAttached),
+            stirLevel: v.stirLevel ?? 0,
+            lastResult: v.lastResult,
+            position: v.position ?? { x: 48, y: 56 },
+            fx: {},
+          };
+          return withLivePreview(base);
+        });
+        return {
+          vessels,
+          activeVesselId: state.activeVesselId ?? null,
+          lastExplanationVesselId: state.lastExplanationVesselId ?? null,
+        } as never;
+      },
       partialize: (s) => ({
-        vessels: s.vessels.map((v) => ({ ...v, fx: {} })),
+        vessels: s.vessels.map((v) => ({
+          ...v,
+          fx: {},
+          // drop ephemeral preview size from storage
+          livePreview: undefined,
+        })),
         activeVesselId: s.activeVesselId,
         lastExplanationVesselId: s.lastExplanationVesselId,
       }),

@@ -9,6 +9,7 @@ import {
   recipeIdFromExplanationKey,
 } from "@/domains/chemistry/engine/perfumeCraft";
 import { resolveScentProfile } from "@/domains/chemistry/perfume";
+import { FormulaInspector } from "@/perfume/FormulaInspector";
 import { ScentProfileDetails } from "@/perfume/ScentProfileDetails";
 import { useDeskStore } from "@/store/deskStore";
 import { useProgressStore } from "@/store/progressStore";
@@ -65,8 +66,15 @@ async function streamExplanation(
 export function ExplanationPanel() {
   const vessels = useDeskStore((s) => s.vessels);
   const lastId = useDeskStore((s) => s.lastExplanationVesselId);
-  const vessel = vessels.find((v) => v.instanceId === lastId);
-  const result = vessel?.lastResult;
+  const activeId = useDeskStore((s) => s.activeVesselId);
+  const vessel =
+    vessels.find((v) => v.instanceId === lastId) ??
+    vessels.find((v) => v.instanceId === activeId) ??
+    vessels[0];
+  const result = lastId
+    ? vessels.find((v) => v.instanceId === lastId)?.lastResult
+    : vessel?.lastResult;
+  const livePreview = vessel?.livePreview;
   const user = useAuthStore((s) => s.user);
   const authReady = useAuthStore((s) => s.authReady);
 
@@ -257,22 +265,29 @@ export function ExplanationPanel() {
           expanded ? "" : "hidden md:block"
         }`}
       >
-        {!result ? (
+        {!result && !livePreview ? (
           <div className="rounded-lg bg-lab-wash/70 px-2 py-2 text-lab-muted">
             <p>
-              After you mix, this panel explains the chemistry in plain language
-              — faithful to the balanced equation on the vessel.
+              Pour oils and ethanol, then adjust amounts — this panel tells you
+              honestly what the blend would smell like and flags hazards live.
             </p>
             {!user && authReady ? (
               <p className="mt-2 text-[11px] text-lab-teal">
                 <Link href="/login" className="font-semibold underline">
                   Sign in
                 </Link>{" "}
-                to unlock the live lab tutor.
+                to unlock the live lab tutor after Mix.
               </p>
             ) : null}
           </div>
-        ) : waiting ? (
+        ) : (
+          <>
+            {livePreview ? <FormulaInspector preview={livePreview} /> : null}
+            {!result ? (
+              <p className="text-[11px] text-lab-muted">
+                Mix when ready to lock the reaction / perfume craft.
+              </p>
+            ) : waiting ? (
           <p className="text-lab-muted motion-safe:animate-pulse">
             Consulting the lab tutor…
           </p>
@@ -334,6 +349,8 @@ export function ExplanationPanel() {
                 </p>
               ) : null}
             </div>
+          </>
+            )}
           </>
         )}
       </div>

@@ -107,3 +107,39 @@ The desk stays free-play; the guide panel is a floating coach with openable hint
 - Dark mode by default
 - Pill clusters and stat strips competing with the desk
 - Detached badges floating on vessel liquid
+
+## IFRA screening (Phase B)
+
+Formula Inspector and live preview run a **teaching** IFRA Standards–aligned screen (default Category 4 fine fragrance) against Chem Lab’s version-pinned seed (`49th-Amendment-teaching`).
+
+| UI | Behavior |
+|----|----------|
+| Pass | Teal “IFRA screen: Pass · Screened” + per-oil actual% / max% |
+| Fail | Hazard-tint status; warnings also land in the hazards list |
+| Unknown | Muted — material not in seed or solvents only |
+| Disclaimer | Always visible: educational aid, not certified compliance |
+
+Optional API: `POST /api/ifra/check` with `{ contents, category? }` — auth not required; IP rate-limited.
+
+## Atelier Market & panel studies (Phase B)
+
+Market keeps the golden-hour desk language (Fraunces / DM Sans, lab tokens) — frosted panels, bottle silhouettes, no dashboard chrome.
+
+| Surface | Role |
+|---------|------|
+| Top bar **Market** / `/market` | Browse + search shared formulas; Remix on desk |
+| `/lab/formula/[id]` | Deep link — volumetric remix via `loadFormula({ contents })` |
+| Formula Inspector / Share card | **Publish to Market** (auth); Screened vs Experimental badge from IFRA |
+| `/study/[id]` | Blind or labeled panel; 1–7 attribute ratings; one per uid |
+
+Collections: `formulas` (public read, owner write), `studies`, `study_ratings`. Panel means show in the study page and after starting a study from the Inspector.
+
+## 3D fluid (vessel well)
+
+WebGL liquid (`FluidVesselCanvas` / Three.js) sits **inside** the glass well under the SVG rim. Spectacle is secondary to the glass silhouette — no HUD stickers, no neon glow, no purple shaders. Lab CSS tokens (`--lab-glass`, teal / amber / hazard) remain the palette.
+
+Constraints:
+- Fill, layers, turbidity, foam/boil particles, and short impulses (blast/flash/pour) only
+- Cap particles; pause when off-screen; idle throttle so many vessels do not freeze the desk
+- Fallback to SVG `LiquidSurface` when WebGL fails, `prefers-reduced-motion`, or `force2d`
+- CSS `VesselEffects` stay on top of / beside the 3D liquid

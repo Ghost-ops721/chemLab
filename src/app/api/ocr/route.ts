@@ -7,6 +7,7 @@ import {
   requireFirebaseUser,
 } from "@/lib/server/requireAuth";
 import { logLlmUsage } from "@/lib/server/analytics";
+import { enforceOrgQuota } from "@/lib/server/orgs/orgHelpers";
 
 export const maxDuration = 60;
 
@@ -89,6 +90,9 @@ export async function POST(req: Request) {
 
   const limited = enforceRateLimit(req, auth.uid, "ocr");
   if (limited) return limited.response;
+
+  const orgQuota = await enforceOrgQuota(auth.uid, "ocr");
+  if (orgQuota) return orgQuota;
 
   let body: {
     imageBase64?: string;

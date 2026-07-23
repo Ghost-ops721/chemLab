@@ -1,5 +1,5 @@
-import { LabApp } from "@/desk/LabApp";
+import { LandingPage } from "@/components/marketing/LandingPage";
 
 export default function Home() {
-  return <LabApp />;
+  return <LandingPage />;
 }

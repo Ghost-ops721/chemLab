@@ -20,8 +20,9 @@ const mono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Chem Lab",
-  description: "Virtual chemistry lab with profiles, XP, and discoveries",
+  title: "Chem Lab — Build perfume on a chemistry desk",
+  description:
+    "Pour, stir, and invent scents and everyday formulas on a virtual chemistry desk. Free to explore — join the waitlist for 10% off Premium.",
 };
 
 export default function RootLayout({

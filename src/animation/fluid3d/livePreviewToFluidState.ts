@@ -1,0 +1,197 @@
+import type {
+  DeskVessel,
+  EngineEffect,
+  EngineEffectKind,
+  LiveVesselPreview,
+  VesselFx,
+} from "@/types";
+import type {
+  FluidImpulse,
+  FluidImpulseKind,
+  FluidLayer,
+  FluidState,
+} from "./types";
+
+const IMPULSE_KINDS = new Set<EngineEffectKind>([
+  "blast",
+  "flash",
+  "burst",
+  "boil",
+]);
+
+const IMPULSE_DURATION: Record<FluidImpulseKind, number> = {
+  blast: 700,
+  flash: 450,
+  pour: 900,
+  stir: 600,
+  shake: 700,
+  burst: 550,
+};
+
+function intensityStrength(
+  intensity?: EngineEffect["intensity"],
+): number {
+  switch (intensity) {
+    case "high":
+      return 1;
+    case "medium":
+      return 0.65;
+    case "low":
+      return 0.35;
+    case "exo":
+      return 0.85;
+    case "endo":
+      return 0.4;
+    default:
+      return 0.55;
+  }
+}
+
+function effectActive(
+  effects: EngineEffect[] | undefined,
+  kind: EngineEffectKind,
+): EngineEffect | undefined {
+  return effects?.find((e) => e.kind === kind);
+}
+
+function buildLayers(
+  layerColors: string[] | undefined,
+  fillColor: string,
+): FluidLayer[] {
+  const colors = (layerColors ?? []).filter(
+    (c) => c && c !== "transparent",
+  );
+  if (colors.length < 2) {
+    return [
+      {
+        color: fillColor === "transparent" ? "#8fc0b5" : fillColor,
+        fraction: 1,
+      },
+    ];
+  }
+  const fraction = 1 / colors.length;
+  return colors.map((color) => ({ color, fraction }));
+}
+
+function fxImpulse(
+  kind: FluidImpulseKind,
+  at: number | undefined,
+  strength: number,
+): FluidImpulse | null {
+  if (!at) return null;
+  return {
+    kind,
+    strength,
+    at,
+    durationMs: IMPULSE_DURATION[kind],
+  };
+}
+
+function impulsesFromFx(fx: VesselFx | undefined): FluidImpulse[] {
+  if (!fx) return [];
+  const out: FluidImpulse[] = [];
+  const pour = fxImpulse("pour", fx.pourAt ?? fx.transferAt, 0.85);
+  if (pour) out.push(pour);
+  const stir = fxImpulse("stir", fx.stirAt, 0.45);
+  if (stir) out.push(stir);
+  const shake = fxImpulse("shake", fx.shakeAt, 0.75);
+  if (shake) out.push(shake);
+  return out;
+}
+
+function impulsesFromEffects(
+  effects: EngineEffect[] | undefined,
+  mixAt: number | undefined,
+): FluidImpulse[] {
+  if (!effects?.length) return [];
+  const at = mixAt ?? Date.now();
+  const out: FluidImpulse[] = [];
+  for (const e of effects) {
+    if (!IMPULSE_KINDS.has(e.kind)) continue;
+    if (e.kind === "boil") continue; // sustained, not a burst
+    const kind = e.kind as FluidImpulseKind;
+    out.push({
+      kind,
+      strength: intensityStrength(e.intensity),
+      at,
+      durationMs: IMPULSE_DURATION[kind] ?? 500,
+    });
+  }
+  return out;
+}
+
+export type FluidVesselInput = Pick<
+  DeskVessel,
+  "fx" | "heatAttached" | "stirLevel" | "lastResult"
+> & {
+  /** Optional resolved fill when preview is partial */
+  fillColorOverride?: string;
+  fillPctOverride?: number;
+  boiling?: boolean;
+};
+
+/**
+ * Map live preview + vessel FX into FluidState for the WebGL vessel.
+ */
+export function livePreviewToFluidState(
+  preview: LiveVesselPreview | null | undefined,
+  vessel: FluidVesselInput,
+): FluidState {
+  const effects = [
+    ...(preview?.effects ?? []),
+    ...(vessel.lastResult?.effects ?? []),
+  ];
+  const fillColor =
+    vessel.fillColorOverride ??
+    preview?.fillColor ??
+    vessel.lastResult?.effects.find((e) => e.kind === "color")?.value ??
+    "#8fc0b5";
+
+  const fill =
+    vessel.fillPctOverride ??
+    preview?.fillPct ??
+    (preview ? 0 : 0);
+
+  const turbid =
+    effectActive(effects, "turbid") || effectActive(effects, "dirty");
+  const foamFx = effectActive(effects, "foam");
+  const boilFx =
+    Boolean(vessel.boiling) || Boolean(effectActive(effects, "boil"));
+  const bubbleFx = Boolean(effectActive(effects, "bubble"));
+  const meltFx = effectActive(effects, "melt");
+  const solidFx = effectActive(effects, "solidify");
+  const heatFx = effectActive(effects, "heat");
+
+  const viscosityBase = solidFx
+    ? 0.55 + intensityStrength(solidFx.intensity) * 0.4
+    : meltFx
+      ? Math.max(0.05, 0.35 - intensityStrength(meltFx.intensity) * 0.25)
+      : 0.18;
+
+  const temperature = Math.min(
+    1,
+    (vessel.heatAttached ? 0.55 : 0) +
+      (heatFx ? intensityStrength(heatFx.intensity) * 0.45 : 0) +
+      (boilFx ? 0.35 : 0),
+  );
+
+  const impulses = [
+    ...impulsesFromFx(vessel.fx),
+    ...impulsesFromEffects(effects, vessel.fx?.mixAt ?? vessel.fx?.heatFlashAt),
+  ];
+
+  return {
+    fill: Math.max(0, Math.min(100, fill)),
+    layers: buildLayers(preview?.layerColors, fillColor),
+    viscosity: Math.max(0, Math.min(1, viscosityBase)),
+    turbidity: turbid ? intensityStrength(turbid.intensity) : 0,
+    foam: foamFx ? intensityStrength(foamFx.intensity) : 0,
+    temperature,
+    impulses,
+    fillColor: fillColor === "transparent" ? "#8fc0b5" : fillColor,
+    boil: boilFx,
+    bubble: bubbleFx || boilFx,
+    melt: meltFx ? intensityStrength(meltFx.intensity) : 0,
+    solidify: solidFx ? intensityStrength(solidFx.intensity) : 0,
+  };
+}

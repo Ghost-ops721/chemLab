@@ -1,7 +1,9 @@
 import {
   createUserWithEmailAndPassword,
+  GoogleAuthProvider,
   onAuthStateChanged,
   signInWithEmailAndPassword,
+  signInWithPopup,
   signOut as firebaseSignOut,
   updateProfile,
   type User,
@@ -15,6 +17,7 @@ import {
 } from "./profile";
 import { useAuthStore } from "@/store/authStore";
 import { useProgressStore } from "@/store/progressStore";
+import { getAuthHeaders } from "@/lib/client/authHeaders";
 
 export function formatAuthError(err: unknown): string {
   if (err instanceof FirebaseError) {
@@ -85,6 +88,29 @@ export async function signIn(email: string, password: string) {
     email.trim(),
     password,
   );
+  return cred.user;
+}
+
+/** Google SSO — then auto-join org if email domain matches org.sso.domain */
+export async function signInWithGoogle() {
+  const provider = new GoogleAuthProvider();
+  provider.setCustomParameters({ prompt: "select_account" });
+  const cred = await signInWithPopup(getFirebaseAuth(), provider);
+  const email = cred.user.email;
+  if (email) {
+    try {
+      const headers = await getAuthHeaders();
+      if (headers) {
+        await fetch("/api/sso/provision", {
+          method: "POST",
+          headers,
+          body: JSON.stringify({ email, provider: "google" }),
+        });
+      }
+    } catch {
+      /* best-effort org join */
+    }
+  }
   return cred.user;
 }
 

@@ -55,3 +55,5 @@ npx playwright test  # smoke E2E
 ## Auth funnel
 
 Guests can add 2 chemicals, then must sign up. Live tutor and OCR require a signed-in user.
+
+Public marketing lives at `/`. The desk is at `/lab`. Waitlist: `POST /api/waitlist`. Teacher CMS: `/teacher`. Class join: `/join?code=`.

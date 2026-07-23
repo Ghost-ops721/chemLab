@@ -5,6 +5,7 @@ import {
   PRODUCT_GOALS,
   goalDifficulty,
   type GoalCategory,
+  type ProductGoal,
 } from "@/domains/chemistry/data/goals";
 import {
   PERFUME_RECIPES,
@@ -13,8 +14,16 @@ import {
 } from "@/domains/chemistry/perfume";
 import { useGoalStore } from "@/store/goalStore";
 import { useProgressStore } from "@/store/progressStore";
+import { useAuthStore } from "@/store/authStore";
 import { track } from "@/lib/analytics/track";
 import { DifficultyBadge } from "@/perfume/DifficultyBadge";
+import { getAuthHeaders } from "@/lib/client/authHeaders";
+
+function resolveGoal(id: string): ProductGoal | null {
+  const product = PRODUCT_GOALS.find((g) => g.id === id);
+  if (product) return product;
+  return getPerfumeGoal(id) ?? null;
+}
 
 const FILTERS: { id: "all" | Exclude<GoalCategory, "perfume">; label: string }[] =
   [
@@ -44,9 +53,11 @@ export function GoalPicker({
   const completedGoalIds = useGoalStore((s) => s.completedGoalIds);
   const activeGoalId = useGoalStore((s) => s.activeGoalId);
   const completedPerfumes = useProgressStore((s) => s.completedPerfumeIds);
+  const user = useAuthStore((s) => s.user);
   const [filter, setFilter] = useState<"all" | Exclude<GoalCategory, "perfume">>(
     "all",
   );
+  const [classGoalIds, setClassGoalIds] = useState<string[]>([]);
   const closeRef = useRef<HTMLButtonElement>(null);
 
   const catalog = PRODUCT_GOALS;
@@ -55,6 +66,23 @@ export function GoalPicker({
     if (filter === "all") return catalog;
     return PRODUCT_GOALS.filter((g) => g.category === filter);
   }, [filter, catalog]);
+
+  const [packGoalFilter, setPackGoalFilter] = useState<string[] | "all">("all");
+  const [perfumeAllowed, setPerfumeAllowed] = useState(true);
+
+  const visibleCatalog = useMemo(() => {
+    if (packGoalFilter === "all") return filtered;
+    const allow = new Set(packGoalFilter);
+    return filtered.filter((g) => allow.has(g.id));
+  }, [filtered, packGoalFilter]);
+
+  const classGoals = useMemo(
+    () =>
+      classGoalIds
+        .map((id) => resolveGoal(id))
+        .filter((g): g is ProductGoal => Boolean(g)),
+    [classGoalIds],
+  );
 
   const spotlight = useMemo(
     () =>
@@ -67,6 +95,35 @@ export function GoalPicker({
   const doneCount = completedGoalIds.filter((id) =>
     catalog.some((g) => g.id === id),
   ).length;
+
+  useEffect(() => {
+    if (!open || !user) return;
+    let cancelled = false;
+    void (async () => {
+      const headers = await getAuthHeaders();
+      if (!headers || cancelled) return;
+      const [classRes, packRes] = await Promise.all([
+        fetch("/api/class-goals", { headers }),
+        fetch("/api/content-packs", { headers }),
+      ]);
+      if (cancelled) return;
+      if (classRes.ok) {
+        const json = (await classRes.json()) as { goalIds?: string[] };
+        setClassGoalIds(json.goalIds ?? []);
+      }
+      if (packRes.ok) {
+        const json = (await packRes.json()) as {
+          goalIds?: string[] | "all";
+          perfumeAtelier?: boolean;
+        };
+        setPackGoalFilter(json.goalIds === "all" ? "all" : (json.goalIds ?? "all"));
+        setPerfumeAllowed(json.perfumeAtelier !== false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [open, user]);
 
   useEffect(() => {
     if (!open) return;
@@ -101,7 +158,7 @@ export function GoalPicker({
         <div className="flex items-start justify-between gap-2 border-b border-lab-line/50 px-3 py-2">
           <div>
             <p className="text-[9px] font-semibold uppercase tracking-[0.16em] text-lab-muted">
-              Goals · {doneCount}/{catalog.length} done
+              Goals · {doneCount}/{visibleCatalog.length} shown
             </p>
             <h2 className="font-display text-xl tracking-tight text-lab-ink">
               Make something real
@@ -120,7 +177,45 @@ export function GoalPicker({
           </button>
         </div>
 
-        {/* Always show perfume entry — never gate the whole hero on wiring */}
+        {classGoals.length > 0 ? (
+          <div className="border-b border-lab-line/40 bg-lab-amber/10 px-3 py-2.5">
+            <p className="text-[9px] font-semibold uppercase tracking-[0.16em] text-lab-amber">
+              Class goals
+            </p>
+            <ul className="mt-1.5 space-y-1">
+              {classGoals.map((g) => {
+                const done =
+                  completedGoalIds.includes(g.id) ||
+                  completedPerfumes.includes(g.id);
+                return (
+                  <li key={`class-${g.id}`}>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        track("goal_start", {
+                          goalId: g.id,
+                          from: "class_goals",
+                        });
+                        startGoal(g.id);
+                        setPickerOpen(false);
+                      }}
+                      className="flex w-full items-center justify-between rounded-lg border border-lab-amber/30 bg-white/80 px-2.5 py-1.5 text-left hover:border-lab-teal/40"
+                    >
+                      <span className="text-xs font-semibold text-lab-ink">
+                        {g.icon} {g.title}
+                      </span>
+                      <span className="text-[10px] text-lab-muted">
+                        {done ? "✓" : goalDifficulty(g)}
+                      </span>
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
+        ) : null}
+
+        {perfumeAllowed ? (
         <div className="border-b border-lab-line/40 bg-linear-to-br from-lab-teal/10 via-lab-panel to-lab-amber/10 px-3 py-3">
           <p className="text-[9px] font-semibold uppercase tracking-[0.18em] text-lab-teal">
             Perfume atelier
@@ -190,6 +285,7 @@ export function GoalPicker({
             Browse full Atelier →
           </button>
         </div>
+        ) : null}
 
         <div className="flex flex-wrap gap-1 border-b border-lab-line/40 px-3 py-2">
           {FILTERS.map((f) => (
@@ -206,6 +302,7 @@ export function GoalPicker({
               {f.label}
             </button>
           ))}
+          {perfumeAllowed ? (
           <button
             type="button"
             onClick={() => openAtelier("goals_chip")}
@@ -213,10 +310,11 @@ export function GoalPicker({
           >
             All perfumes →
           </button>
+          ) : null}
         </div>
 
         <ul className="scroll-thin min-h-0 flex-1 space-y-1 overflow-y-auto p-2">
-          {filtered.map((g) => {
+          {visibleCatalog.map((g) => {
             const done = completedGoalIds.includes(g.id);
             const active = activeGoalId === g.id;
             const diff = goalDifficulty(g);

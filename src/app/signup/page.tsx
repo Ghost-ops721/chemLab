@@ -8,7 +8,7 @@ export default function SignupPage() {
   return (
     <div className="min-h-dvh bg-lab-wash px-4 py-8">
       <div className="mx-auto flex max-w-lg items-center justify-between">
-        <Link href="/" className="font-display text-2xl text-lab-ink">
+        <Link href="/lab" className="font-display text-2xl text-lab-ink">
           Chem Lab
         </Link>
         <NavChrome />

@@ -57,3 +57,10 @@ export {
   allPerfumeGoals,
   clearPerfumeGoalCache,
 } from "./perfumeGoalFactory";
+
+export {
+  isOilItem,
+  getOilMeta,
+  resolvedOilFields,
+  type OilMeta,
+} from "./oilMeta";

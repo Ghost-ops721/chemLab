@@ -16,10 +16,12 @@ export function GamificationBar({
   onOpenAtelier,
   onOpenShop,
   onOpenShelf,
+  onOpenMarket,
 }: {
   onOpenAtelier?: () => void;
   onOpenShop?: () => void;
   onOpenShelf?: () => void;
+  onOpenMarket?: () => void;
 } = {}) {
   const xp = useProgressStore((s) => s.xp);
   const stars = useProgressStore((s) => s.stars);
@@ -227,6 +229,16 @@ export function GamificationBar({
             className="shrink-0 rounded-lg bg-lab-amber/90 px-2.5 py-1 text-[11px] font-semibold text-lab-ink shadow-sm hover:bg-lab-amber"
           >
             Perfume
+          </button>
+        ) : null}
+
+        {onOpenMarket ? (
+          <button
+            type="button"
+            onClick={onOpenMarket}
+            className="hidden shrink-0 rounded-lg border border-lab-glass/50 bg-white/10 px-2.5 py-1 text-[11px] font-semibold text-lab-foam hover:bg-white/15 sm:inline-flex"
+          >
+            Market
           </button>
         ) : null}
 

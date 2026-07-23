@@ -40,6 +40,18 @@ export interface Chemical extends Item {
   /** Cation / anion for salt bookkeeping */
   cation?: string;
   anion?: string;
+  /** CAS registry number when known (oils / IFRA Phase B). */
+  casNumber?: string;
+  /** Approximate flash point °C for flammability teaching. */
+  flashPointC?: number;
+  /** Suggested max % in finished fragrance (teaching / IFRA-inspired). */
+  maxSuggestedPct?: number;
+  /** Relative density vs water (~1). Oils often ~0.85–0.95. */
+  density?: number;
+  /** Odor strength 0–1 for live scent weighting. */
+  odorStrength?: number;
+  /** Pleasantness −1..1 for honest “smells bad” verdicts. */
+  pleasantness?: number;
 }
 
 export interface Equipment extends Item {

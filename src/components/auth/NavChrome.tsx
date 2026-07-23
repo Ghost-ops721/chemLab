@@ -19,10 +19,22 @@ export function NavChrome() {
   return (
     <nav className="flex shrink-0 items-center gap-1.5 text-[11px]">
       <Link
-        href="/"
+        href="/lab"
         className="rounded-md px-2 py-1 font-semibold text-lab-ink hover:bg-lab-wash"
       >
         Lab
+      </Link>
+      <Link
+        href="/teacher"
+        className="rounded-md px-2 py-1 font-semibold text-lab-ink hover:bg-lab-wash"
+      >
+        Teacher
+      </Link>
+      <Link
+        href="/market"
+        className="rounded-md px-2 py-1 font-semibold text-lab-ink hover:bg-lab-wash"
+      >
+        Market
       </Link>
       <Link
         href="/profile"

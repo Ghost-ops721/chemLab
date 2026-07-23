@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { formatAuthError, signIn, signUp } from "@/lib/firebase/auth";
+import { formatAuthError, signIn, signInWithGoogle, signUp } from "@/lib/firebase/auth";
 import { track } from "@/lib/analytics/track";
 
 type Mode = "login" | "signup";
@@ -60,7 +60,7 @@ function PasswordField({
 
 export function AuthForm({
   mode,
-  redirectTo = "/",
+  redirectTo = "/lab",
 }: {
   mode: Mode;
   redirectTo?: string;
@@ -73,6 +73,22 @@ export function AuthForm({
   const [confirmPassword, setConfirmPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
+
+  async function onGoogle() {
+    setError(null);
+    setPending(true);
+    try {
+      await signInWithGoogle();
+      track(mode === "signup" ? "signup_complete" : "page_view", {
+        provider: "google",
+      });
+      router.replace(mode === "signup" ? "/profile?onboarding=1" : redirectTo);
+    } catch (err) {
+      setError(formatAuthError(err));
+    } finally {
+      setPending(false);
+    }
+  }
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -204,6 +220,14 @@ export function AuthForm({
           : mode === "signup"
             ? "Create account"
             : "Log in"}
+      </button>
+      <button
+        type="button"
+        disabled={pending}
+        onClick={() => void onGoogle()}
+        className="w-full rounded-lg border border-lab-line bg-white px-3 py-2 text-sm font-semibold text-lab-ink hover:bg-lab-wash disabled:opacity-60"
+      >
+        Continue with Google
       </button>
       <p className="text-center text-xs text-lab-muted">
         {mode === "signup" ? (

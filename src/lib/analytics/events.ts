@@ -18,7 +18,12 @@ export type AnalyticsEventName =
   | "invention_improved"
   | "invention_shared"
   | "shelf_open"
-  | "shelf_remix";
+  | "shelf_remix"
+  | "market_remix"
+  | "market_open"
+  | "formula_published"
+  | "study_created"
+  | "study_rated";
 
 export const ANALYTICS_EVENT_NAMES = new Set<string>([
   "page_view",
@@ -41,4 +46,9 @@ export const ANALYTICS_EVENT_NAMES = new Set<string>([
   "invention_shared",
   "shelf_open",
   "shelf_remix",
+  "market_remix",
+  "market_open",
+  "formula_published",
+  "study_created",
+  "study_rated",
 ]);

@@ -12,8 +12,9 @@ import { useGoalStore } from "@/store/goalStore";
 import { getGoal } from "@/domains/chemistry/data/goals";
 import { useAuthStore } from "@/store/authStore";
 import { labCopy } from "@/lab/labCopy";
+import { isOilItem } from "@/domains/chemistry/perfume/oilMeta";
 
-type ModalKind = "equipment" | "chemicals" | null;
+type ModalKind = "equipment" | "chemicals" | "oils" | null;
 
 export function ItemPanel() {
   const [modal, setModal] = useState<ModalKind>(null);
@@ -59,18 +60,48 @@ export function ItemPanel() {
   }
 
   const categories = useMemo(() => {
-    const set = new Set(items.map((i) => i.category));
+    const set = new Set(
+      items
+        .filter((i) => i.subcategory !== "fragrance")
+        .map((i) => i.category),
+    );
     return ["all", ...Array.from(set).sort()];
   }, [items]);
 
   const filteredChemicals = useMemo(() => {
     const q = query.trim().toLowerCase();
     return items.filter((i) => {
+      if (i.subcategory === "fragrance") return false;
       if (category !== "all" && i.category !== category) return false;
       if (!q) return true;
       const chem = getChemical(i.id);
       const hay =
         `${i.name} ${chem?.formula ?? ""} ${i.category} ${i.subcategory}`.toLowerCase();
+      return hay.includes(q);
+    });
+  }, [items, query, category]);
+
+  const filteredOils = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    const role = category;
+    return items.filter((i) => {
+      const isEthanol = i.id === "c2h5oh";
+      const isOil = isOilItem(i.id);
+      if (!isOil && !isEthanol) return false;
+      if (role === "carrier") {
+        if (!isEthanol) return false;
+      } else if (role === "top" || role === "heart" || role === "base") {
+        const tags = i.tags.map((t) => t.toLowerCase());
+        const ok =
+          role === "base"
+            ? tags.includes("base") || tags.includes("fixative")
+            : tags.includes(role);
+        if (!ok) return false;
+      }
+      if (!q) return true;
+      const chem = getChemical(i.id);
+      const hay =
+        `${i.name} ${chem?.formula ?? ""} ${i.tags.join(" ")}`.toLowerCase();
       return hay.includes(q);
     });
   }, [items, query, category]);
@@ -147,7 +178,35 @@ export function ItemPanel() {
   }
 
   const list =
-    modal === "chemicals" ? filteredChemicals : filteredEquipment;
+    modal === "chemicals"
+      ? filteredChemicals
+      : modal === "oils"
+        ? filteredOils
+        : filteredEquipment;
+
+  const modalTitle =
+    modal === "equipment"
+      ? "Equipment"
+      : modal === "oils"
+        ? "Oils"
+        : "Chemicals";
+
+  const modalHint =
+    modal === "equipment"
+      ? "Place glassware on the desk, or use heat and stir on the active vessel."
+      : modal === "oils"
+        ? targetVessel
+          ? `Pour fragrance oils into ${EQUIPMENT_BY_ID[targetVessel.equipmentId]?.name ?? "vessel"} — adjust ml on the vessel.`
+          : "Place glassware first, then pour oils and ethanol."
+        : targetVessel
+          ? `Pour into ${EQUIPMENT_BY_ID[targetVessel.equipmentId]?.name ?? "vessel"}${
+              targetVessel.contentIds.length
+                ? ` · ${targetVessel.contentIds.length} inside`
+                : ""
+            }.`
+          : "Place glassware first, then pour reactants into it.";
+
+  const oilRoles = ["all", "carrier", "top", "heart", "base"];
 
   const modalUi =
     mounted && modal
@@ -173,19 +232,11 @@ export function ItemPanel() {
                       id="inventory-modal-title"
                       className="font-display text-lg leading-none tracking-tight text-lab-ink"
                     >
-                      {modal === "equipment" ? "Equipment" : "Chemicals"}
+                      {modalTitle}
                     </h2>
                   </div>
                   <p className="mt-0.5 max-w-xl truncate text-[11px] text-lab-muted">
-                    {modal === "equipment"
-                      ? "Place glassware on the desk, or use heat and stir on the active vessel."
-                      : targetVessel
-                        ? `Pour into ${EQUIPMENT_BY_ID[targetVessel.equipmentId]?.name ?? "vessel"}${
-                            targetVessel.contentIds.length
-                              ? ` · ${targetVessel.contentIds.length} inside`
-                              : ""
-                          }.`
-                        : "Place glassware first, then pour reactants into it."}
+                    {modalHint}
                   </p>
                 </div>
                 <button
@@ -209,7 +260,9 @@ export function ItemPanel() {
                     placeholder={
                       modal === "equipment"
                         ? "Search glassware, heat, tools…"
-                        : "Search by name or formula — HCl, NaOH, ethanol…"
+                        : modal === "oils"
+                          ? "Search oils — bergamot, lavender, musk…"
+                          : "Search by name or formula — HCl, NaOH, ethanol…"
                     }
                     className="w-full rounded-lg border border-lab-line/70 bg-white px-2.5 py-1.5 text-xs text-lab-ink outline-none ring-lab-teal/30 placeholder:text-lab-muted focus:ring-2"
                   />
@@ -236,6 +289,27 @@ export function ItemPanel() {
                     })}
                   </div>
                 ) : null}
+                {modal === "oils" ? (
+                  <div className="flex gap-1 overflow-x-auto pb-0.5 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                    {oilRoles.map((c) => {
+                      const active = category === c;
+                      return (
+                        <button
+                          key={c}
+                          type="button"
+                          onClick={() => setCategory(c)}
+                          className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-medium capitalize transition ${
+                            active
+                              ? "bg-lab-teal text-lab-foam"
+                              : "bg-white/80 text-lab-muted ring-1 ring-lab-line/60 hover:text-lab-ink"
+                          }`}
+                        >
+                          {c === "all" ? "All" : c}
+                        </button>
+                      );
+                    })}
+                  </div>
+                ) : null}
               </div>
             </div>
 
@@ -243,7 +317,11 @@ export function ItemPanel() {
               <div className="mx-auto w-full max-w-5xl">
                 <p className="mb-1.5 text-[10px] text-lab-muted">
                   {list.length}{" "}
-                  {modal === "equipment" ? "tools" : "chemicals"}
+                  {modal === "equipment"
+                    ? "tools"
+                    : modal === "oils"
+                      ? "oils"
+                      : "chemicals"}
                   {query.trim() ? ` matching “${query.trim()}”` : ""}
                 </p>
 
@@ -251,9 +329,10 @@ export function ItemPanel() {
                   <p className="rounded-lg border border-dashed border-lab-line/70 bg-white/40 px-3 py-6 text-center text-[11px] text-lab-muted">
                     Nothing matched. Try another formula or clear the search.
                   </p>
-                ) : modal === "chemicals" ? (
+                ) : modal === "chemicals" || modal === "oils" ? (
                   <div className="grid grid-cols-1 gap-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-                    {filteredChemicals.map((item) => {
+                    {(modal === "oils" ? filteredOils : filteredChemicals).map(
+                      (item) => {
                       const chem = getChemical(item.id);
                       const highlighted = highlightIds.has(item.id);
                       return (
@@ -353,6 +432,13 @@ export function ItemPanel() {
       <div className="pointer-events-none absolute bottom-16 right-3 z-40 flex flex-col gap-1.5 md:hidden">
         <button
           type="button"
+          onClick={() => openModal("oils")}
+          className="pointer-events-auto rounded-full bg-lab-amber px-3 py-2 text-[11px] font-semibold text-white shadow-lg"
+        >
+          Oils
+        </button>
+        <button
+          type="button"
           onClick={() => openModal("chemicals")}
           className="pointer-events-auto rounded-full bg-lab-teal px-3 py-2 text-[11px] font-semibold text-white shadow-lg"
         >
@@ -379,6 +465,13 @@ export function ItemPanel() {
             className="flex-1 rounded-lg border border-lab-line/60 bg-white/90 px-1.5 py-1 text-[11px] font-medium text-lab-ink shadow-sm transition hover:border-lab-teal/50 hover:bg-white"
           >
             Equipment
+          </button>
+          <button
+            type="button"
+            onClick={() => openModal("oils")}
+            className="flex-1 rounded-lg border border-lab-amber/40 bg-lab-amber/10 px-1.5 py-1 text-[11px] font-medium text-lab-amber shadow-sm transition hover:bg-lab-amber/15"
+          >
+            Oils
           </button>
           <button
             type="button"

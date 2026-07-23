@@ -57,28 +57,51 @@ export function VesselEffects({
     fxAlive(fx?.transferAt, 1100, now) && fx?.transferRole === "target";
   const stirActive = fxAlive(fx?.stirAt, 1100, now);
 
-  const gas = result?.effects.some((e) => e.kind === "gas");
+  const gas = result?.effects.some((e) => e.kind === "gas" || e.kind === "bubble");
   const gasIntensity =
-    result?.effects.find((e) => e.kind === "gas")?.intensity ?? "medium";
+    result?.effects.find((e) => e.kind === "gas" || e.kind === "bubble")
+      ?.intensity ?? "medium";
   const ppt = result?.effects.find((e) => e.kind === "precipitate");
   const heat = result?.effects.find((e) => e.kind === "heat");
   const smoke = result?.effects.some((e) => e.kind === "smoke");
-  const hazard = result?.effects.some((e) => e.kind === "hazard");
+  const hazard = result?.effects.some(
+    (e) =>
+      e.kind === "hazard" ||
+      e.kind === "blast" ||
+      e.kind === "flash" ||
+      e.kind === "burst",
+  );
+  const blast = result?.effects.some((e) => e.kind === "blast");
+  const flash = result?.effects.some((e) => e.kind === "flash");
+  const foam = result?.effects.some((e) => e.kind === "foam");
+  const glow = result?.effects.some((e) => e.kind === "glow");
+  const sparkleFx = result?.effects.some((e) => e.kind === "sparkle");
+  const dirty = result?.effects.some(
+    (e) => e.kind === "dirty" || e.kind === "turbid",
+  );
+  const layerFx = result?.effects.find((e) => e.kind === "layer");
+  const solidify = result?.effects.some((e) => e.kind === "solidify");
+  const melt = result?.effects.some((e) => e.kind === "melt");
+  const steam = result?.effects.some((e) => e.kind === "steam");
+  const crystal = result?.effects.some((e) => e.kind === "crystal");
+  const overflow = result?.effects.some((e) => e.kind === "overflow");
+  const forceBoil =
+    boiling || result?.effects.some((e) => e.kind === "boil");
 
   const bubbleCount =
     gasIntensity === "high" ? 14 : gasIntensity === "low" ? 5 : 9;
-  const boilCount = boiling ? 8 : 0;
+  const boilCount = forceBoil ? 8 : 0;
 
   useEffect(() => {
-    if ((!gas && !boiling) || (!mixing && !boiling)) return;
+    if ((!gas && !forceBoil) || (!mixing && !forceBoil)) return;
     if (ppt && mixing) labSound.ppt();
-    const id = window.setInterval(() => labSound.bubble(), boiling ? 320 : 220);
+    const id = window.setInterval(() => labSound.bubble(), forceBoil ? 320 : 220);
     return () => clearInterval(id);
-  }, [gas, mixing, boiling, ppt]);
+  }, [gas, mixing, forceBoil, ppt]);
 
   // Gas bubbles linger after mix
   const gasVisible = Boolean(
-    gas && (mixing || fxAlive(fx?.mixAt, 2800, now) || boiling),
+    gas && (mixing || fxAlive(fx?.mixAt, 2800, now) || forceBoil),
   );
   const smokeCount = smoke
     ? result?.effects.find((e) => e.kind === "smoke")?.intensity === "high"
@@ -210,7 +233,7 @@ export function VesselEffects({
         : null}
 
       {/* Continuous boil bubbles */}
-      {boiling && !gas
+      {forceBoil && !gas
         ? Array.from({ length: boilCount }).map((_, i) => (
             <span
               key={`boil-${i}`}
@@ -225,6 +248,107 @@ export function VesselEffects({
             />
           ))
         : null}
+
+      {/* Layered immiscible bands */}
+      {layerFx?.value ? (
+        <div className="pointer-events-none absolute inset-x-[14%] bottom-[12%] top-[35%] overflow-hidden rounded-sm">
+          {layerFx.value.split(",").map((color, i, arr) => (
+            <div
+              key={`layer-${i}`}
+              className="absolute inset-x-0"
+              style={{
+                bottom: `${(i / arr.length) * 100}%`,
+                height: `${100 / arr.length}%`,
+                background: color,
+                opacity: 0.55,
+              }}
+            />
+          ))}
+        </div>
+      ) : null}
+
+      {/* Foam head */}
+      {foam ? (
+        <div className="lab-foam-head absolute inset-x-[16%] top-[28%] h-4 overflow-hidden rounded-t-full bg-white/50">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <span
+              key={`foam-${i}`}
+              className="lab-foam-bubble absolute rounded-full bg-white/80"
+              style={{
+                left: `${8 + i * 14}%`,
+                width: 5 + (i % 3),
+                height: 5 + (i % 3),
+                top: `${(i % 2) * 3}px`,
+              }}
+            />
+          ))}
+        </div>
+      ) : null}
+
+      {/* Blast / flash / burst */}
+      {(blast || flash) && (mixing || hazard) ? (
+        <>
+          <div className="lab-blast-shock absolute inset-0 rounded-[1rem] bg-lab-amber/30" />
+          <div className="lab-flash-flare absolute inset-x-2 top-2 h-16 rounded-full bg-gradient-to-b from-amber-200/80 to-transparent" />
+          {Array.from({ length: 10 }).map((_, i) => (
+            <span
+              key={`ember-${i}`}
+              className="lab-blast-ember absolute h-1.5 w-1.5 rounded-full bg-orange-400"
+              style={{
+                left: `${10 + i * 8}%`,
+                top: `${30 + (i % 4) * 10}%`,
+                animationDelay: `${i * 0.04}s`,
+              }}
+            />
+          ))}
+        </>
+      ) : null}
+
+      {result?.effects.some((e) => e.kind === "burst") && mixing ? (
+        <div className="lab-burst-ring absolute inset-1 rounded-full border-2 border-lab-hazard/80" />
+      ) : null}
+
+      {glow ? (
+        <div
+          className="lab-glow-bloom absolute inset-2 rounded-full"
+          style={{
+            background: `radial-gradient(circle, ${heat?.value ?? "#ff8a65"}88, transparent 70%)`,
+          }}
+        />
+      ) : null}
+
+      {dirty ? (
+        <div className="lab-dirty-haze absolute inset-3 rounded-full bg-stone-600/25 blur-sm" />
+      ) : null}
+
+      {steam ? (
+        <div className="lab-steam absolute inset-x-4 top-0 h-10 bg-gradient-to-t from-transparent to-white/40" />
+      ) : null}
+
+      {melt ? (
+        <div className="lab-melt-drip absolute inset-x-[30%] top-[20%] h-8 w-2 rounded-full bg-amber-200/50" />
+      ) : null}
+
+      {solidify ? (
+        <div className="lab-solidify-frost absolute inset-x-2 bottom-2 h-6 rounded-sm bg-sky-100/40" />
+      ) : null}
+
+      {crystal
+        ? Array.from({ length: 7 }).map((_, i) => (
+            <span
+              key={`xtal-${i}`}
+              className="lab-crystal absolute h-2 w-2 rotate-45 bg-sky-200/70"
+              style={{
+                left: `${18 + i * 10}%`,
+                bottom: `${10 + (i % 3) * 6}%`,
+              }}
+            />
+          ))
+        : null}
+
+      {overflow ? (
+        <div className="lab-overflow absolute inset-x-[20%] top-[18%] h-3 rounded-full bg-lab-glass/50" />
+      ) : null}
 
       {/* Precipitate: cloudy haze → settling flakes → bed */}
       {ppt ? (
@@ -316,7 +440,7 @@ export function VesselEffects({
       ) : null}
 
       {/* Sparkles on successful mix */}
-      {mixing && result?.ok
+      {(mixing && result?.ok) || sparkleFx
         ? Array.from({ length: 8 }).map((_, i) => (
             <span
               key={`sp-${i}`}

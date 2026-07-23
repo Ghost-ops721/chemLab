@@ -18,7 +18,23 @@ export type EngineEffectKind =
   | "precipitate"
   | "heat"
   | "hazard"
-  | "smoke";
+  | "smoke"
+  | "blast"
+  | "burst"
+  | "boil"
+  | "melt"
+  | "foam"
+  | "glow"
+  | "sparkle"
+  | "bubble"
+  | "solidify"
+  | "dirty"
+  | "layer"
+  | "flash"
+  | "steam"
+  | "crystal"
+  | "turbid"
+  | "overflow";
 
 export interface EngineEffect {
   kind: EngineEffectKind;
@@ -31,8 +47,16 @@ export interface EngineEffect {
 
 export interface EngineInput {
   itemIds: string[];
+  /** Optional volume map chemicalId → mL */
+  amounts?: Record<string, number>;
   /** Equipment function present (e.g. heat-source) */
   equipmentFunctions?: string[];
+}
+
+/** One chemical species in a vessel with a teaching volume. */
+export interface VesselContent {
+  chemicalId: string;
+  amountMl: number;
 }
 
 export interface EngineResult {
@@ -71,16 +95,59 @@ export interface VesselFx {
   transferRole?: "source" | "target";
 }
 
+/** Compact IFRA teaching screen attached to live preview. */
+export interface LiveIfraSummary {
+  status: "pass" | "fail" | "unknown";
+  category: string;
+  categoryLabel: string;
+  version: string;
+  screened: boolean;
+  failCount: number;
+  unknownCount: number;
+  ingredients: {
+    chemicalId: string;
+    name: string;
+    actualPct: number;
+    maxPct?: number;
+    status: "pass" | "fail" | "unknown";
+  }[];
+  disclaimer: string;
+}
+
+/** Live formula preview attached while pouring (before Mix). */
+export interface LiveVesselPreview {
+  fillColor?: string;
+  layerColors?: string[];
+  fillPct: number;
+  ethanolPct: number;
+  oilLoadPct: number;
+  concentrationLabel?: string;
+  scentVerdict?: string;
+  scentSummary?: string;
+  hazards: { level: "info" | "warn" | "danger"; message: string; effect?: EngineEffectKind }[];
+  notes: { role: string; name: string; amountMl: number; pct: number }[];
+  effects: EngineEffect[];
+  /** IFRA Standards–aligned teaching screen (Category 4 default). */
+  ifra?: LiveIfraSummary;
+}
+
 /** Instance of equipment placed on the desk */
 export interface DeskVessel {
   instanceId: string;
   equipmentId: string;
+  /** Volumetric contents (source of truth). */
+  contents: VesselContent[];
+  /**
+   * Unique chemical ids present — kept in sync with `contents` for goals / legacy.
+   */
   contentIds: string[];
   /** Heat source attached to this vessel */
   heatAttached: boolean;
   /** How vigorously the liquid has been stirred (0–3) */
   stirLevel: number;
   lastResult?: EngineResult;
+  /** Live preview while adjusting amounts (perfume / hazards). */
+  livePreview?: LiveVesselPreview;
   position: { x: number; y: number };
   fx: VesselFx;
 }

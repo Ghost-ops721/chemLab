@@ -93,7 +93,7 @@ function ProfileFormFields({
       setProfile(next);
       closeAuthGate();
       setSaved(true);
-      if (onboarding) router.replace("/");
+      if (onboarding) router.replace("/lab");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not save profile");
     } finally {

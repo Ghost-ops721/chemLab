@@ -224,12 +224,21 @@ export function livePreviewToFluidState(
     }
   }
 
+  const overflowFx = effectActive(effects, "overflow");
+  const foamFromOverflow = overflowFx
+    ? Math.max(0.55, intensityStrength(overflowFx.intensity) * 0.85)
+    : 0;
+
   return {
-    fill: Math.max(0, Math.min(100, fill)),
+    // Allow slight over-lip fill so spill / foam band reads at the rim
+    fill: Math.max(0, Math.min(112, fill)),
     layers: buildLayers(preview?.layerColors, fillColor),
     viscosity: Math.max(0, Math.min(1, viscosityBase)),
     turbidity: turbid ? intensityStrength(turbid.intensity) : 0,
-    foam: foamFx ? intensityStrength(foamFx.intensity) : 0,
+    foam: Math.max(
+      foamFx ? intensityStrength(foamFx.intensity) : 0,
+      foamFromOverflow,
+    ),
     temperature,
     impulses,
     fillColor: fillColor === "transparent" ? "#8fc0b5" : fillColor,

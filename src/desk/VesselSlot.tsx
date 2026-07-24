@@ -20,7 +20,10 @@ import { labCopy } from "@/lab/labCopy";
 import { snapAlignPosition, VESSEL_CARD } from "@/desk/vesselLayout";
 import {
   capacityMlForEquipment,
+  fillPctFromContents,
   getVesselContents,
+  isOverflowing,
+  softCapacityMl,
   totalMl,
 } from "@/desk/vesselContents";
 
@@ -48,6 +51,10 @@ export function VesselSlot({ vessel, deskRef }: Props) {
   const setChemicalAmount = useDeskStore((s) => s.setChemicalAmount);
 
   const dragOffset = useRef<{ dx: number; dy: number } | null>(null);
+  /** Latest drag position — DOM-written during move; committed to store on up. */
+  const dragPosRef = useRef<{ x: number; y: number } | null>(null);
+  const cardRef = useRef<HTMLDivElement | null>(null);
+  const deskRectRef = useRef<DOMRect | null>(null);
   const [dragging, setDragging] = useState(false);
 
   const now = useFxClock(
@@ -95,11 +102,9 @@ export function VesselSlot({ vessel, deskRef }: Props) {
 
   const capacityMl = capacityMlForEquipment(vessel.equipmentId);
   const usedMl = totalMl(contents);
+  const overflowing = isOverflowing(contents, capacityMl);
   const fillPct =
-    preview?.fillPct ??
-    (contents.length === 0
-      ? 0
-      : Math.min(82, 12 + (usedMl / capacityMl) * 70));
+    preview?.fillPct ?? fillPctFromContents(contents, vessel.equipmentId);
 
   // Merge live FX into a synthetic result for VesselEffects when not yet mixed
   const fxResult =
@@ -161,28 +166,39 @@ export function VesselSlot({ vessel, deskRef }: Props) {
     const desk = deskRef.current;
     if (!desk) return;
     const rect = desk.getBoundingClientRect();
+    deskRectRef.current = rect;
     dragOffset.current = {
       dx: e.clientX - rect.left - vessel.position.x,
       dy: e.clientY - rect.top - vessel.position.y,
     };
+    dragPosRef.current = { ...vessel.position };
     setDragging(true);
     (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
   }
 
   function onMovePointerMove(e: React.PointerEvent) {
     if (!dragOffset.current || !dragging) return;
-    const desk = deskRef.current;
-    if (!desk) return;
-    const rect = desk.getBoundingClientRect();
-    moveVessel(vessel.instanceId, {
-      x: e.clientX - rect.left - dragOffset.current.dx,
-      y: e.clientY - rect.top - dragOffset.current.dy,
-    });
+    const rect = deskRectRef.current ?? deskRef.current?.getBoundingClientRect();
+    if (!rect) return;
+    const next = {
+      x: Math.max(8, e.clientX - rect.left - dragOffset.current.dx),
+      y: Math.max(8, e.clientY - rect.top - dragOffset.current.dy),
+    };
+    dragPosRef.current = next;
+    // Direct DOM write — avoid Zustand re-render of every vessel / WebGL canvas
+    const el = cardRef.current;
+    if (el) {
+      el.style.left = `${next.x}px`;
+      el.style.top = `${next.y}px`;
+    }
   }
 
   function onMovePointerUp(e: React.PointerEvent) {
     const wasDragging = dragging;
+    const dropPos = dragPosRef.current;
     dragOffset.current = null;
+    dragPosRef.current = null;
+    deskRectRef.current = null;
     setDragging(false);
     try {
       (e.currentTarget as HTMLElement).releasePointerCapture(e.pointerId);
@@ -190,19 +206,23 @@ export function VesselSlot({ vessel, deskRef }: Props) {
       /* ignore */
     }
 
-    if (!wasDragging) return;
+    if (!wasDragging || !dropPos) return;
+
+    // Commit once so siblings / store catch up
+    moveVessel(vessel.instanceId, dropPos);
 
     const latest =
       useDeskStore.getState().vessels.find(
         (v) => v.instanceId === vessel.instanceId,
-      ) ?? vessel;
+      ) ?? { ...vessel, position: dropPos };
     const latestContents = getVesselContents(latest);
+    const positioned = { ...latest, position: dropPos };
 
     // Vessel→vessel pour: if released overlapping another vessel, transfer
     const others = useDeskStore
       .getState()
       .vessels.filter((v) => v.instanceId !== vessel.instanceId);
-    const target = findOverlapTarget(latest, others);
+    const target = findOverlapTarget(positioned, others);
     if (target && latestContents.length > 0) {
       const ok = transferVesselContents(vessel.instanceId, target.instanceId);
       if (ok) {
@@ -217,7 +237,7 @@ export function VesselSlot({ vessel, deskRef }: Props) {
 
     // Otherwise snap / align with a nearby card when close enough
     const snapped = snapAlignPosition(
-      latest.position,
+      dropPos,
       others.map((v) => v.position),
     );
     if (snapped) {
@@ -225,9 +245,14 @@ export function VesselSlot({ vessel, deskRef }: Props) {
     }
   }
 
+  function bindCard(node: HTMLDivElement | null) {
+    cardRef.current = node;
+    setNodeRef(node);
+  }
+
   return (
     <div
-      ref={setNodeRef}
+      ref={bindCard}
       role="button"
       tabIndex={0}
       style={{
@@ -238,9 +263,11 @@ export function VesselSlot({ vessel, deskRef }: Props) {
             ? `rotate(${pourCardTilt + blastKick}deg)`
             : undefined,
         transformOrigin: "72% 85%",
-        transition: isSource
+        // No left/top transition while dragging — that was the lag
+        transition: dragging || isSource
           ? "none"
-          : "transform 0.35s ease-out, left 0.2s, top 0.2s, box-shadow 0.2s, border-color 0.2s, background-color 0.2s",
+          : "transform 0.35s ease-out, left 0.15s, top 0.15s, box-shadow 0.2s, border-color 0.2s, background-color 0.2s",
+        willChange: dragging ? "left, top" : undefined,
       }}
       onPointerDown={onMovePointerDown}
       onPointerMove={onMovePointerMove}
@@ -385,8 +412,15 @@ export function VesselSlot({ vessel, deskRef }: Props) {
           </div>
         ) : null}
         {usedMl > 0 ? (
-          <div className="absolute left-1 top-1 rounded-full bg-black/35 px-1.5 py-0.5 font-mono text-[9px] text-lab-foam">
+          <div
+            className={`absolute left-1 top-1 rounded-full px-1.5 py-0.5 font-mono text-[9px] ${
+              overflowing
+                ? "bg-lab-hazard/80 text-lab-foam"
+                : "bg-black/35 text-lab-foam"
+            }`}
+          >
             {usedMl.toFixed(1)}/{capacityMl} ml
+            {overflowing ? " ⚠" : ""}
           </div>
         ) : null}
       </div>
@@ -404,7 +438,9 @@ export function VesselSlot({ vessel, deskRef }: Props) {
             const othersMl = usedMl - entry.amountMl;
             const maxForThis = Math.max(
               0.1,
-              Math.round((capacityMl - Math.max(0, othersMl)) * 10) / 10,
+              Math.round(
+                (softCapacityMl(capacityMl) - Math.max(0, othersMl)) * 10,
+              ) / 10,
             );
             const amountPct = Math.min(
               100,

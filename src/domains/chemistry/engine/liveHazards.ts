@@ -17,13 +17,43 @@ export function assessLiveHazards(input: {
   coolAttached?: boolean;
   ethanolPct: number;
   oilLoadPct: number;
+  /** Marked glassware capacity (ml). Overfill → overflow / foam FX. */
+  capacityMl?: number;
+  /** Current total volume (ml). */
+  totalMl?: number;
 }): LiveHazard[] {
-  const { contents, heatAttached, coolAttached, ethanolPct } = input;
+  const {
+    contents,
+    heatAttached,
+    coolAttached,
+    ethanolPct,
+    capacityMl,
+    totalMl: totalVolume,
+  } = input;
   const out: LiveHazard[] = [];
   const ids = new Set(contents.map((c) => c.chemicalId));
   const chems = contents
     .map((c) => getChemical(c.chemicalId))
     .filter(Boolean);
+
+  if (
+    capacityMl != null &&
+    capacityMl > 0 &&
+    totalVolume != null &&
+    totalVolume > capacityMl + 0.05
+  ) {
+    const over = totalVolume - capacityMl;
+    out.push({
+      level: "warn",
+      message: `Overfilled by ${over.toFixed(1)} ml — liquid spilling over the rim.`,
+      effect: "overflow",
+    });
+    out.push({
+      level: "info",
+      message: "Foam / spill at the lip from overfill.",
+      effect: "foam",
+    });
+  }
 
   const hasFuel = chems.some((c) => c?.isFuel || c?.id === "c2h5oh");
   const hasOxidizer = chems.some((c) => c?.isOxidizer);

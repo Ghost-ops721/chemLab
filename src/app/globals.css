@@ -1432,6 +1432,24 @@ body {
   animation: pour-bloom 0.7s ease-out forwards;
 }
 
+@keyframes overflow-drip {
+  0% {
+    transform: translateY(0) scaleY(0.4);
+    opacity: 0.85;
+  }
+  70% {
+    opacity: 0.65;
+  }
+  100% {
+    transform: translateY(18px) scaleY(1.2);
+    opacity: 0;
+  }
+}
+.lab-overflow-drip {
+  animation: overflow-drip 0.9s ease-out infinite;
+  transform-origin: top center;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .lab-blast-shock,
   .lab-flash-flare,
@@ -1444,6 +1462,7 @@ body {
   .lab-melt-drip,
   .lab-crystal,
   .lab-overflow,
+  .lab-overflow-drip,
   .lab-solidify-frost,
   .lab-frost-rim,
   .lab-ice-shard,

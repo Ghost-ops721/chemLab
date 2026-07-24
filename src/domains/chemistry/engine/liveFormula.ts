@@ -16,6 +16,7 @@ import {
   capacityMlForEquipment,
   fillPctFromContents,
   layerColors,
+  softCapacityMl,
   totalMl,
 } from "@/desk/vesselContents";
 import { assessLiveHazards } from "./liveHazards";
@@ -169,13 +170,17 @@ export function computeLivePreview(input: LiveFormulaInput): LiveVesselPreview {
   const avgPleasantness = pleasantW > 0 ? pleasantSum / pleasantW : 0;
   const hasFragrance = fragranceContents.length > 0 || ethanolMl > 0;
 
-  // Overdose warnings (IFRA-inspired teaching caps)
+  const capacityMl = capacityMlForEquipment(equipmentId);
+
+  // Overdose warnings (IFRA-inspired teaching caps) + overfill spill/foam
   const hazards = assessLiveHazards({
     contents,
     heatAttached: Boolean(heatAttached),
     coolAttached: Boolean(coolAttached),
     ethanolPct,
     oilLoadPct,
+    capacityMl,
+    totalMl: total,
   });
 
   for (const c of fragranceContents) {
@@ -242,9 +247,11 @@ export function computeLivePreview(input: LiveFormulaInput): LiveVesselPreview {
   };
 }
 
+/** Room left before the soft spill ceiling (not marked capacity). */
 export function livePreviewRoomLeft(
   contents: VesselContent[],
   equipmentId: string,
 ): number {
-  return Math.max(0, capacityMlForEquipment(equipmentId) - totalMl(contents));
+  const cap = capacityMlForEquipment(equipmentId);
+  return Math.max(0, softCapacityMl(cap) - totalMl(contents));
 }

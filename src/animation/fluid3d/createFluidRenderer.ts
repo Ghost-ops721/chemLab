@@ -242,11 +242,15 @@ export async function createFluidRenderer(
 
   const applyState = (s: FluidState) => {
     state = s;
+    // Cap at full well; CSS overflow/foam reads past the rim
     const fill01 = Math.max(0, Math.min(1, s.fill / 100));
     uniforms.uFill.value = fill01;
     uniforms.uColor.value = parseColor(THREE, s.fillColor);
     uniforms.uTurbidity.value = s.turbidity;
-    uniforms.uFoam.value = s.foam;
+    // Boost foam when fill is past the lip so overfill still reads in WebGL
+    const foamBoost =
+      s.fill > 100 ? Math.min(1, 0.45 + (s.fill - 100) / 24) : 0;
+    uniforms.uFoam.value = Math.max(s.foam, foamBoost);
     uniforms.uViscosity.value = s.viscosity;
     uniforms.uSolidify.value = s.solidify;
     uniforms.uMelt.value = s.melt;

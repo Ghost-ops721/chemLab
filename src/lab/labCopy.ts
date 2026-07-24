@@ -22,7 +22,11 @@ export const labCopy = {
   }),
   pourFail: {
     title: "Couldn't pour",
-    detail: "Vessel may be full or already contains that chemical",
+    detail: "Bottle empty, or the vessel is past its spill limit",
+  },
+  pourOverflow: {
+    title: "Overflowing",
+    detail: "Past the rim — foam and spill on the desk",
   },
   dropOntoVessel: {
     title: "Drop onto a vessel",

@@ -10,12 +10,23 @@ const CAPACITY_ML: Record<string, number> = {
   "graduated-cylinder": 25,
 };
 
+/**
+ * Past marked capacity the vessel spills / foams.
+ * Soft ceiling keeps the desk teachable (no infinite pours).
+ */
+export const OVERFILL_MAX_FACTOR = 1.8;
+
 export function capacityMlForEquipment(equipmentId: string): number {
   const mapped = CAPACITY_ML[equipmentId];
   if (mapped) return mapped;
   const eq = EQUIPMENT_BY_ID[equipmentId];
   // Legacy slot capacity → ~8 ml per slot
   return Math.max(10, (eq?.capacity ?? 3) * 8);
+}
+
+/** Hard stop for pours / transfers (capacity × overfill factor). */
+export function softCapacityMl(capacityMl: number): number {
+  return capacityMl * OVERFILL_MAX_FACTOR;
 }
 
 /** Default pour volume when dragging a chemical into a vessel. */
@@ -33,6 +44,20 @@ export function defaultPourMl(chemicalId: string): number {
 
 export function totalMl(contents: VesselContent[]): number {
   return contents.reduce((sum, c) => sum + Math.max(0, c.amountMl), 0);
+}
+
+export function overflowMl(
+  contents: VesselContent[],
+  capacityMl: number,
+): number {
+  return Math.max(0, totalMl(contents) - capacityMl);
+}
+
+export function isOverflowing(
+  contents: VesselContent[],
+  capacityMl: number,
+): boolean {
+  return overflowMl(contents, capacityMl) > 0.05;
 }
 
 export function contentIdsFrom(contents: VesselContent[]): string[] {
@@ -74,7 +99,10 @@ export function syncVesselContents(
   };
 }
 
-/** Add or increase amount; respects capacity in mL. Returns null if no room. */
+/**
+ * Add or increase amount. May exceed marked capacity (overflow / foam);
+ * hard-stops at softCapacityMl. Returns null only when soft-full.
+ */
 export function pourIntoContents(
   contents: VesselContent[],
   chemicalId: string,
@@ -82,7 +110,7 @@ export function pourIntoContents(
   capacityMl: number,
 ): VesselContent[] | null {
   const used = totalMl(contents);
-  const room = Math.max(0, capacityMl - used);
+  const room = Math.max(0, softCapacityMl(capacityMl) - used);
   if (room < 0.05) return null;
   const add = Math.min(amountMl, room);
   if (add < 0.05) return null;
@@ -100,13 +128,16 @@ export function pourIntoContents(
   return next;
 }
 
-/** Transfer as much volume as fits into target. */
+/**
+ * Transfer volume into target. May overfill past marked capacity
+ * (spill / foam); hard-stops at softCapacityMl.
+ */
 export function transferContents(
   from: VesselContent[],
   to: VesselContent[],
   capacityMl: number,
 ): { from: VesselContent[]; to: VesselContent[]; movedMl: number } | null {
-  const room = Math.max(0, capacityMl - totalMl(to));
+  const room = Math.max(0, softCapacityMl(capacityMl) - totalMl(to));
   if (room < 0.05 || from.length === 0) return null;
 
   let remainingRoom = room;
@@ -148,20 +179,28 @@ export function setContentAmount(
 ): VesselContent[] {
   const others = contents.filter((c) => c.chemicalId !== chemicalId);
   const othersTotal = totalMl(others);
-  const maxForThis = Math.max(0, capacityMl - othersTotal);
+  const maxForThis = Math.max(0, softCapacityMl(capacityMl) - othersTotal);
   const clamped = Math.min(Math.max(0, amountMl), maxForThis);
   if (clamped < 0.05) return others;
   return [...others, { chemicalId, amountMl: clamped }];
 }
 
+/**
+ * Visual fill %. Marked-full sits near the lip (~82); overfill climbs
+ * past the rim so CSS overflow / foam can read.
+ */
 export function fillPctFromContents(
   contents: VesselContent[],
   equipmentId: string,
 ): number {
   const cap = capacityMlForEquipment(equipmentId);
   const used = totalMl(contents);
-  if (used <= 0) return 0;
-  return Math.min(82, 12 + (used / cap) * 70);
+  if (used <= 0 || cap <= 0) return 0;
+  const ratio = used / cap;
+  if (ratio <= 1) {
+    return 12 + ratio * 70;
+  }
+  return Math.min(112, 82 + (ratio - 1) * 55);
 }
 
 /** Volume-weighted blend of chemical colors (hex). */

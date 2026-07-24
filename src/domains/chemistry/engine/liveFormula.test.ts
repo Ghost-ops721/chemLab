@@ -3,6 +3,7 @@ import {
   blendFillColor,
   capacityMlForEquipment,
   defaultPourMl,
+  isOverflowing,
   pourIntoContents,
   setContentAmount,
   totalMl,
@@ -27,19 +28,31 @@ describe("vesselContents", () => {
     expect(totalMl(b!)).toBe(2);
   });
 
-  it("respects capacity when pouring", () => {
-    const full = pourIntoContents(
+  it("allows pour past marked capacity (overflow / foam)", () => {
+    const over = pourIntoContents(
       [{ chemicalId: "c2h5oh", amountMl: 49 }],
       "bergamot-oil",
       5,
       50,
     );
-    expect(full![1]!.amountMl).toBe(1);
-    expect(totalMl(full!)).toBe(50);
-    expect(pourIntoContents(full!, "lavender-oil", 1, 50)).toBeNull();
+    expect(over).not.toBeNull();
+    expect(totalMl(over!)).toBe(54);
+    expect(isOverflowing(over!, 50)).toBe(true);
   });
 
-  it("transfers volume between vessels", () => {
+  it("hard-stops at soft capacity (~1.8×)", () => {
+    const nearSoft = pourIntoContents(
+      [{ chemicalId: "c2h5oh", amountMl: 89 }],
+      "bergamot-oil",
+      5,
+      50,
+    );
+    expect(nearSoft).not.toBeNull();
+    expect(totalMl(nearSoft!)).toBe(90); // only 1 ml room to soft cap
+    expect(pourIntoContents(nearSoft!, "lavender-oil", 1, 50)).toBeNull();
+  });
+
+  it("transfers volume between vessels (may overfill target)", () => {
     const result = transferContents(
       [
         { chemicalId: "c2h5oh", amountMl: 10 },
@@ -49,22 +62,24 @@ describe("vesselContents", () => {
       5,
     );
     expect(result).not.toBeNull();
-    expect(result!.movedMl).toBe(5);
-    expect(totalMl(result!.to)).toBe(5);
-    expect(totalMl(result!.from)).toBe(7);
+    expect(result!.movedMl).toBe(9);
+    expect(totalMl(result!.to)).toBe(9);
+    expect(totalMl(result!.from)).toBe(3);
+    expect(isOverflowing(result!.to, 5)).toBe(true);
   });
 
-  it("clamps amount slider against remaining capacity", () => {
+  it("clamps amount slider against soft capacity", () => {
     const next = setContentAmount(
       [
         { chemicalId: "c2h5oh", amountMl: 40 },
         { chemicalId: "bergamot-oil", amountMl: 2 },
       ],
       "bergamot-oil",
-      20,
+      60,
       50,
     );
-    expect(next.find((c) => c.chemicalId === "bergamot-oil")!.amountMl).toBe(10);
+    // soft cap 90 − 40 ethanol = 50 ml room for bergamot
+    expect(next.find((c) => c.chemicalId === "bergamot-oil")!.amountMl).toBe(50);
   });
 
   it("blends colors by volume weight", () => {
@@ -122,6 +137,17 @@ describe("liveFormula", () => {
     });
     expect(preview.oilLoadPct).toBeGreaterThan(5);
     expect(preview.concentrationLabel).toBeTruthy();
+  });
+
+  it("emits overflow + foam when past marked capacity", () => {
+    const preview = computeLivePreview({
+      contents: [{ chemicalId: "h2o", amountMl: 58 }],
+      equipmentId: "beaker",
+    });
+    expect(preview.fillPct).toBeGreaterThan(82);
+    expect(preview.effects.some((e) => e.kind === "overflow")).toBe(true);
+    expect(preview.effects.some((e) => e.kind === "foam")).toBe(true);
+    expect(preview.hazards.some((h) => h.effect === "overflow")).toBe(true);
   });
 
   it("attaches IFRA teaching screen to live preview", () => {

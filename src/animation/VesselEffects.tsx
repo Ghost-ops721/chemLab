@@ -399,15 +399,18 @@ export function VesselEffects({
         </div>
       ) : null}
 
-      {/* Foam head */}
+      {/* Foam head — rides near the lip when overflowing */}
       {foam ? (
-        <div className="lab-foam-head absolute inset-x-[16%] top-[28%] h-4 overflow-hidden rounded-t-full bg-white/50">
-          {Array.from({ length: 6 }).map((_, i) => (
+        <div
+          className="lab-foam-head absolute inset-x-[16%] h-5 overflow-visible rounded-t-full bg-white/55"
+          style={{ top: overflow ? "12%" : "28%" }}
+        >
+          {Array.from({ length: overflow ? 9 : 6 }).map((_, i) => (
             <span
               key={`foam-${i}`}
               className="lab-foam-bubble absolute rounded-full bg-white/80"
               style={{
-                left: `${8 + i * 14}%`,
+                left: `${6 + i * (overflow ? 10 : 14)}%`,
                 width: 5 + (i % 3),
                 height: 5 + (i % 3),
                 top: `${(i % 2) * 3}px`,
@@ -595,7 +598,30 @@ export function VesselEffects({
         : null}
 
       {overflow ? (
-        <div className="lab-overflow absolute inset-x-[20%] top-[18%] h-3 rounded-full bg-lab-glass/50" />
+        <div className="pointer-events-none absolute inset-0">
+          <div
+            className="lab-overflow absolute inset-x-[14%] top-[14%] h-4 rounded-full"
+            style={{
+              background: `linear-gradient(to bottom, ${fillColor ?? "rgba(143,192,181,0.85)"}cc, transparent)`,
+              opacity: 0.9,
+            }}
+          />
+          {[0, 1, 2].map((i) => (
+            <span
+              key={`spill-${i}`}
+              className="lab-overflow-drip absolute rounded-full"
+              style={{
+                left: `${28 + i * 18}%`,
+                top: "16%",
+                width: 4 + (i % 2),
+                height: 10 + i * 3,
+                background: fillColor ?? "rgba(143,192,181,0.75)",
+                opacity: 0.7,
+                animationDelay: `${i * 0.12}s`,
+              }}
+            />
+          ))}
+        </div>
       ) : null}
 
       {/* Precipitate: cloudy haze → settling flakes → bed */}

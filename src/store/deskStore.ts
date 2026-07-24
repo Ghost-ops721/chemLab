@@ -14,6 +14,7 @@ import {
   defaultPourMl,
   fillPctFromContents,
   getVesselContents,
+  isOverflowing,
   pourIntoContents,
   setContentAmount,
   syncVesselContents,
@@ -23,6 +24,7 @@ import { resolveGlassShape } from "@/animation/glassware/shapes";
 import { VESSEL_CARD } from "@/desk/vesselLayout";
 import { useInventoryStockStore, defaultStockMl } from "@/store/inventoryStockStore";
 import { showToast } from "@/gamification/ToastHost";
+import { labCopy } from "@/lab/labCopy";
 
 if (typeof window !== "undefined") {
   try {
@@ -285,6 +287,17 @@ export const useDeskStore = create<DeskState>()(
           return false;
         }
         labSound.pour();
+        const poured = get()
+          .vessels.find((v) => v.instanceId === vesselId);
+        if (
+          poured &&
+          isOverflowing(
+            getVesselContents(poured),
+            capacityMlForEquipment(poured.equipmentId),
+          )
+        ) {
+          showToast(labCopy.pourOverflow);
+        }
         const auth = useAuthStore.getState();
         if (!auth.user) {
           auth.recordGuestChemicalAdd();
@@ -395,6 +408,16 @@ export const useDeskStore = create<DeskState>()(
           }),
           activeVesselId: toId,
         }));
+        const target = get().vessels.find((v) => v.instanceId === toId);
+        if (
+          target &&
+          isOverflowing(
+            getVesselContents(target),
+            capacityMlForEquipment(target.equipmentId),
+          )
+        ) {
+          showToast(labCopy.pourOverflow);
+        }
         return true;
       },
 

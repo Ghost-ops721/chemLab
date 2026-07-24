@@ -1,6 +1,7 @@
 import type { Chemical } from "../types";
 import type { VesselContent } from "@/types";
 import type { ReactionResult } from "../types";
+import { OVERFILL_MAX_FACTOR } from "@/desk/vesselContents";
 
 export interface TeachingStoichResult {
   nextContents: VesselContent[];
@@ -147,10 +148,12 @@ export function applyTeachingStoich(
       amountMl: Math.round(amountMl * 100) / 100,
     }));
 
+  // Soft ceiling only — past marked capacity is intentional (overflow / foam).
   if (capacityMl != null && capacityMl > 0) {
+    const softCap = capacityMl * OVERFILL_MAX_FACTOR;
     const total = nextContents.reduce((s, c) => s + c.amountMl, 0);
-    if (total > capacityMl) {
-      const scale = capacityMl / total;
+    if (total > softCap) {
+      const scale = softCap / total;
       nextContents = nextContents.map((c) => ({
         ...c,
         amountMl: Math.round(c.amountMl * scale * 100) / 100,

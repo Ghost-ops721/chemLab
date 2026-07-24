@@ -15,6 +15,7 @@ import { labCopy } from "@/lab/labCopy";
 import {
   capacityMlForEquipment,
   getVesselContents,
+  softCapacityMl,
   totalMl,
 } from "@/desk/vesselContents";
 import { isOilItem } from "@/domains/chemistry/perfume/oilMeta";
@@ -166,16 +167,18 @@ export function ItemPanel({
   const pourCap = targetVessel
     ? capacityMlForEquipment(targetVessel.equipmentId)
     : 50;
-  const pourRoom = targetVessel
-    ? Math.max(
-        0.1,
-        Math.round(
-          (pourCap - totalMl(getVesselContents(targetVessel))) * 10,
-        ) / 10,
-      )
-    : pourCap;
-  const pourMax = Math.min(pourCap, Math.max(pourRoom, 0.1));
+  const softCap = softCapacityMl(pourCap);
+  const usedInTarget = targetVessel
+    ? totalMl(getVesselContents(targetVessel))
+    : 0;
+  // Allow pour past marked capacity (overflow / foam); stop at soft ceiling
+  const pourRoom = Math.max(
+    0.1,
+    Math.round((softCap - usedInTarget) * 10) / 10,
+  );
+  const pourMax = Math.min(pourCap, pourRoom);
   const pourPct = Math.min(100, (pourAmountMl / pourMax) * 100);
+  const overfilled = usedInTarget > pourCap + 0.05;
 
   function PourAmountControl({ compact = false }: { compact?: boolean }) {
     return (
@@ -199,7 +202,9 @@ export function ItemPanel({
               compact ? "text-[9px]" : "text-[10px]"
             }`}
           >
-            of {pourMax} ml room
+            {overfilled
+              ? `${pourMax} ml (overflowing)`
+              : `of ${pourMax} ml`}
           </span>
         </div>
         <div className="relative h-2 overflow-hidden rounded-full bg-lab-wash">

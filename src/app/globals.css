@@ -38,6 +38,23 @@ body {
   background: var(--lab-wash);
 }
 
+/* Stop iOS Safari from inflating text / opening “zoomed in”. */
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+html,
+body {
+  max-width: 100%;
+  overflow-x: clip;
+}
+
+.lab-app {
+  max-width: 100vw;
+  overflow-x: clip;
+}
+
 /* Lab shell: never show scrollbars (scroll still works). Desktop + phone. */
 .lab-app,
 .lab-app * {

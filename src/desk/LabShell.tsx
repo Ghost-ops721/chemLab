@@ -355,9 +355,15 @@ export function LabShell() {
     >
       <div className="lab-app flex h-dvh flex-col overflow-hidden bg-lab-wash">
         <header className="flex shrink-0 items-center justify-between gap-2 border-b border-white/10 bg-lab-ink px-3 py-1.5 md:gap-3 md:px-4">
-          <div className="min-w-0">
+          <div className="min-w-0 flex-1 overflow-hidden">
             <h1 className="leading-none">
-              <AlyraMark size="md" href={null} onDark />
+              <AlyraMark
+                size="sm"
+                href={null}
+                onDark
+                className="max-w-full"
+                wordmarkClassName="md:text-2xl"
+              />
             </h1>
             <p className="mt-0.5 hidden max-w-md truncate text-[11px] text-lab-foam/55 md:block">
               {mode === "desk"

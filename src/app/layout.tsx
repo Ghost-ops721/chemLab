@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Cormorant_Garamond, DM_Sans, JetBrains_Mono } from "next/font/google";
 import { AuthProvider } from "@/components/auth/AuthProvider";
 import "./globals.css";
@@ -29,6 +29,16 @@ export const metadata: Metadata = {
   },
 };
 
+/** Phone must open at 1× — no accidental zoomed-in first paint. */
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 5,
+  userScalable: true,
+  viewportFit: "cover",
+  themeColor: "#0c0c0c",
+};
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -39,7 +49,7 @@ export default function RootLayout({
       lang="en"
       className={`${display.variable} ${sans.variable} ${mono.variable} h-full`}
     >
-      <body className="min-h-full font-sans antialiased">
+      <body className="min-h-full max-w-[100vw] overflow-x-hidden font-sans antialiased">
         <AuthProvider>{children}</AuthProvider>
       </body>
     </html>

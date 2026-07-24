@@ -1,5 +1,9 @@
-import type { EngineResult } from "@/types";
+import type { EngineResult, VesselContent } from "@/types";
+import { getVesselContents } from "@/desk/vesselContents";
 import type { GoalDeskSnapshot, GoalHint, GoalStep } from "./goals";
+
+/** Tolerance when checking min teaching volumes (ml). */
+export const AMOUNT_TOLERANCE_ML = 0.05;
 
 export function hints(
   nudge: string,
@@ -17,10 +21,33 @@ function anyVessel(snap: GoalDeskSnapshot) {
   return snap.vessels;
 }
 
+function vesselMeetsAmounts(
+  contents: VesselContent[],
+  chemicalIds: string[],
+  minAmounts?: Record<string, number>,
+): boolean {
+  if (!chemicalIds.every((id) => contents.some((c) => c.chemicalId === id))) {
+    return false;
+  }
+  if (!minAmounts) return true;
+  const totals: Record<string, number> = {};
+  for (const c of contents) {
+    totals[c.chemicalId] = (totals[c.chemicalId] ?? 0) + c.amountMl;
+  }
+  return Object.entries(minAmounts).every(
+    ([id, min]) => (totals[id] ?? 0) + AMOUNT_TOLERANCE_ML >= min,
+  );
+}
+
 export function vesselHas(
   snap: GoalDeskSnapshot,
   chemicalIds: string[],
-  opts?: { heat?: boolean; cool?: boolean; equipmentIds?: string[] },
+  opts?: {
+    heat?: boolean;
+    cool?: boolean;
+    equipmentIds?: string[];
+    minAmounts?: Record<string, number>;
+  },
 ) {
   return anyVessel(snap).some((v) => {
     if (opts?.heat && !v.heatAttached) return false;
@@ -31,7 +58,8 @@ export function vesselHas(
     ) {
       return false;
     }
-    return chemicalIds.every((id) => v.contentIds.includes(id));
+    const contents = getVesselContents(v);
+    return vesselMeetsAmounts(contents, chemicalIds, opts?.minAmounts);
   });
 }
 
@@ -55,7 +83,9 @@ export function maxStirLevel(
 ): number {
   const vessels = chemicalIds?.length
     ? snap.vessels.filter((v) =>
-        chemicalIds.every((id) => v.contentIds.includes(id)),
+        chemicalIds.every((id) =>
+          getVesselContents(v).some((c) => c.chemicalId === id),
+        ),
       )
     : snap.vessels;
   return vessels.reduce((m, v) => Math.max(m, v.stirLevel), 0);
@@ -67,7 +97,9 @@ export function hasShaken(
 ): boolean {
   return snap.vessels.some((v) => {
     if (chemicalIds?.length) {
-      if (!chemicalIds.every((id) => v.contentIds.includes(id))) return false;
+      const contents = getVesselContents(v);
+      if (!chemicalIds.every((id) => contents.some((c) => c.chemicalId === id)))
+        return false;
     }
     return Boolean(v.fx.shakeAt);
   });
@@ -78,6 +110,16 @@ export function lastResultMatches(
   pred: (r: EngineResult) => boolean,
 ) {
   return snap.vessels.some((v) => v.lastResult && pred(v.lastResult));
+}
+
+function targetAmountsFrom(
+  minAmounts?: Record<string, number>,
+): VesselContent[] | undefined {
+  if (!minAmounts) return undefined;
+  return Object.entries(minAmounts).map(([chemicalId, amountMl]) => ({
+    chemicalId,
+    amountMl,
+  }));
 }
 
 export function placeBeakerStep(
@@ -126,6 +168,8 @@ export function pourStep(
     title: string;
     instruction: string;
     chemicalIds: string[];
+    /** Min ml required for each chemicalId (teaching volumes). */
+    minAmounts?: Record<string, number>;
     heat?: boolean;
     nudge: string;
     clue: string;
@@ -137,8 +181,12 @@ export function pourStep(
     title: opts.title,
     instruction: opts.instruction,
     hints: hints(opts.nudge, opts.clue, opts.almost),
+    targetAmounts: targetAmountsFrom(opts.minAmounts),
     check: (s) =>
-      vesselHas(s, opts.chemicalIds, opts.heat ? { heat: true } : undefined),
+      vesselHas(s, opts.chemicalIds, {
+        ...(opts.heat ? { heat: true } : {}),
+        minAmounts: opts.minAmounts,
+      }),
   };
 }
 
@@ -204,6 +252,7 @@ export function heatStep(
     title?: string;
     instruction?: string;
     chemicalIds: string[];
+    minAmounts?: Record<string, number>;
     nudge?: string;
     clue?: string;
     almost?: string;
@@ -219,7 +268,12 @@ export function heatStep(
       opts.clue ?? "Drop a Bunsen burner onto the vessel or tap Heat.",
       opts.almost ?? "Turn Heat on for that beaker.",
     ),
-    check: (s) => vesselHas(s, opts.chemicalIds, { heat: true }),
+    targetAmounts: targetAmountsFrom(opts.minAmounts),
+    check: (s) =>
+      vesselHas(s, opts.chemicalIds, {
+        heat: true,
+        minAmounts: opts.minAmounts,
+      }),
   };
 }
 
@@ -229,6 +283,7 @@ export function coolStep(
     title?: string;
     instruction?: string;
     chemicalIds: string[];
+    minAmounts?: Record<string, number>;
     nudge?: string;
     clue?: string;
     almost?: string;
@@ -244,7 +299,12 @@ export function coolStep(
       opts.clue ?? "Drop an Ice Bath onto the vessel or tap Cool.",
       opts.almost ?? "Turn Cool on for that beaker.",
     ),
-    check: (s) => vesselHas(s, opts.chemicalIds, { cool: true }),
+    targetAmounts: targetAmountsFrom(opts.minAmounts),
+    check: (s) =>
+      vesselHas(s, opts.chemicalIds, {
+        cool: true,
+        minAmounts: opts.minAmounts,
+      }),
   };
 }
 

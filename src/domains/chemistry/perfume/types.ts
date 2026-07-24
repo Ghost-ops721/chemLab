@@ -74,6 +74,8 @@ export interface PerfumeRecipe {
    * Always includes ethanol (c2h5oh) plus signature notes.
    */
   requiredChemicalIds: string[];
+  /** Teaching volumes (ml) for each required chemical — ethanol larger, oils ~1 ml. */
+  targetContents: import("@/types").VesselContent[];
   difficulty: GoalDifficulty;
   xpReward: number;
   /** First clear only */

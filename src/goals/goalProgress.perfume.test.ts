@@ -6,6 +6,7 @@ import {
   perfumeRecipeToGoal,
 } from "@/domains/chemistry/perfume/perfumeGoalFactory";
 import { getPerfumeRecipe, PERFUME_RECIPES } from "@/domains/chemistry/perfume";
+import { defaultPourMl } from "@/desk/vesselContents";
 
 function emptyFx() {
   return {};
@@ -29,7 +30,7 @@ function vessel(
     contentIds: partial.contentIds ?? [],
     contents: (partial.contentIds ?? []).map((chemicalId) => ({
       chemicalId,
-      amountMl: 2,
+      amountMl: defaultPourMl(chemicalId),
     })),
     heatAttached: partial.heatAttached ?? false,
     coolAttached: partial.coolAttached ?? false,

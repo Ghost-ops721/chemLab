@@ -2,12 +2,15 @@
 
 import { useState } from "react";
 import { getGoal, type HintTier } from "@/domains/chemistry/data/goals";
+import { getChemical } from "@/domains/chemistry/data/chemicals";
 import {
   currentStep,
   goalProgressPct,
   isGoalComplete,
 } from "@/goals/goalProgress";
 import { useGoalStore } from "@/store/goalStore";
+import { formatAmount } from "@/desk/unitDisplay";
+import { useUnitPrefStore } from "@/store/unitPrefStore";
 
 const TIER_LABEL: Record<HintTier, string> = {
   nudge: "Nudge",
@@ -26,6 +29,8 @@ export function GoalGuidePanel() {
   const setPickerOpen = useGoalStore((s) => s.setPickerOpen);
 
   const [hintsOpen, setHintsOpen] = useState(false);
+  const unit = useUnitPrefStore((s) => s.unit);
+  const cycleUnit = useUnitPrefStore((s) => s.cycleUnit);
 
   if (!activeGoalId) return null;
   const goal = getGoal(activeGoalId);
@@ -140,9 +145,23 @@ export function GoalGuidePanel() {
                 <div className="min-w-0">
                   <p className="font-semibold text-lab-ink">{s.title}</p>
                   {isCurrent ? (
-                    <p className="mt-px text-[11px] leading-snug text-lab-ink/85">
-                      {s.instruction}
-                    </p>
+                    <>
+                      <p className="mt-px text-[11px] leading-snug text-lab-ink/85">
+                        {s.instruction}
+                      </p>
+                      {s.targetAmounts?.length ? (
+                        <p className="mt-1 text-[10px] leading-snug text-lab-teal">
+                          Recipe:{" "}
+                          {s.targetAmounts
+                            .map((t) => {
+                              const name =
+                                getChemical(t.chemicalId)?.name ?? t.chemicalId;
+                              return `${formatAmount(t.chemicalId, t.amountMl, unit)} ${name}`;
+                            })
+                            .join(" · ")}
+                        </p>
+                      ) : null}
+                    </>
                   ) : null}
                 </div>
               </div>
@@ -209,7 +228,15 @@ export function GoalGuidePanel() {
             </ul>
           ) : null}
           <p className="mt-1.5 text-[9px] text-lab-muted">
-            Highlighted items in Inventory match this goal.
+            Highlighted items in Inventory match this goal.{" "}
+            <button
+              type="button"
+              className="underline decoration-lab-line hover:text-lab-ink"
+              onClick={() => cycleUnit()}
+              title="Cycle display units"
+            >
+              Units: {unit}
+            </button>
           </p>
         </div>
       ) : null}

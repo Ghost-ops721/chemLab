@@ -83,10 +83,16 @@ export function InventionShareCard({
     if (!latest) return;
     setPublishing(true);
     try {
-      const contents = latest.snapshot.contentIds.map((chemicalId) => ({
-        chemicalId,
-        amountMl: defaultPourMl(chemicalId),
-      }));
+      const contents =
+        latest.snapshot.contents?.length
+          ? latest.snapshot.contents.map((c) => ({
+              chemicalId: c.chemicalId,
+              amountMl: c.amountMl,
+            }))
+          : latest.snapshot.contentIds.map((chemicalId) => ({
+              chemicalId,
+              amountMl: defaultPourMl(chemicalId),
+            }));
       const ifra = checkIfraCompliance({ contents, category: "cat4" });
       const formula = await publishFormula({
         title: invention.name,

@@ -3,6 +3,7 @@ import { CHEMICALS, getChemical } from "./data/chemicals";
 import { EQUIPMENT } from "./data/equipment";
 import { resolveChemistry } from "./engine/resolve";
 import { adaptReactionResult } from "./adapt";
+import { applyTeachingStoich } from "./engine/teachingStoich";
 
 export const chemistryDomain: DomainModule = {
   id: "chemistry",
@@ -22,9 +23,23 @@ export const chemistryDomain: DomainModule = {
     );
 
     const result = resolveChemistry(chemicals, { hasHeat, hasCool });
-    return adaptReactionResult(
+    const adapted = adaptReactionResult(
       result,
       chemicals.map((c) => c.id),
     );
+
+    if (input.amounts && adapted.ok) {
+      const stoich = applyTeachingStoich(
+        result,
+        [...chemicals, ...result.products],
+        input.amounts,
+      );
+      if (stoich) {
+        adapted.nextContents = stoich.nextContents;
+        adapted.limitingReagentId = stoich.limitingReagentId;
+      }
+    }
+
+    return adapted;
   },
 };

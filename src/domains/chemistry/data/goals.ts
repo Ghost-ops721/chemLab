@@ -1,4 +1,5 @@
 import type { DeskVessel, EngineResult } from "@/types";
+import { defaultPourMl } from "@/desk/vesselContents";
 import {
   heatStep,
   mixUntilStep,
@@ -11,6 +12,16 @@ import {
   difficultyFromSteps,
   type GoalDifficulty,
 } from "@/domains/chemistry/perfume/types";
+
+/** Teaching min volumes for goal checks (matches default pours). */
+function goalMinAmounts(...ids: string[]): Record<string, number> {
+  return Object.fromEntries(ids.map((id) => [id, defaultPourMl(id)]));
+}
+
+function fmtMl(id: string): string {
+  const n = defaultPourMl(id);
+  return Number.isInteger(n) ? String(n) : n.toFixed(1);
+}
 
 export type HintTier = "nudge" | "clue" | "almost";
 
@@ -30,6 +41,8 @@ export interface GoalStep {
   instruction: string;
   hints: GoalHint[];
   check: (snap: GoalDeskSnapshot) => boolean;
+  /** Recipe amounts to show in the guide (teaching ml). */
+  targetAmounts?: import("@/types").VesselContent[];
 }
 
 export type GoalCategory = "product" | "classic" | "perfume";
@@ -113,16 +126,18 @@ export const PRODUCT_GOALS: ProductGoal[] = [
       pourStep("perfume-solvent", {
         title: "Add the carrier",
         instruction:
-          "Pour the alcohol that will carry the scent (and evaporate on skin).",
+          `Pour ${fmtMl("c2h5oh")} ml ethanol — the alcohol that will carry the scent (and evaporate on skin).`,
         chemicalIds: ["c2h5oh"],
+        minAmounts: goalMinAmounts("c2h5oh"),
         nudge: "Think of a solvent that evaporates on skin.",
         clue: "Look under organics / alcohols.",
-        almost: "Pour Ethanol (C₂H₅OH) into the beaker.",
+        almost: `Pour ${fmtMl("c2h5oh")} ml Ethanol (C₂H₅OH) into the beaker.`,
       }),
       {
         id: "perfume-scent",
         title: "Add the scent",
-        instruction: "Add a fragrant citrus oil or a fruity ester note.",
+        instruction:
+          `Add about ${fmtMl("limonene")} ml of a fragrant citrus oil or a fruity ester note.`,
         hints: [
           { tier: "nudge", text: "Something that smells like lemon or fruit." },
           {
@@ -131,12 +146,20 @@ export const PRODUCT_GOALS: ProductGoal[] = [
           },
           {
             tier: "almost",
-            text: "Pour Limonene (citrus oil) — or Ethyl Acetate — into the same beaker.",
+            text: `Pour ${fmtMl("limonene")} ml Limonene (citrus oil) — or Ethyl Acetate — into the same beaker.`,
           },
         ],
+        targetAmounts: [
+          { chemicalId: "c2h5oh", amountMl: defaultPourMl("c2h5oh") },
+          { chemicalId: "limonene", amountMl: defaultPourMl("limonene") },
+        ],
         check: (s) =>
-          vesselHas(s, ["c2h5oh", "limonene"]) ||
-          vesselHas(s, ["c2h5oh", "ethyl-acetate"]),
+          vesselHas(s, ["c2h5oh", "limonene"], {
+            minAmounts: goalMinAmounts("c2h5oh", "limonene"),
+          }) ||
+          vesselHas(s, ["c2h5oh", "ethyl-acetate"], {
+            minAmounts: goalMinAmounts("c2h5oh", "ethyl-acetate"),
+          }),
       },
       mixUntilStep("perfume-mix", {
         title: "Blend the cologne",
@@ -173,22 +196,25 @@ export const PRODUCT_GOALS: ProductGoal[] = [
       }),
       pourStep("soap-fat", {
         title: "Add the fat",
-        instruction: "Pour a plant oil (triglyceride) into the beaker.",
+        instruction: `Pour ${fmtMl("plant-oil")} ml plant oil (triglyceride) into the beaker.`,
         chemicalIds: ["plant-oil"],
+        minAmounts: goalMinAmounts("plant-oil"),
         nudge: "Soap starts from oils and fats.",
         clue: "Search for “plant oil” or “fat”.",
-        almost: "Pour Plant Oil (triglyceride).",
+        almost: `Pour ${fmtMl("plant-oil")} ml Plant Oil (triglyceride).`,
       }),
       pourStep("soap-lye", {
         title: "Add the lye",
-        instruction: "Add a strong base — the classic soapmaking alkali.",
+        instruction: `Add ${fmtMl("naoh")} ml of a strong base — the classic soapmaking alkali.`,
         chemicalIds: ["plant-oil", "naoh"],
+        minAmounts: goalMinAmounts("plant-oil", "naoh"),
         nudge: "You need a strong base (lye).",
         clue: "Look under bases for sodium hydroxide.",
-        almost: "Pour NaOH into the same beaker.",
+        almost: `Pour ${fmtMl("naoh")} ml NaOH into the same beaker.`,
       }),
       heatStep("soap-heat", {
         chemicalIds: ["plant-oil", "naoh"],
+        minAmounts: goalMinAmounts("plant-oil", "naoh"),
         title: "Heat the pot",
         instruction: "Attach a Bunsen burner — saponification needs heat.",
       }),
@@ -219,19 +245,21 @@ export const PRODUCT_GOALS: ProductGoal[] = [
       placeBeakerStep("ink-glass"),
       pourStep("ink-lead", {
         title: "Add lead nitrate",
-        instruction: "Pour lead(II) nitrate solution into the beaker.",
+        instruction: `Pour ${fmtMl("pbno32")} ml lead(II) nitrate solution into the beaker.`,
         chemicalIds: ["pbno32"],
+        minAmounts: goalMinAmounts("pbno32"),
         nudge: "One partner is a lead salt.",
         clue: "Search Pb(NO₃)₂.",
-        almost: "Pour Lead(II) Nitrate.",
+        almost: `Pour ${fmtMl("pbno32")} ml Lead(II) Nitrate.`,
       }),
       pourStep("ink-iodide", {
         title: "Add iodide",
-        instruction: "Add potassium iodide — the other half of the pigment.",
+        instruction: `Add ${fmtMl("ki")} ml potassium iodide — the other half of the pigment.`,
         chemicalIds: ["pbno32", "ki"],
+        minAmounts: goalMinAmounts("pbno32", "ki"),
         nudge: "Iodide will swap partners with lead.",
         clue: "Look for KI in salts.",
-        almost: "Pour Potassium Iodide.",
+        almost: `Pour ${fmtMl("ki")} ml Potassium Iodide.`,
       }),
       mixUntilStep("ink-mix", {
         title: "Precipitate the pigment",
@@ -260,19 +288,21 @@ export const PRODUCT_GOALS: ProductGoal[] = [
       placeBeakerStep("antacid-glass"),
       pourStep("antacid-acid", {
         title: "Add “stomach acid”",
-        instruction: "Pour hydrochloric acid to stand in for stomach acid.",
+        instruction: `Pour ${fmtMl("hcl")} ml hydrochloric acid to stand in for stomach acid.`,
         chemicalIds: ["hcl"],
+        minAmounts: goalMinAmounts("hcl"),
         nudge: "Stomach acid is mostly HCl.",
         clue: "Acids → Hydrochloric Acid.",
-        almost: "Pour HCl.",
+        almost: `Pour ${fmtMl("hcl")} ml HCl.`,
       }),
       pourStep("antacid-base", {
         title: "Add the antacid",
-        instruction: "Add a carbonate salt — the classic antacid ingredient.",
+        instruction: `Add ${fmtMl("na2co3")} ml of a carbonate salt — the classic antacid ingredient.`,
         chemicalIds: ["hcl", "na2co3"],
+        minAmounts: goalMinAmounts("hcl", "na2co3"),
         nudge: "Look for a carbonate.",
         clue: "Sodium carbonate is a common choice.",
-        almost: "Pour Na₂CO₃ (Sodium Carbonate).",
+        almost: `Pour ${fmtMl("na2co3")} ml Na₂CO₃ (Sodium Carbonate).`,
       }),
       mixUntilStep("antacid-mix", {
         title: "Make it fizz",
@@ -304,19 +334,21 @@ export const PRODUCT_GOALS: ProductGoal[] = [
       }),
       pourStep("rust-oxide", {
         title: "Add the rust",
-        instruction: "Add iron(III) oxide — laboratory “rust”.",
+        instruction: `Add ${fmtMl("fe2o3")} ml iron(III) oxide — laboratory “rust”.`,
         chemicalIds: ["fe2o3"],
+        minAmounts: goalMinAmounts("fe2o3"),
         nudge: "Rust is an iron oxide.",
         clue: "Search Fe₂O₃ or rust.",
-        almost: "Pour Iron(III) Oxide (rust).",
+        almost: `Pour ${fmtMl("fe2o3")} ml Iron(III) Oxide (rust).`,
       }),
       pourStep("rust-acid", {
         title: "Add the acid",
-        instruction: "Pour hydrochloric acid to attack the oxide.",
+        instruction: `Pour ${fmtMl("hcl")} ml hydrochloric acid to attack the oxide.`,
         chemicalIds: ["fe2o3", "hcl"],
+        minAmounts: goalMinAmounts("fe2o3", "hcl"),
         nudge: "Acids dissolve many metal oxides.",
         clue: "Use HCl.",
-        almost: "Pour Hydrochloric Acid into the beaker.",
+        almost: `Pour ${fmtMl("hcl")} ml Hydrochloric Acid into the beaker.`,
       }),
       mixUntilStep("rust-mix", {
         title: "Dissolve the rust",
@@ -347,19 +379,21 @@ export const PRODUCT_GOALS: ProductGoal[] = [
       placeBeakerStep("sanitizer-glass"),
       pourStep("sanitizer-alcohol", {
         title: "Add ethanol",
-        instruction: "Pour ethanol — the antimicrobial carrier.",
+        instruction: `Pour ${fmtMl("c2h5oh")} ml ethanol — the antimicrobial carrier.`,
         chemicalIds: ["c2h5oh"],
+        minAmounts: goalMinAmounts("c2h5oh"),
         nudge: "Sanitizer needs a strong alcohol.",
         clue: "Organics → Ethanol.",
-        almost: "Pour Ethanol (C₂H₅OH).",
+        almost: `Pour ${fmtMl("c2h5oh")} ml Ethanol (C₂H₅OH).`,
       }),
       pourStep("sanitizer-glycerol", {
         title: "Add glycerol",
-        instruction: "Add glycerol so the mix doesn’t dry skin as harshly.",
+        instruction: `Add ${fmtMl("glycerol")} ml glycerol so the mix doesn’t dry skin as harshly.`,
         chemicalIds: ["c2h5oh", "glycerol"],
+        minAmounts: goalMinAmounts("c2h5oh", "glycerol"),
         nudge: "Look for a thick, sweet alcohol (humectant).",
         clue: "Search Inventory for glycerol.",
-        almost: "Pour Glycerol into the same beaker.",
+        almost: `Pour ${fmtMl("glycerol")} ml Glycerol into the same beaker.`,
       }),
       mixUntilStep("sanitizer-mix", {
         title: "Blend the gel",
@@ -388,19 +422,21 @@ export const PRODUCT_GOALS: ProductGoal[] = [
       placeBeakerStep("bath-glass"),
       pourStep("bath-acid", {
         title: "Add citric acid",
-        instruction: "Add citric acid — the sour half of the fizz.",
+        instruction: `Add ${fmtMl("citric-acid")} ml citric acid — the sour half of the fizz.`,
         chemicalIds: ["citric-acid"],
+        minAmounts: goalMinAmounts("citric-acid"),
         nudge: "Bath bombs use a food acid.",
         clue: "Search citric acid.",
-        almost: "Pour Citric Acid.",
+        almost: `Pour ${fmtMl("citric-acid")} ml Citric Acid.`,
       }),
       pourStep("bath-soda", {
         title: "Add baking soda",
-        instruction: "Add sodium bicarbonate (baking soda).",
+        instruction: `Add ${fmtMl("nahco3")} ml sodium bicarbonate (baking soda).`,
         chemicalIds: ["citric-acid", "nahco3"],
+        minAmounts: goalMinAmounts("citric-acid", "nahco3"),
         nudge: "The other half is a bicarbonate.",
         clue: "Look for NaHCO₃.",
-        almost: "Pour Sodium Bicarbonate.",
+        almost: `Pour ${fmtMl("nahco3")} ml Sodium Bicarbonate.`,
       }),
       mixUntilStep("bath-mix", {
         title: "Trigger the fizz",
@@ -429,19 +465,21 @@ export const PRODUCT_GOALS: ProductGoal[] = [
       placeBeakerStep("oxygen-glass"),
       pourStep("oxygen-peroxide", {
         title: "Add peroxide",
-        instruction: "Pour hydrogen peroxide into the beaker.",
+        instruction: `Pour ${fmtMl("h2o2")} ml hydrogen peroxide into the beaker.`,
         chemicalIds: ["h2o2"],
+        minAmounts: goalMinAmounts("h2o2"),
         nudge: "Start with H₂O₂.",
         clue: "Oxidizers → Hydrogen Peroxide.",
-        almost: "Pour Hydrogen Peroxide.",
+        almost: `Pour ${fmtMl("h2o2")} ml Hydrogen Peroxide.`,
       }),
       pourStep("oxygen-catalyst", {
         title: "Add the catalyst",
-        instruction: "Add manganese dioxide — it speeds the breakdown.",
+        instruction: `Add ${fmtMl("mno2")} ml manganese dioxide — it speeds the breakdown.`,
         chemicalIds: ["h2o2", "mno2"],
+        minAmounts: goalMinAmounts("h2o2", "mno2"),
         nudge: "You need a black oxide catalyst.",
         clue: "Search MnO₂.",
-        almost: "Pour Manganese Dioxide.",
+        almost: `Pour ${fmtMl("mno2")} ml Manganese Dioxide.`,
       }),
       mixUntilStep("oxygen-mix", {
         title: "Release oxygen",
@@ -470,19 +508,21 @@ export const PRODUCT_GOALS: ProductGoal[] = [
       placeBeakerStep("lime-glass"),
       pourStep("lime-oxide", {
         title: "Add quicklime",
-        instruction: "Add calcium oxide (quicklime).",
+        instruction: `Add ${fmtMl("cao")} ml calcium oxide (quicklime).`,
         chemicalIds: ["cao"],
+        minAmounts: goalMinAmounts("cao"),
         nudge: "Look for CaO.",
         clue: "Search quicklime or calcium oxide.",
-        almost: "Pour Calcium Oxide.",
+        almost: `Pour ${fmtMl("cao")} ml Calcium Oxide.`,
       }),
       pourStep("lime-water", {
         title: "Add water",
-        instruction: "Pour water to slake the lime.",
+        instruction: `Pour ${fmtMl("h2o")} ml water to slake the lime.`,
         chemicalIds: ["cao", "h2o"],
+        minAmounts: goalMinAmounts("cao", "h2o"),
         nudge: "Slaking needs water.",
         clue: "Add H₂O.",
-        almost: "Pour Water into the beaker.",
+        almost: `Pour ${fmtMl("h2o")} ml Water into the beaker.`,
       }),
       mixUntilStep("lime-mix", {
         title: "Slake into putty",
@@ -511,19 +551,21 @@ export const PRODUCT_GOALS: ProductGoal[] = [
       placeBeakerStep("cleaner-glass"),
       pourStep("cleaner-vinegar", {
         title: "Add vinegar",
-        instruction: "Pour acetic acid (vinegar chemistry).",
+        instruction: `Pour ${fmtMl("ch3cooh")} ml acetic acid (vinegar chemistry).`,
         chemicalIds: ["ch3cooh"],
+        minAmounts: goalMinAmounts("ch3cooh"),
         nudge: "Kitchen acid = acetic acid.",
         clue: "Acids → Acetic Acid.",
-        almost: "Pour Acetic Acid.",
+        almost: `Pour ${fmtMl("ch3cooh")} ml Acetic Acid.`,
       }),
       pourStep("cleaner-salt", {
         title: "Add salt",
-        instruction: "Add sodium chloride.",
+        instruction: `Add ${fmtMl("nacl")} ml sodium chloride.`,
         chemicalIds: ["ch3cooh", "nacl"],
+        minAmounts: goalMinAmounts("ch3cooh", "nacl"),
         nudge: "Table salt finishes the mix.",
         clue: "Pour NaCl.",
-        almost: "Pour Sodium Chloride.",
+        almost: `Pour ${fmtMl("nacl")} ml Sodium Chloride.`,
       }),
       mixUntilStep("cleaner-mix", {
         title: "Blend the cleaner",
@@ -552,22 +594,25 @@ export const PRODUCT_GOALS: ProductGoal[] = [
       placeBeakerStep("balm-glass"),
       pourStep("balm-oil", {
         title: "Add plant oil",
-        instruction: "Pour plant oil as the soft base.",
+        instruction: `Pour ${fmtMl("plant-oil")} ml plant oil as the soft base.`,
         chemicalIds: ["plant-oil"],
+        minAmounts: goalMinAmounts("plant-oil"),
         nudge: "Start with an oil.",
         clue: "Search plant oil.",
-        almost: "Pour Plant Oil.",
+        almost: `Pour ${fmtMl("plant-oil")} ml Plant Oil.`,
       }),
       pourStep("balm-wax", {
         title: "Add beeswax",
-        instruction: "Add beeswax to thicken the mix.",
+        instruction: `Add ${fmtMl("beeswax")} ml beeswax to thicken the mix.`,
         chemicalIds: ["plant-oil", "beeswax"],
+        minAmounts: goalMinAmounts("plant-oil", "beeswax"),
         nudge: "Wax makes a balm, not a liquid oil.",
         clue: "Search beeswax.",
-        almost: "Pour Beeswax.",
+        almost: `Pour ${fmtMl("beeswax")} ml Beeswax.`,
       }),
       heatStep("balm-heat", {
         chemicalIds: ["plant-oil", "beeswax"],
+        minAmounts: goalMinAmounts("plant-oil", "beeswax"),
         title: "Melt the wax",
         instruction: "Heat so the wax melts into the oil.",
       }),
@@ -598,22 +643,25 @@ export const PRODUCT_GOALS: ProductGoal[] = [
       placeBeakerStep("inv-glass"),
       pourStep("inv-acid", {
         title: "Add citric acid",
-        instruction: "Add citric acid (the “lemon juice” stand-in).",
+        instruction: `Add ${fmtMl("citric-acid")} ml citric acid (the “lemon juice” stand-in).`,
         chemicalIds: ["citric-acid"],
+        minAmounts: goalMinAmounts("citric-acid"),
         nudge: "Food acid works as invisible ink.",
         clue: "Search citric acid.",
-        almost: "Pour Citric Acid.",
+        almost: `Pour ${fmtMl("citric-acid")} ml Citric Acid.`,
       }),
       pourStep("inv-water", {
         title: "Add water",
-        instruction: "Dilute with water to make a writing solution.",
+        instruction: `Dilute with ${fmtMl("h2o")} ml water to make a writing solution.`,
         chemicalIds: ["citric-acid", "h2o"],
+        minAmounts: goalMinAmounts("citric-acid", "h2o"),
         nudge: "Ink needs a solvent.",
         clue: "Pour Water.",
-        almost: "Pour H₂O into the beaker.",
+        almost: `Pour ${fmtMl("h2o")} ml H₂O into the beaker.`,
       }),
       heatStep("inv-heat", {
         chemicalIds: ["citric-acid", "h2o"],
+        minAmounts: goalMinAmounts("citric-acid", "h2o"),
         title: "Heat to “reveal”",
         instruction: "Attach heat — the classic reveal step for this demo.",
       }),
@@ -644,19 +692,21 @@ export const PRODUCT_GOALS: ProductGoal[] = [
       placeBeakerStep("slime-glass"),
       pourStep("slime-pva", {
         title: "Add PVA glue",
-        instruction: "Pour PVA (polyvinyl alcohol) glue.",
+        instruction: `Pour ${fmtMl("pva")} ml PVA (polyvinyl alcohol) glue.`,
         chemicalIds: ["pva"],
+        minAmounts: goalMinAmounts("pva"),
         nudge: "Slime starts from white glue / PVA.",
         clue: "Search PVA.",
-        almost: "Pour PVA Glue.",
+        almost: `Pour ${fmtMl("pva")} ml PVA Glue.`,
       }),
       pourStep("slime-borax", {
         title: "Add borax",
-        instruction: "Add borax as the cross-linker.",
+        instruction: `Add ${fmtMl("borax")} ml borax as the cross-linker.`,
         chemicalIds: ["pva", "borax"],
+        minAmounts: goalMinAmounts("pva", "borax"),
         nudge: "You need a borate cross-linker.",
         clue: "Search borax.",
-        almost: "Pour Borax.",
+        almost: `Pour ${fmtMl("borax")} ml Borax.`,
       }),
       mixUntilStep("slime-mix", {
         title: "Cross-link the goo",
@@ -687,19 +737,21 @@ export const PRODUCT_GOALS: ProductGoal[] = [
       placeBeakerStep("salt-glass"),
       pourStep("salt-acid", {
         title: "Add hydrochloric acid",
-        instruction: "Pour HCl into the beaker.",
+        instruction: `Pour ${fmtMl("hcl")} ml HCl into the beaker.`,
         chemicalIds: ["hcl"],
+        minAmounts: goalMinAmounts("hcl"),
         nudge: "Start with a strong acid.",
-        clue: "Pour Hydrochloric Acid.",
-        almost: "Add HCl.",
+        clue: `Pour ${fmtMl("hcl")} ml Hydrochloric Acid.`,
+        almost: `Add ${fmtMl("hcl")} ml HCl.`,
       }),
       pourStep("salt-base", {
         title: "Add sodium hydroxide",
-        instruction: "Add NaOH to neutralize the acid.",
+        instruction: `Add ${fmtMl("naoh")} ml NaOH to neutralize the acid.`,
         chemicalIds: ["hcl", "naoh"],
+        minAmounts: goalMinAmounts("hcl", "naoh"),
         nudge: "Pair it with a strong base.",
-        clue: "Pour NaOH.",
-        almost: "Add Sodium Hydroxide.",
+        clue: `Pour ${fmtMl("naoh")} ml NaOH.`,
+        almost: `Add ${fmtMl("naoh")} ml Sodium Hydroxide.`,
       }),
       mixUntilStep("salt-mix", {
         title: "Neutralize",
@@ -728,19 +780,21 @@ export const PRODUCT_GOALS: ProductGoal[] = [
       placeBeakerStep("agcl-glass"),
       pourStep("agcl-silver", {
         title: "Add silver nitrate",
-        instruction: "Pour AgNO₃ solution.",
+        instruction: `Pour ${fmtMl("agno3")} ml AgNO₃ solution.`,
         chemicalIds: ["agno3"],
+        minAmounts: goalMinAmounts("agno3"),
         nudge: "Start with a silver salt.",
         clue: "Search AgNO₃.",
-        almost: "Pour Silver Nitrate.",
+        almost: `Pour ${fmtMl("agno3")} ml Silver Nitrate.`,
       }),
       pourStep("agcl-chloride", {
         title: "Add chloride",
-        instruction: "Add NaCl so Cl⁻ meets Ag⁺.",
+        instruction: `Add ${fmtMl("nacl")} ml NaCl so Cl⁻ meets Ag⁺.`,
         chemicalIds: ["agno3", "nacl"],
+        minAmounts: goalMinAmounts("agno3", "nacl"),
         nudge: "Need a soluble chloride.",
         clue: "Pour Sodium Chloride.",
-        almost: "Add NaCl.",
+        almost: `Add ${fmtMl("nacl")} ml NaCl.`,
       }),
       mixUntilStep("agcl-mix", {
         title: "Precipitate AgCl",
@@ -769,19 +823,21 @@ export const PRODUCT_GOALS: ProductGoal[] = [
       placeBeakerStep("baso4-glass"),
       pourStep("baso4-ba", {
         title: "Add barium chloride",
-        instruction: "Pour BaCl₂.",
+        instruction: `Pour ${fmtMl("bacl2")} ml BaCl₂.`,
         chemicalIds: ["bacl2"],
+        minAmounts: goalMinAmounts("bacl2"),
         nudge: "Need Ba²⁺.",
         clue: "Search BaCl₂.",
-        almost: "Pour Barium Chloride.",
+        almost: `Pour ${fmtMl("bacl2")} ml Barium Chloride.`,
       }),
       pourStep("baso4-so4", {
         title: "Add a sulfate",
-        instruction: "Add magnesium sulfate (or another soluble sulfate).",
+        instruction: `Add ${fmtMl("mgso4")} ml magnesium sulfate (or another soluble sulfate).`,
         chemicalIds: ["bacl2", "mgso4"],
+        minAmounts: goalMinAmounts("bacl2", "mgso4"),
         nudge: "Pair with SO₄²⁻.",
         clue: "Pour MgSO₄.",
-        almost: "Add Magnesium Sulfate.",
+        almost: `Add ${fmtMl("mgso4")} ml Magnesium Sulfate.`,
       }),
       mixUntilStep("baso4-mix", {
         title: "Precipitate BaSO₄",
@@ -810,19 +866,21 @@ export const PRODUCT_GOALS: ProductGoal[] = [
       placeBeakerStep("agcro4-glass"),
       pourStep("agcro4-ag", {
         title: "Add silver nitrate",
-        instruction: "Pour AgNO₃.",
+        instruction: `Pour ${fmtMl("agno3")} ml AgNO₃.`,
         chemicalIds: ["agno3"],
+        minAmounts: goalMinAmounts("agno3"),
         nudge: "Silver salt first.",
         clue: "Pour Silver Nitrate.",
-        almost: "Add AgNO₃.",
+        almost: `Add ${fmtMl("agno3")} ml AgNO₃.`,
       }),
       pourStep("agcro4-cr", {
         title: "Add chromate",
-        instruction: "Add potassium chromate.",
+        instruction: `Add ${fmtMl("k2cro4")} ml potassium chromate.`,
         chemicalIds: ["agno3", "k2cro4"],
+        minAmounts: goalMinAmounts("agno3", "k2cro4"),
         nudge: "Look for a yellow chromate salt.",
         clue: "Search K₂CrO₄.",
-        almost: "Pour Potassium Chromate.",
+        almost: `Pour ${fmtMl("k2cro4")} ml Potassium Chromate.`,
       }),
       mixUntilStep("agcro4-mix", {
         title: "Precipitate Ag₂CrO₄",
@@ -851,19 +909,21 @@ export const PRODUCT_GOALS: ProductGoal[] = [
       placeBeakerStep("mgoh-glass"),
       pourStep("mgoh-mg", {
         title: "Add magnesium sulfate",
-        instruction: "Pour MgSO₄.",
+        instruction: `Pour ${fmtMl("mgso4")} ml MgSO₄.`,
         chemicalIds: ["mgso4"],
+        minAmounts: goalMinAmounts("mgso4"),
         nudge: "Need Mg²⁺.",
         clue: "Search MgSO₄.",
-        almost: "Pour Magnesium Sulfate.",
+        almost: `Pour ${fmtMl("mgso4")} ml Magnesium Sulfate.`,
       }),
       pourStep("mgoh-oh", {
         title: "Add sodium hydroxide",
-        instruction: "Add NaOH to precipitate the hydroxide.",
+        instruction: `Add ${fmtMl("naoh")} ml NaOH to precipitate the hydroxide.`,
         chemicalIds: ["mgso4", "naoh"],
+        minAmounts: goalMinAmounts("mgso4", "naoh"),
         nudge: "Hydroxide crashes Mg²⁺ out.",
-        clue: "Pour NaOH.",
-        almost: "Add Sodium Hydroxide.",
+        clue: `Pour ${fmtMl("naoh")} ml NaOH.`,
+        almost: `Add ${fmtMl("naoh")} ml Sodium Hydroxide.`,
       }),
       mixUntilStep("mgoh-mix", {
         title: "Form Mg(OH)₂",
@@ -892,19 +952,21 @@ export const PRODUCT_GOALS: ProductGoal[] = [
       placeBeakerStep("h2-glass"),
       pourStep("h2-zn", {
         title: "Add zinc",
-        instruction: "Place zinc metal in the beaker.",
+        instruction: `Add ${fmtMl("zn")} ml zinc metal in the beaker.`,
         chemicalIds: ["zn"],
+        minAmounts: goalMinAmounts("zn"),
         nudge: "Need an active metal.",
         clue: "Metals → Zinc.",
-        almost: "Add Zinc.",
+        almost: `Add ${fmtMl("zn")} ml Zinc.`,
       }),
       pourStep("h2-acid", {
         title: "Add acid",
-        instruction: "Pour HCl onto the zinc.",
+        instruction: `Pour ${fmtMl("hcl")} ml HCl onto the zinc.`,
         chemicalIds: ["zn", "hcl"],
+        minAmounts: goalMinAmounts("zn", "hcl"),
         nudge: "Acid frees hydrogen.",
-        clue: "Pour Hydrochloric Acid.",
-        almost: "Add HCl.",
+        clue: `Pour ${fmtMl("hcl")} ml Hydrochloric Acid.`,
+        almost: `Add ${fmtMl("hcl")} ml HCl.`,
       }),
       mixUntilStep("h2-mix", {
         title: "Release H₂",
@@ -937,19 +999,21 @@ export const PRODUCT_GOALS: ProductGoal[] = [
       placeBeakerStep("cu-glass"),
       pourStep("cu-salt", {
         title: "Add copper sulfate",
-        instruction: "Pour blue CuSO₄ solution.",
+        instruction: `Pour ${fmtMl("cuso4")} ml blue CuSO₄ solution.`,
         chemicalIds: ["cuso4"],
+        minAmounts: goalMinAmounts("cuso4"),
         nudge: "Blue vitriol = CuSO₄.",
         clue: "Search copper sulfate.",
-        almost: "Pour Copper(II) Sulfate.",
+        almost: `Pour ${fmtMl("cuso4")} ml Copper(II) Sulfate.`,
       }),
       pourStep("cu-zn", {
         title: "Add zinc",
-        instruction: "Add zinc metal to displace copper.",
+        instruction: `Add ${fmtMl("zn")} ml zinc metal to displace copper.`,
         chemicalIds: ["cuso4", "zn"],
+        minAmounts: goalMinAmounts("cuso4", "zn"),
         nudge: "More reactive metal wins.",
         clue: "Add Zinc.",
-        almost: "Pour/add Zinc into the blue solution.",
+        almost: `Add ${fmtMl("zn")} ml Zinc into the blue solution.`,
       }),
       mixUntilStep("cu-mix", {
         title: "Displace copper",
@@ -981,22 +1045,25 @@ export const PRODUCT_GOALS: ProductGoal[] = [
       placeBeakerStep("burn-glass"),
       pourStep("burn-fuel", {
         title: "Add a fuel",
-        instruction: "Add methane (or another listed fuel).",
+        instruction: `Add ${fmtMl("ch4")} ml methane (or another listed fuel).`,
         chemicalIds: ["ch4"],
+        minAmounts: goalMinAmounts("ch4"),
         nudge: "Need something flammable.",
         clue: "Gases → Methane.",
-        almost: "Add Methane (CH₄).",
+        almost: `Add ${fmtMl("ch4")} ml Methane (CH₄).`,
       }),
       pourStep("burn-o2", {
         title: "Add oxygen",
-        instruction: "Add O₂ as the oxidizer.",
+        instruction: `Add ${fmtMl("o2")} ml O₂ as the oxidizer.`,
         chemicalIds: ["ch4", "o2"],
+        minAmounts: goalMinAmounts("ch4", "o2"),
         nudge: "Fire needs oxygen.",
         clue: "Add Oxygen gas.",
-        almost: "Pour O₂.",
+        almost: `Pour ${fmtMl("o2")} ml O₂.`,
       }),
       heatStep("burn-heat", {
         chemicalIds: ["ch4", "o2"],
+        minAmounts: goalMinAmounts("ch4", "o2"),
         title: "Ignite",
         instruction: "Attach a Bunsen burner to ignite the mix.",
       }),
@@ -1027,19 +1094,21 @@ export const PRODUCT_GOALS: ProductGoal[] = [
       placeBeakerStep("lw-glass"),
       pourStep("lw-lime", {
         title: "Add limewater",
-        instruction: "Pour calcium hydroxide (limewater).",
+        instruction: `Pour ${fmtMl("caoh2")} ml calcium hydroxide (limewater).`,
         chemicalIds: ["caoh2"],
+        minAmounts: goalMinAmounts("caoh2"),
         nudge: "Limewater is Ca(OH)₂(aq).",
         clue: "Bases → Calcium Hydroxide.",
-        almost: "Pour Calcium Hydroxide.",
+        almost: `Pour ${fmtMl("caoh2")} ml Calcium Hydroxide.`,
       }),
       pourStep("lw-co2", {
         title: "Add carbon dioxide",
-        instruction: "Add CO₂ gas to the limewater.",
+        instruction: `Add ${fmtMl("co2")} ml CO₂ gas to the limewater.`,
         chemicalIds: ["caoh2", "co2"],
+        minAmounts: goalMinAmounts("caoh2", "co2"),
         nudge: "The gas under test is CO₂.",
         clue: "Add Carbon Dioxide.",
-        almost: "Pour CO₂ into the beaker.",
+        almost: `Pour ${fmtMl("co2")} ml CO₂ into the beaker.`,
       }),
       mixUntilStep("lw-mix", {
         title: "Turn it milky",

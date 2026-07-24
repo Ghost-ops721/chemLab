@@ -88,6 +88,7 @@ export type SanitizedInvention = {
     snapshot: {
       equipmentId: string;
       contentIds: string[];
+      contents?: { chemicalId: string; amountMl: number }[];
       heatAttached: boolean;
       coolAttached: boolean;
       stirLevel: number;
@@ -123,6 +124,26 @@ export function sanitizeInventionsInput(
       const contentIds = snap.contentIds
         .filter((id): id is string => typeof id === "string")
         .slice(0, MAX_CONTENT_IDS);
+      const contentsRaw = Array.isArray(snap.contents) ? snap.contents : [];
+      const contents = contentsRaw
+        .filter(
+          (c): c is { chemicalId: string; amountMl: number } =>
+            Boolean(
+              c &&
+                typeof c === "object" &&
+                typeof (c as { chemicalId?: unknown }).chemicalId ===
+                  "string" &&
+                typeof (c as { amountMl?: unknown }).amountMl === "number",
+            ),
+        )
+        .slice(0, MAX_CONTENT_IDS)
+        .map((c) => ({
+          chemicalId: String(c.chemicalId).slice(0, 64),
+          amountMl: Math.max(
+            0,
+            Math.min(500, Math.round(Number(c.amountMl) * 100) / 100),
+          ),
+        }));
       const score =
         typeof ver.score === "number" && Number.isFinite(ver.score)
           ? Math.max(0, Math.min(100, Math.floor(ver.score)))
@@ -143,6 +164,7 @@ export function sanitizeInventionsInput(
         snapshot: {
           equipmentId: snap.equipmentId.slice(0, 40),
           contentIds,
+          ...(contents.length ? { contents } : {}),
           heatAttached: Boolean(snap.heatAttached),
           coolAttached: Boolean(snap.coolAttached),
           stirLevel:

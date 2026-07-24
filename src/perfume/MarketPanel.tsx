@@ -43,6 +43,12 @@ function FormulaRow({
           <p className="truncate text-[10px] text-lab-muted">
             by {formula.authorName}
             {formula.scentVerdict ? ` · ${formula.scentVerdict}` : ""}
+            {formula.contents?.length
+              ? ` · ${formula.contents
+                  .slice(0, 3)
+                  .map((c) => `${c.amountMl} ml`)
+                  .join(", ")}${formula.contents.length > 3 ? "…" : ""}`
+              : ""}
           </p>
           {formula.scentSummary ? (
             <p className="mt-0.5 line-clamp-2 text-[11px] leading-snug text-lab-ink/80">

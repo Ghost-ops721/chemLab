@@ -18,6 +18,8 @@ import {
   type PerfumeRecipe,
 } from "./types";
 import { getChemical } from "@/domains/chemistry/data/chemicals";
+import { defaultPourMl } from "@/desk/vesselContents";
+import type { VesselContent } from "@/types";
 
 function chemIdsForNotes(noteIds: string[]): string[] {
   return noteIds
@@ -29,6 +31,28 @@ function chemName(id: string) {
   return getChemical(id)?.name ?? id;
 }
 
+function minAmountsFrom(contents: VesselContent[], ids: string[]): Record<string, number> {
+  const map = Object.fromEntries(contents.map((c) => [c.chemicalId, c.amountMl]));
+  const out: Record<string, number> = {};
+  for (const id of ids) {
+    out[id] = map[id] ?? defaultPourMl(id);
+  }
+  return out;
+}
+
+function fmtMl(id: string, recipe?: PerfumeRecipe): string {
+  const fromRecipe = recipe?.targetContents.find((c) => c.chemicalId === id)?.amountMl;
+  const n = fromRecipe ?? defaultPourMl(id);
+  return Number.isInteger(n) ? String(n) : n.toFixed(1);
+}
+
+function amountsLine(recipe: PerfumeRecipe, ids: string[]): string {
+  return ids
+    .map((id) => `${fmtMl(id, recipe)} ml ${chemName(id)}`)
+    .join(", ");
+}
+
+
 function mixPred(recipeId: string) {
   return (r: { ok: boolean; explanationKey?: string }) =>
     Boolean(r.ok && r.explanationKey === `product-perfume:${recipeId}`);
@@ -38,25 +62,30 @@ function formulaCheckStep(
   recipe: PerfumeRecipe,
   required: string[],
 ): GoalStep {
+  const mins = minAmountsFrom(recipe.targetContents, required);
   return {
     id: `${recipe.id}-ready`,
     title: "Formula check",
-    instruction: "Confirm every signature ingredient is in one vessel.",
+    instruction: `Confirm every signature ingredient meets the recipe volumes: ${amountsLine(recipe, required)}.`,
     hints: [
       {
         tier: "nudge",
-        text: "Compare your beaker to the recipe formula.",
+        text: "Compare your beaker to the recipe formula (ml matters).",
       },
       {
         tier: "clue",
-        text: `Need: ${required.map(chemName).join(", ")}.`,
+        text: `Need: ${amountsLine(recipe, required)}.`,
       },
       {
         tier: "almost",
-        text: "All required chemicals should already be poured — continue.",
+        text: "All required chemicals at target ml should already be poured — continue.",
       },
     ],
-    check: (s) => vesselHas(s, required),
+    targetAmounts: required.map((chemicalId) => ({
+      chemicalId,
+      amountMl: mins[chemicalId]!,
+    })),
+    check: (s) => vesselHas(s, required, { minAmounts: mins }),
   };
 }
 
@@ -81,11 +110,12 @@ function buildEasy(recipe: PerfumeRecipe, signatures: string[]): GoalStep[] {
     pourStep(`${recipe.id}-solvent`, {
       title: "Add the carrier",
       instruction:
-        "Pour ethanol — the alcohol that carries the scent and evaporates on skin.",
+        `Pour ${fmtMl("c2h5oh", recipe)} ml ethanol — the alcohol that carries the scent and evaporates on skin.`,
       chemicalIds: ["c2h5oh"],
+        minAmounts: minAmountsFrom(recipe.targetContents, ["c2h5oh"]),
       nudge: "Think of a solvent that evaporates on skin.",
       clue: "Look under organics / alcohols for Ethanol.",
-      almost: "Pour Ethanol (C₂H₅OH) into the beaker.",
+      almost: `Pour ${fmtMl("c2h5oh", recipe)} ml Ethanol (C₂H₅OH) into the beaker.`,
     }),
   ];
 
@@ -95,11 +125,12 @@ function buildEasy(recipe: PerfumeRecipe, signatures: string[]): GoalStep[] {
     steps.push(
       pourStep(`${recipe.id}-sig-${chemId}`, {
         title: `Add ${roleHint}: ${chemName(chemId)}`,
-        instruction: `Pour ${chemName(chemId)} — a signature ${roleHint} for ${recipe.displayName}.`,
+        instruction: `Pour ${fmtMl(chemId, recipe)} ml ${chemName(chemId)} — a signature ${roleHint} for ${recipe.displayName}.`,
         chemicalIds: ["c2h5oh", ...signatures.slice(0, i + 1)],
+        minAmounts: minAmountsFrom(recipe.targetContents, ["c2h5oh", ...signatures.slice(0, i + 1)]),
         nudge: `Find the next scent oil for this ${roleHint} note.`,
         clue: `Search Inventory for ${chemName(chemId)}.`,
-        almost: `Pour ${chemName(chemId)} into the beaker.`,
+        almost: `Pour ${fmtMl(chemId, recipe)} ml ${chemName(chemId)} into the beaker.`,
       }),
     );
   });
@@ -126,11 +157,12 @@ function buildMedium(recipe: PerfumeRecipe, signatures: string[]): GoalStep[] {
     placeBeakerStep(`${recipe.id}-glass`),
     pourStep(`${recipe.id}-solvent`, {
       title: "Add the carrier",
-      instruction: "Pour ethanol as your perfume base.",
+      instruction: `Pour ${fmtMl("c2h5oh", recipe)} ml ethanol as your perfume base.`,
       chemicalIds: ["c2h5oh"],
+        minAmounts: minAmountsFrom(recipe.targetContents, ["c2h5oh"]),
       nudge: "Start with the carrier alcohol.",
       clue: "Inventory → Ethanol.",
-      almost: "Pour Ethanol into the beaker.",
+      almost: `Pour ${fmtMl("c2h5oh", recipe)} ml Ethanol into the beaker.`,
     }),
     stirStep(`${recipe.id}-stir-carrier`, {
       chemicalIds: ["c2h5oh"],
@@ -147,11 +179,12 @@ function buildMedium(recipe: PerfumeRecipe, signatures: string[]): GoalStep[] {
     steps.push(
       pourStep(`${recipe.id}-sig-${chemId}`, {
         title: `Add ${roleHint}: ${chemName(chemId)}`,
-        instruction: `Pour ${chemName(chemId)} for the ${roleHint} of ${recipe.displayName}.`,
+        instruction: `Pour ${fmtMl(chemId, recipe)} ml ${chemName(chemId)} for the ${roleHint} of ${recipe.displayName}.`,
         chemicalIds: soFar,
+        minAmounts: minAmountsFrom(recipe.targetContents, soFar),
         nudge: `Next ${roleHint} oil.`,
         clue: `Search for ${chemName(chemId)}.`,
-        almost: `Pour ${chemName(chemId)}.`,
+        almost: `Pour ${fmtMl(chemId, recipe)} ml ${chemName(chemId)}.`,
       }),
       stirStep(`${recipe.id}-stir-${chemId}`, {
         chemicalIds: soFar,
@@ -203,19 +236,21 @@ function buildHard(recipe: PerfumeRecipe, signatures: string[]): GoalStep[] {
     }),
     pourStep(`${recipe.id}-solvent-a`, {
       title: "Ethanol in A",
-      instruction: "Pour ethanol into beaker A.",
+      instruction: `Pour ${fmtMl("c2h5oh", recipe)} ml ethanol into beaker A.`,
       chemicalIds: ["c2h5oh"],
+        minAmounts: minAmountsFrom(recipe.targetContents, ["c2h5oh"]),
       nudge: "Carrier goes in the first beaker.",
-      clue: "Pour Ethanol into one beaker.",
-      almost: "Beaker A should contain Ethanol.",
+      clue: `Pour ${fmtMl("c2h5oh", recipe)} ml Ethanol into one beaker.`,
+      almost: `Beaker A should contain ${fmtMl("c2h5oh", recipe)} ml Ethanol.`,
     }),
     pourStep(`${recipe.id}-top-a`, {
       title: `Top in A: ${chemName(top!)}`,
-      instruction: `Add ${chemName(top!)} to the ethanol in A.`,
+      instruction: `Add ${fmtMl(top!, recipe)} ml ${chemName(top!)} to the ethanol in A.`,
       chemicalIds: topAccord,
+        minAmounts: minAmountsFrom(recipe.targetContents, topAccord),
       nudge: "Top notes dissolve in alcohol first.",
-      clue: `Pour ${chemName(top!)} into the ethanol beaker.`,
-      almost: `A holds Ethanol + ${chemName(top!)}.`,
+      clue: `Pour ${fmtMl(top!, recipe)} ml ${chemName(top!)} into the ethanol beaker.`,
+      almost: `A holds Ethanol + ${fmtMl(top!, recipe)} ml ${chemName(top!)}.`,
     }),
     stirStep(`${recipe.id}-stir-a`, {
       chemicalIds: topAccord,
@@ -225,8 +260,9 @@ function buildHard(recipe: PerfumeRecipe, signatures: string[]): GoalStep[] {
     }),
     pourStep(`${recipe.id}-heart-b`, {
       title: `Heart in B: ${chemName(heart)}`,
-      instruction: `Pour ${chemName(heart)} into the empty second beaker.`,
+      instruction: `Pour ${fmtMl(heart, recipe)} ml ${chemName(heart)} into the empty second beaker.`,
       chemicalIds: heartSolo,
+        minAmounts: minAmountsFrom(recipe.targetContents, heartSolo),
       nudge: "Heart notes start in their own vessel.",
       clue: `Pour ${chemName(heart)} into beaker B (not A).`,
       almost: `B contains ${chemName(heart)}.`,
@@ -256,15 +292,19 @@ function buildHard(recipe: PerfumeRecipe, signatures: string[]): GoalStep[] {
           text: `One vessel must hold ${combinedTopHeart.map(chemName).join(" + ")}.`,
         },
       ],
-      check: (s) => vesselHas(s, combinedTopHeart),
+      check: (s) =>
+        vesselHas(s, combinedTopHeart, {
+          minAmounts: minAmountsFrom(recipe.targetContents, combinedTopHeart),
+        }),
     },
     pourStep(`${recipe.id}-base`, {
       title: `Add base: ${chemName(base)}`,
-      instruction: `Pour ${chemName(base)} into the combined vessel.`,
+      instruction: `Pour ${fmtMl(base, recipe)} ml ${chemName(base)} into the combined vessel.`,
       chemicalIds: full,
+        minAmounts: minAmountsFrom(recipe.targetContents, full),
       nudge: "Base notes finish the pyramid.",
       clue: `Search for ${chemName(base)}.`,
-      almost: `Pour ${chemName(base)} into the combined beaker.`,
+      almost: `Pour ${fmtMl(base, recipe)} ml ${chemName(base)} into the combined beaker.`,
     }),
     stirStep(`${recipe.id}-stir-full`, {
       chemicalIds: full,
@@ -312,7 +352,10 @@ function buildHard(recipe: PerfumeRecipe, signatures: string[]): GoalStep[] {
         { tier: "clue", text: recipe.brandLabel },
         { tier: "almost", text: "Formula still in one vessel — continue to Mix." },
       ],
-      check: (s) => vesselHas(s, full),
+      check: (s) =>
+        vesselHas(s, full, {
+          minAmounts: minAmountsFrom(recipe.targetContents, full),
+        }),
     },
     blendMixStep(recipe),
   ];
@@ -350,11 +393,12 @@ function buildVeryHard(
     }),
     pourStep(`${recipe.id}-vh-etoh`, {
       title: "Charge beaker with ethanol",
-      instruction: "Pour ethanol into the beaker only.",
+      instruction: `Pour ${fmtMl("c2h5oh", recipe)} ml ethanol into the beaker only.`,
       chemicalIds: ["c2h5oh"],
+        minAmounts: minAmountsFrom(recipe.targetContents, ["c2h5oh"]),
       nudge: "Carrier first.",
       clue: "Ethanol → beaker.",
-      almost: "Beaker has Ethanol.",
+      almost: `Beaker has ${fmtMl("c2h5oh", recipe)} ml Ethanol.`,
     }),
     stirStep(`${recipe.id}-vh-stir-etoh`, {
       chemicalIds: ["c2h5oh"],
@@ -363,11 +407,12 @@ function buildVeryHard(
     }),
     pourStep(`${recipe.id}-vh-top`, {
       title: `Top concentrate: ${chemName(top)}`,
-      instruction: `Add ${chemName(top)} to the beaker.`,
+      instruction: `Add ${fmtMl(top, recipe)} ml ${chemName(top)} to the beaker.`,
       chemicalIds: topAccord,
+        minAmounts: minAmountsFrom(recipe.targetContents, topAccord),
       nudge: "Build the top accord in the beaker.",
-      clue: `Pour ${chemName(top)}.`,
-      almost: `Beaker: Ethanol + ${chemName(top)}.`,
+      clue: `Pour ${fmtMl(top, recipe)} ml ${chemName(top)}.`,
+      almost: `Beaker: Ethanol + ${fmtMl(top, recipe)} ml ${chemName(top)}.`,
     }),
     stirStep(`${recipe.id}-vh-stir-top`, {
       chemicalIds: topAccord,
@@ -377,8 +422,9 @@ function buildVeryHard(
     }),
     pourStep(`${recipe.id}-vh-heart-flask`, {
       title: `Heart in flask: ${chemName(heart)}`,
-      instruction: `Pour ${chemName(heart)} into the Erlenmeyer (not the beaker).`,
+      instruction: `Pour ${fmtMl(heart, recipe)} ml ${chemName(heart)} into the Erlenmeyer (not the beaker).`,
       chemicalIds: heartAccord,
+        minAmounts: minAmountsFrom(recipe.targetContents, heartAccord),
       nudge: "Heart lives in the flask for now.",
       clue: `Target the flask with ${chemName(heart)}.`,
       almost: `Flask contains ${chemName(heart)}.`,
@@ -401,7 +447,10 @@ function buildVeryHard(
           text: `Flask (or one vessel) must hold ${mid.map(chemName).join(" + ")}.`,
         },
       ],
-      check: (s) => vesselHas(s, mid),
+      check: (s) =>
+        vesselHas(s, mid, {
+          minAmounts: minAmountsFrom(recipe.targetContents, mid),
+        }),
     },
     stirStep(`${recipe.id}-vh-stir-mid`, {
       chemicalIds: mid,
@@ -411,10 +460,11 @@ function buildVeryHard(
     }),
     pourStep(`${recipe.id}-vh-base`, {
       title: `Base: ${chemName(base)}`,
-      instruction: `Add ${chemName(base)} to the combined vessel.`,
+      instruction: `Add ${fmtMl(base, recipe)} ml ${chemName(base)} to the combined vessel.`,
       chemicalIds: full,
+        minAmounts: minAmountsFrom(recipe.targetContents, full),
       nudge: "Base / resin last.",
-      clue: `Pour ${chemName(base)}.`,
+      clue: `Pour ${fmtMl(base, recipe)} ml ${chemName(base)}.`,
       almost: `Full formula in one vessel.`,
     }),
     stirStep(`${recipe.id}-vh-stir-base`, {
@@ -467,7 +517,10 @@ function buildVeryHard(
           text: "Continue when the full formula is still in one vessel.",
         },
       ],
-      check: (s) => vesselHas(s, full),
+      check: (s) =>
+        vesselHas(s, full, {
+          minAmounts: minAmountsFrom(recipe.targetContents, full),
+        }),
     },
     {
       id: `${recipe.id}-vh-capacity`,
@@ -525,7 +578,10 @@ function buildVeryHard(
           text: requiredList(full),
         },
       ],
-      check: (s) => vesselHas(s, full),
+      check: (s) =>
+        vesselHas(s, full, {
+          minAmounts: minAmountsFrom(recipe.targetContents, full),
+        }),
     },
     {
       id: `${recipe.id}-vh-inventory`,
@@ -537,7 +593,10 @@ function buildVeryHard(
         { tier: "clue", text: "You already poured what you need." },
         { tier: "almost", text: "Proceed if the vessel still has the formula." },
       ],
-      check: (s) => vesselHas(s, full),
+      check: (s) =>
+        vesselHas(s, full, {
+          minAmounts: minAmountsFrom(recipe.targetContents, full),
+        }),
     },
     stirStep(`${recipe.id}-vh-final-stir`, {
       chemicalIds: full,

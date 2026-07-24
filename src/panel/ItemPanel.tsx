@@ -18,6 +18,9 @@ import {
   totalMl,
 } from "@/desk/vesselContents";
 import { isOilItem } from "@/domains/chemistry/perfume/oilMeta";
+import { useInventoryStockStore } from "@/store/inventoryStockStore";
+import { formatAmount } from "@/desk/unitDisplay";
+import { useUnitPrefStore } from "@/store/unitPrefStore";
 
 type BrowseKind = "equipment" | "chemicals" | "oils";
 
@@ -44,13 +47,35 @@ export function ItemPanel({
   const stirVessel = useDeskStore((s) => s.stirVessel);
   const pourAmountMl = useDeskStore((s) => s.pourAmountMl);
   const setPourAmountMl = useDeskStore((s) => s.setPourAmountMl);
+  const stockMap = useInventoryStockStore((s) => s.stockMlByChemicalId);
+  const restockAll = useInventoryStockStore((s) => s.restockAll);
+  const stockMl = useInventoryStockStore((s) => s.stockMl);
+  const unit = useUnitPrefStore((s) => s.unit);
+  const cycleUnit = useUnitPrefStore((s) => s.cycleUnit);
 
   const activeGoalId = useGoalStore((s) => s.activeGoalId);
+  const completedStepIds = useGoalStore((s) => s.completedStepIds);
   const goal = activeGoalId ? getGoal(activeGoalId) : undefined;
   const highlightIds = useMemo(
     () => new Set(goal?.highlightItemIds ?? []),
     [goal],
   );
+
+  const currentGoalStep = useMemo(() => {
+    if (!goal) return undefined;
+    return goal.steps.find((s) => !completedStepIds.includes(s.id));
+  }, [goal, completedStepIds]);
+
+  // Suggest pour amount when the active step has a target for a highlighted chem
+  useEffect(() => {
+    if (!currentGoalStep?.targetAmounts?.length) return;
+    // Prefer the last-listed target (usually the newly added chemical)
+    const targets = currentGoalStep.targetAmounts;
+    const newest = targets[targets.length - 1];
+    if (!newest) return;
+    setPourAmountMl(newest.amountMl);
+  }, [currentGoalStep?.id, setPourAmountMl]);
+
 
   const items = getAllItems("chemistry");
   const equipment = getAllEquipment("chemistry");
@@ -215,7 +240,32 @@ export function ItemPanel({
           >
             ml each +
           </span>
+          <button
+            type="button"
+            onClick={() => cycleUnit()}
+            className={`ml-auto rounded border border-lab-line/50 px-1 py-0.5 text-lab-muted hover:border-lab-teal/40 hover:text-lab-ink ${
+              compact ? "text-[8px]" : "text-[9px]"
+            }`}
+            title="Cycle display units"
+          >
+            {unit}
+          </button>
         </label>
+        <button
+          type="button"
+          onClick={() => {
+            restockAll();
+            showToast({
+              title: "Bottles refilled",
+              detail: "Inventory stock restored.",
+            });
+          }}
+          className={`w-full rounded border border-dashed border-lab-line/70 text-lab-muted transition hover:border-lab-teal/40 hover:text-lab-ink ${
+            compact ? "py-0.5 text-[9px]" : "py-1 text-[10px]"
+          }`}
+        >
+          Refill bottles
+        </button>
       </div>
     );
   }
@@ -230,6 +280,14 @@ export function ItemPanel({
       return;
     }
     const beforeBlocked = useAuthStore.getState().isLabBlocked();
+    const have = stockMl(id);
+    if (have + 0.05 < pourAmountMl) {
+      showToast({
+        title: "Bottle empty",
+        detail: `Only ${have.toFixed(1)} ml left — refill bottles.`,
+      });
+      return;
+    }
     const ok = addChemicalToVessel(targetVessel.instanceId, id);
     if (!ok) {
       showToast(
@@ -402,12 +460,13 @@ export function ItemPanel({
       <>
         {sidebarList.map((item) => {
           const chem = getChemical(item.id);
+          const left = stockMap[item.id] ?? stockMl(item.id);
           return (
             <DraggableItem
               key={item.id}
               item={item}
               payload={{ type: "chemical", itemId: item.id }}
-              subtitle={chem?.formula ?? item.subcategory}
+              subtitle={`${chem?.formula ?? item.subcategory} · ${formatAmount(item.id, left, unit)} left`}
               accentColor={chem?.color}
               onQuickAdd={() => quickChemical(item.id)}
               hint={
@@ -578,7 +637,13 @@ export function ItemPanel({
                                 {chem?.formula ?? item.name}
                               </span>
                               <span className="block truncate text-[10px] leading-tight text-lab-muted">
-                                {item.name}
+                                {item.name} ·{" "}
+                                {formatAmount(
+                                  item.id,
+                                  stockMap[item.id] ?? stockMl(item.id),
+                                  unit,
+                                )}{" "}
+                                left
                               </span>
                             </span>
                           </button>

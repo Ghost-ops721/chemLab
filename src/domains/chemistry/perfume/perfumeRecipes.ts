@@ -5,6 +5,8 @@ import type {
   GoalDifficulty,
 } from "./types";
 import { DIFFICULTY_REWARDS } from "./types";
+import { defaultPourMl } from "@/desk/vesselContents";
+import type { VesselContent } from "@/types";
 
 type RecipeInput = {
   id: string;
@@ -85,10 +87,18 @@ const RECIPE_DIFFICULTY: Record<string, GoalDifficulty> = {
   "inspired-nishanehacivat": "very-hard",
 };
 
+function targetContentsFor(required: string[]): VesselContent[] {
+  return required.map((chemicalId) => ({
+    chemicalId,
+    amountMl: defaultPourMl(chemicalId),
+  }));
+}
+
 function r(input: RecipeInput): PerfumeRecipe {
   const shortId = input.id.replace(/^inspired-/, "");
   const difficulty = RECIPE_DIFFICULTY[input.id] ?? "medium";
   const rewards = DIFFICULTY_REWARDS[difficulty];
+  const requiredChemicalIds = ["c2h5oh", ...input.signature];
   return {
     id: input.id,
     displayName: input.displayName,
@@ -101,7 +111,8 @@ function r(input: RecipeInput): PerfumeRecipe {
       base: input.base,
       ...(input.fixative ? { fixative: input.fixative } : {}),
     },
-    requiredChemicalIds: ["c2h5oh", ...input.signature],
+    requiredChemicalIds,
+    targetContents: targetContentsFor(requiredChemicalIds),
     difficulty,
     xpReward: rewards.xp,
     starReward: rewards.stars,

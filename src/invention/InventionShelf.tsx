@@ -245,6 +245,7 @@ export function InventionShelf() {
     const id = loadFormula({
       equipmentId: latest.snapshot.equipmentId || "beaker",
       contentIds: latest.snapshot.contentIds,
+      contents: latest.snapshot.contents,
       heatAttached: latest.snapshot.heatAttached,
       coolAttached: latest.snapshot.coolAttached,
       stirLevel: latest.snapshot.stirLevel,

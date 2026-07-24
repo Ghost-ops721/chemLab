@@ -18,6 +18,8 @@ import {
   syncVesselContents,
   transferContents,
 } from "@/desk/vesselContents";
+import { useInventoryStockStore, defaultStockMl } from "@/store/inventoryStockStore";
+import { showToast } from "@/gamification/ToastHost";
 
 if (typeof window !== "undefined") {
   try {
@@ -45,6 +47,7 @@ interface DeskState {
     vesselId: string,
     chemicalId: string,
     amountMl?: number,
+    opts?: { consumeStock?: boolean },
   ) => boolean;
   setChemicalAmount: (
     vesselId: string,
@@ -220,13 +223,26 @@ export const useDeskStore = create<DeskState>()(
         }));
       },
 
-      addChemicalToVessel: (vesselId, chemicalId, amountMl) => {
+      addChemicalToVessel: (vesselId, chemicalId, amountMl, opts) => {
         if (!assertLabActionAllowed()) return false;
 
         let added = false;
         const color = getChemical(chemicalId)?.color;
         const pour =
           amountMl ?? get().pourAmountMl ?? defaultPourMl(chemicalId);
+        const consumeStock = opts?.consumeStock !== false;
+
+        if (consumeStock) {
+          const stock = useInventoryStockStore.getState();
+          if (!stock.tryConsume(chemicalId, pour)) {
+            showToast({
+              title: "Bottle empty",
+              detail: `Not enough ${getChemical(chemicalId)?.name ?? chemicalId} — refill bottles.`,
+            });
+            return false;
+          }
+        }
+
         set((s) => ({
           vessels: s.vessels.map((v) => {
             if (v.instanceId !== vesselId) return v;
@@ -248,14 +264,29 @@ export const useDeskStore = create<DeskState>()(
           }),
           activeVesselId: vesselId,
         }));
-        if (added) {
-          labSound.pour();
-          const auth = useAuthStore.getState();
-          if (!auth.user) {
-            auth.recordGuestChemicalAdd();
+        if (!added) {
+          if (consumeStock) {
+            useInventoryStockStore.setState((s) => ({
+              stockMlByChemicalId: {
+                ...s.stockMlByChemicalId,
+                [chemicalId]:
+                  Math.round(
+                    ((s.stockMlByChemicalId[chemicalId] ??
+                      defaultStockMl(chemicalId)) +
+                      pour) *
+                      100,
+                  ) / 100,
+              },
+            }));
           }
+          return false;
         }
-        return added;
+        labSound.pour();
+        const auth = useAuthStore.getState();
+        if (!auth.user) {
+          auth.recordGuestChemicalAdd();
+        }
+        return true;
       },
 
       setChemicalAmount: (vesselId, chemicalId, amountMl) => {
@@ -513,11 +544,21 @@ export const useDeskStore = create<DeskState>()(
           labSound.hazard();
         } else labSound.mix();
 
+        const nextSynced = result.nextContents
+          ? syncVesselContents(result.nextContents)
+          : null;
+
         set((s) => ({
           vessels: s.vessels.map((v) =>
             v.instanceId === vesselId
               ? withLivePreview({
                   ...v,
+                  ...(nextSynced
+                    ? {
+                        contents: nextSynced.contents,
+                        contentIds: nextSynced.contentIds,
+                      }
+                    : {}),
                   lastResult: result,
                   stirLevel: Math.max(v.stirLevel, 1),
                   fx: patchFx(v.fx, {
@@ -596,11 +637,15 @@ export const useDeskStore = create<DeskState>()(
         if (!id) return null;
         if (contents?.length) {
           for (const c of contents) {
-            get().addChemicalToVessel(id, c.chemicalId, c.amountMl);
+            get().addChemicalToVessel(id, c.chemicalId, c.amountMl, {
+              consumeStock: false,
+            });
           }
         } else {
           for (const chemId of contentIds) {
-            get().addChemicalToVessel(id, chemId);
+            get().addChemicalToVessel(id, chemId, undefined, {
+              consumeStock: false,
+            });
           }
         }
         if (heatAttached) get().attachHeat(id);

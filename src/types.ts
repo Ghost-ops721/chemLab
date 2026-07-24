@@ -66,6 +66,10 @@ export interface EngineResult {
   effects: EngineEffect[];
   explanationKey?: string;
   discoveryId: string;
+  /** Post-mix vessel contents after teaching stoichiometry (when applied). */
+  nextContents?: VesselContent[];
+  /** chemicalId that limited reaction extent */
+  limitingReagentId?: string;
 }
 
 export interface DomainModule {

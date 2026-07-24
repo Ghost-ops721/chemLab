@@ -1,5 +1,6 @@
-import type { DeskVessel, EngineResult } from "@/types";
+import type { DeskVessel, EngineResult, VesselContent } from "@/types";
 import type { GoalVisualKind } from "@/domains/chemistry/data/goals";
+import { getVesselContents } from "@/desk/vesselContents";
 
 /** Product family an invention belongs to */
 export type InventionKind =
@@ -20,6 +21,8 @@ export type MasteryTier = "make" | "refine" | "signature";
 export interface FormulaSnapshot {
   equipmentId: string;
   contentIds: string[];
+  /** Real teaching volumes when captured (preferred over fabricating defaults). */
+  contents?: VesselContent[];
   heatAttached: boolean;
   coolAttached: boolean;
   stirLevel: number;
@@ -64,9 +67,14 @@ export interface InventionScoreResult {
 }
 
 export function snapshotFromVessel(vessel: DeskVessel): FormulaSnapshot {
+  const contents = getVesselContents(vessel).map((c) => ({
+    chemicalId: c.chemicalId,
+    amountMl: c.amountMl,
+  }));
   return {
     equipmentId: vessel.equipmentId,
-    contentIds: [...vessel.contentIds],
+    contentIds: contents.map((c) => c.chemicalId),
+    contents,
     heatAttached: vessel.heatAttached,
     coolAttached: vessel.coolAttached,
     stirLevel: vessel.stirLevel,

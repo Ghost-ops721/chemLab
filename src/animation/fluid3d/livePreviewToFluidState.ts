@@ -5,6 +5,8 @@ import type {
   LiveVesselPreview,
   VesselFx,
 } from "@/types";
+import type { FxIntensities } from "../fxIntensity";
+import { computeFxIntensities } from "../fxIntensity";
 import type {
   FluidImpulse,
   FluidImpulseKind,
@@ -130,6 +132,9 @@ export type FluidVesselInput = Pick<
   fillColorOverride?: string;
   fillPctOverride?: number;
   boiling?: boolean;
+  /** Shared FX intensities (preferred); computed from fx+now when omitted */
+  intensities?: FxIntensities;
+  now?: number;
 };
 
 /**
@@ -164,10 +169,32 @@ export function livePreviewToFluidState(
   const solidFx = effectActive(effects, "solidify");
   const heatFx = effectActive(effects, "heat");
 
-  const viscosityBase = solidFx
-    ? 0.55 + intensityStrength(solidFx.intensity) * 0.4
-    : meltFx
-      ? Math.max(0.05, 0.35 - intensityStrength(meltFx.intensity) * 0.25)
+  const now = vessel.now ?? Date.now();
+  const intensities =
+    vessel.intensities ??
+    computeFxIntensities({
+      fx: vessel.fx,
+      effects,
+      now,
+      heatAttached: Boolean(vessel.heatAttached),
+      coolAttached: Boolean(vessel.coolAttached),
+      boiling: boilFx,
+    });
+
+  // Ease viscosity / freeze from shared solidify / melt intensities
+  const solidAmt = Math.max(
+    intensities.solidify,
+    solidFx ? intensityStrength(solidFx.intensity) : 0,
+  );
+  const meltAmt = Math.max(
+    intensities.melt,
+    meltFx ? intensityStrength(meltFx.intensity) : 0,
+  );
+  const freeze = Math.max(0, solidAmt - meltAmt * 0.9);
+  const viscosityBase = freeze > 0.05
+    ? 0.45 + freeze * 0.5
+    : meltAmt > 0.05
+      ? Math.max(0.05, 0.32 - meltAmt * 0.22)
       : 0.18;
 
   const temperature = Math.min(
@@ -176,8 +203,10 @@ export function livePreviewToFluidState(
       0,
       (vessel.heatAttached ? 0.55 : 0) +
         (heatFx ? intensityStrength(heatFx.intensity) * 0.45 : 0) +
-        (boilFx ? 0.35 : 0) -
-        (vessel.coolAttached ? 0.45 : 0),
+        (boilFx || intensities.boil > 0.3 ? 0.35 : 0) +
+        intensities.heat * 0.2 -
+        (vessel.coolAttached ? 0.45 : 0) -
+        intensities.cool * 0.15,
     ),
   );
 
@@ -185,6 +214,15 @@ export function livePreviewToFluidState(
     ...impulsesFromFx(vessel.fx),
     ...impulsesFromEffects(effects, vessel.fx?.mixAt ?? vessel.fx?.heatFlashAt),
   ];
+
+  // Align pour impulse to stream phase when transferring
+  if (intensities.pourPhase === "stream" && vessel.fx?.transferAt) {
+    const existing = impulses.find((i) => i.kind === "pour");
+    if (existing) {
+      existing.strength = Math.max(existing.strength, 0.95);
+      existing.at = vessel.fx.transferAt + 620;
+    }
+  }
 
   return {
     fill: Math.max(0, Math.min(100, fill)),
@@ -195,9 +233,9 @@ export function livePreviewToFluidState(
     temperature,
     impulses,
     fillColor: fillColor === "transparent" ? "#8fc0b5" : fillColor,
-    boil: boilFx,
-    bubble: bubbleFx || boilFx,
-    melt: meltFx ? intensityStrength(meltFx.intensity) : 0,
-    solidify: solidFx ? intensityStrength(solidFx.intensity) : 0,
+    boil: boilFx || intensities.boil > 0.35,
+    bubble: bubbleFx || boilFx || intensities.boil > 0.35,
+    melt: meltAmt,
+    solidify: freeze,
   };
 }

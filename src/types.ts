@@ -90,8 +90,10 @@ export interface VesselFx {
   coolFlashAt?: number;
   /** Last poured chemical color for splash tint */
   pourColor?: string;
-  /** Optional desk-local origin of a pour stream */
+  /** Optional desk-local origin of a pour stream (lip at transfer start) */
   pourFrom?: { x: number; y: number };
+  /** Source fill % stamped at transfer start (drain animation while store is empty) */
+  sourceFillPct?: number;
   /** Vessel→vessel transfer window */
   transferAt?: number;
   transferFromId?: string;

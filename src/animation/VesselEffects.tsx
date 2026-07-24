@@ -1,10 +1,11 @@
 "use client";
 
-import { useEffect, type CSSProperties } from "react";
+import { useEffect, useRef, type CSSProperties } from "react";
 import type { EngineResult, VesselFx } from "@/types";
 import { labSound } from "@/desk/labSound";
+import { computeFxIntensities } from "./fxIntensity";
 import { resolveGlassShape } from "./glassware/shapes";
-import { fxAlive, useFxClock } from "./useFxClock";
+import { useFxClock, usePrefersReducedMotion } from "./useFxClock";
 
 /** Keep tip inside the well: smaller swing for narrow glassware. */
 const STIR_SWING_DEG: Record<string, number> = {
@@ -34,6 +35,8 @@ interface Props {
   fillColor?: string;
   boiling?: boolean;
   equipmentId?: string;
+  /** When WebGL liquid is showing, tone down CSS boil DOM bubbles. */
+  fluid3dActive?: boolean;
 }
 
 export function VesselEffects({
@@ -45,20 +48,45 @@ export function VesselEffects({
   fillColor,
   boiling = false,
   equipmentId = "beaker",
+  fluid3dActive = false,
 }: Props) {
+  const reduced = usePrefersReducedMotion();
   const now = useFxClock(
-    [fx?.pourAt, fx?.stirAt, fx?.shakeAt, fx?.mixAt, fx?.heatFlashAt, fx?.coolFlashAt, fx?.transferAt],
-    2400,
+    [
+      fx?.pourAt,
+      fx?.stirAt,
+      fx?.shakeAt,
+      fx?.mixAt,
+      fx?.heatFlashAt,
+      fx?.coolFlashAt,
+      fx?.transferAt,
+    ],
+    3200,
   );
 
-  const pouring = fxAlive(fx?.pourAt, 900, now) || fxAlive(fx?.transferAt, 1100, now);
-  const stirring = fxAlive(fx?.stirAt, 1100, now) || stirLevel > 0;
-  const mixing = fxAlive(fx?.mixAt, 1400, now);
-  const heatFlash = fxAlive(fx?.heatFlashAt, 800, now);
-  const coolFlash = fxAlive(fx?.coolFlashAt, 800, now);
+  const intensities = computeFxIntensities({
+    fx,
+    effects: result?.effects,
+    now,
+    heatAttached: Boolean(heatAttached),
+    coolAttached: Boolean(coolAttached),
+    boiling,
+  });
+
+  const pouring =
+    intensities.pourPhase !== "idle" &&
+    (fx?.transferRole !== "source" || intensities.splash > 0);
   const transferringIn =
-    fxAlive(fx?.transferAt, 1100, now) && fx?.transferRole === "target";
-  const stirActive = fxAlive(fx?.stirAt, 1100, now);
+    fx?.transferRole === "target" && intensities.pourPhase !== "idle";
+  const splashOn =
+    intensities.splash > 0.15 &&
+    (transferringIn || Boolean(fx?.pourAt));
+  const stirring = intensities.mix > 0.05 || stirLevel > 0;
+  const mixing = intensities.mix > 0.2;
+  const heatFlash = intensities.heat > 0.55 && Boolean(fx?.heatFlashAt);
+  const coolFlash = intensities.cool > 0.55 && Boolean(fx?.coolFlashAt);
+  const stirActive = Boolean(fx?.stirAt) && intensities.mix > 0.15;
+  const blastWindow = intensities.blast > 0.12;
 
   const gas = result?.effects.some((e) => e.kind === "gas" || e.kind === "bubble");
   const gasIntensity =
@@ -83,34 +111,94 @@ export function VesselEffects({
     (e) => e.kind === "dirty" || e.kind === "turbid",
   );
   const layerFx = result?.effects.find((e) => e.kind === "layer");
-  const solidify = result?.effects.some((e) => e.kind === "solidify");
-  const melt = result?.effects.some((e) => e.kind === "melt");
+  const solidify = intensities.solidify > 0.2;
+  const melt = intensities.melt > 0.2;
   const steam = result?.effects.some((e) => e.kind === "steam");
   const crystal = result?.effects.some((e) => e.kind === "crystal");
   const overflow = result?.effects.some((e) => e.kind === "overflow");
-  const forceBoil =
-    boiling || result?.effects.some((e) => e.kind === "boil");
+  const forceBoil = intensities.boil > 0.25;
 
-  const bubbleCount =
-    gasIntensity === "high" ? 14 : gasIntensity === "low" ? 5 : 9;
-  const boilCount = forceBoil ? 8 : 0;
+  // Cap DOM nodes: fewer when energetic or when WebGL owns particles
+  const energetic = intensities.blast > 0.3 || intensities.boil > 0.6;
+  const bubbleCount = fluid3dActive
+    ? 0
+    : gasIntensity === "high"
+      ? energetic
+        ? 10
+        : 14
+      : gasIntensity === "low"
+        ? 5
+        : energetic
+          ? 7
+          : 10;
+  const boilCount = forceBoil
+    ? fluid3dActive
+      ? 2
+      : energetic
+        ? 8
+        : 12
+    : 0;
+  const burning = intensities.burn > 0.25;
+
+  const prevPhase = useRef(intensities.pourPhase);
+  const boilPeakAt = useRef(0);
+  const blastSoundAt = useRef(0);
+
+  // Pour stream-phase hit (transfer source only); inventory pour still cues from deskStore
+  useEffect(() => {
+    const prev = prevPhase.current;
+    prevPhase.current = intensities.pourPhase;
+    if (
+      intensities.pourPhase === "stream" &&
+      prev !== "stream" &&
+      fx?.transferRole === "source"
+    ) {
+      labSound.pour();
+    }
+  }, [intensities.pourPhase, fx?.transferRole]);
+
+  // Blast hit on shared mix window peak (deskStore also cues hazard on mix)
+  useEffect(() => {
+    if (intensities.blast < 0.85 || !fx?.mixAt) return;
+    if (blastSoundAt.current === fx.mixAt) return;
+    blastSoundAt.current = fx.mixAt;
+    // Secondary after-beat tick only — primary hazard sound is in mixVessel
+    labSound.bubble();
+  }, [intensities.blast, fx?.mixAt]);
 
   useEffect(() => {
     if ((!gas && !forceBoil) || (!mixing && !forceBoil)) return;
     if (ppt && mixing) labSound.ppt();
-    const id = window.setInterval(() => labSound.bubble(), forceBoil ? 320 : 220);
+    const id = window.setInterval(() => {
+      if (intensities.boil > 0.78) {
+        const bucket = Math.floor(now / 220);
+        if (bucket !== boilPeakAt.current) {
+          boilPeakAt.current = bucket;
+          labSound.bubble();
+          labSound.bubble();
+        }
+      } else {
+        labSound.bubble();
+      }
+    }, forceBoil ? 280 : 220);
     return () => clearInterval(id);
-  }, [gas, mixing, forceBoil, ppt]);
+  }, [gas, mixing, forceBoil, ppt, intensities.boil, now]);
 
-  // Gas bubbles linger after mix
   const gasVisible = Boolean(
-    gas && (mixing || fxAlive(fx?.mixAt, 2800, now) || forceBoil),
+    gas && (mixing || intensities.mix > 0.05 || forceBoil),
   );
   const smokeCount = smoke
     ? result?.effects.find((e) => e.kind === "smoke")?.intensity === "high"
-      ? 7
-      : 5
-    : 0;
+      ? fluid3dActive
+        ? 5
+        : 10
+      : fluid3dActive
+        ? 3
+        : 7
+    : burning
+      ? 3
+      : 0;
+  const dramaKey = fx?.mixAt ?? fx?.shakeAt ?? fx?.heatFlashAt ?? 0;
   const pptColor =
     ppt?.value && ppt.value !== "transparent" ? ppt.value : "#c4b5a0";
   const splashColor = fx?.pourColor ?? fillColor ?? "var(--lab-glass, #8fc0b5)";
@@ -118,54 +206,77 @@ export function VesselEffects({
   const stirDeg = STIR_SWING_DEG[shapeId] ?? 10;
   const stirInsetX = STIR_ROD_INSET_X[shapeId] ?? "18%";
 
+  const frostOpacity = reduced
+    ? Math.max(0.7, intensities.solidify)
+    : undefined;
+  const meltStatic = reduced && melt;
+  const hazardStatic = reduced && hazard;
+
   return (
-    <div className="pointer-events-none absolute inset-0 overflow-hidden">
-      {/* Surface hit ripples on pour */}
-      {pouring || transferringIn
-        ? [0, 1, 2].map((i) => (
+    <div
+      className="pointer-events-none absolute inset-0 overflow-visible"
+      style={
+        {
+          ["--fx-boil"]: intensities.boil,
+          ["--fx-blast"]: intensities.blast,
+          ["--fx-solidify"]: intensities.solidify,
+          ["--fx-melt"]: intensities.melt,
+          ["--fx-burn"]: intensities.burn,
+          ["--fx-splash"]: intensities.splash,
+        } as CSSProperties
+      }
+    >
+      {/* Surface hit ripples — timed to stream arrival splash */}
+      {splashOn || (pouring && transferringIn)
+        ? [0, 1, 2, 3].map((i) => (
             <span
               key={`ripple-${fx?.pourAt ?? fx?.transferAt}-${i}`}
-              className="lab-ripple absolute left-1/2 top-[28%] -translate-x-1/2 rounded-full border border-white/50"
+              className={`lab-ripple absolute left-1/2 top-[28%] -translate-x-1/2 rounded-full border-2 border-white/70 ${
+                reduced ? "lab-fx-static-visible" : ""
+              }`}
               style={{
-                width: 12 + i * 14,
-                height: 6 + i * 5,
-                animationDelay: `${i * 0.08}s`,
+                width: 16 + i * 16,
+                height: 8 + i * 6,
+                animationDelay: `${i * 0.1}s`,
+                opacity: reduced ? 0.45 : undefined,
               }}
             />
           ))
         : null}
 
-      {/* Pour splash droplets */}
-      {pouring
-        ? Array.from({ length: 9 }).map((_, i) => (
+      {/* Pour splash droplets — bloom on receive */}
+      {splashOn
+        ? Array.from({ length: reduced ? 4 : 12 }).map((_, i) => (
             <span
               key={`splash-${fx?.pourAt ?? fx?.transferAt}-${i}`}
               className="lab-splash absolute rounded-full"
               style={{
-                left: `${14 + i * 8}%`,
-                top: "10%",
-                width: 4 + (i % 3) * 2,
-                height: 4 + (i % 3) * 2,
+                left: `${10 + i * 7}%`,
+                top: `${6 + (i % 3) * 4}%`,
+                width: 5 + (i % 4) * 2,
+                height: 5 + (i % 4) * 2,
                 background: splashColor,
-                animationDelay: `${i * 0.035}s`,
+                boxShadow: `0 0 6px ${splashColor}`,
+                animationDelay: `${i * 0.03}s`,
+                opacity: reduced ? 0.55 : undefined,
               }}
             />
           ))
         : null}
 
-      {/* Rim drip */}
-      {pouring
-        ? [0, 1].map((i) => (
+      {/* Rim drip during stream onto target */}
+      {splashOn && intensities.pourPhase === "stream"
+        ? [0, 1, 2].map((i) => (
             <span
               key={`drip-${i}`}
               className="lab-rim-drip absolute rounded-full"
               style={{
-                left: `${62 + i * 10}%`,
-                top: "4%",
-                width: 3,
-                height: 8,
+                left: `${58 + i * 10}%`,
+                top: "2%",
+                width: 4,
+                height: 12,
                 background: splashColor,
-                animationDelay: `${0.12 + i * 0.1}s`,
+                animationDelay: `${0.1 + i * 0.12}s`,
               }}
             />
           ))
@@ -179,7 +290,7 @@ export function VesselEffects({
         >
           <div
             className={`lab-stir-rod absolute left-1/2 top-0 h-[88%] w-1 origin-top -translate-x-1/2 rounded-full bg-gradient-to-b from-stone-300 to-stone-500 ${
-              stirActive ? "lab-stir-rod-active" : ""
+              stirActive && !reduced ? "lab-stir-rod-active" : ""
             }`}
             style={
               {
@@ -195,7 +306,7 @@ export function VesselEffects({
       {stirring && (stirActive || stirLevel >= 2) ? (
         <div
           className={`lab-swirl absolute inset-4 rounded-full border-2 border-white/40 ${
-            stirActive ? "lab-swirl-active" : "lab-swirl-idle"
+            stirActive && !reduced ? "lab-swirl-active" : "lab-swirl-idle"
           }`}
           style={{ opacity: 0.3 + stirLevel * 0.15 }}
         />
@@ -223,34 +334,52 @@ export function VesselEffects({
         ? Array.from({ length: bubbleCount }).map((_, i) => (
             <span
               key={`b-${i}`}
-              className="bubble absolute bottom-3 rounded-full bg-white/75 shadow-sm"
+              className="bubble absolute bottom-3 rounded-full bg-white/85 shadow-[0_0_4px_rgba(255,255,255,0.7)]"
               style={{
-                left: `${8 + ((i * 11) % 78)}%`,
-                width: 3 + (i % 4) * 2,
-                height: 3 + (i % 4) * 2,
-                animationDelay: `${(i * 0.14) % 1.4}s`,
-                animationDuration: `${1.2 + (i % 3) * 0.25}s`,
+                left: `${6 + ((i * 11) % 82)}%`,
+                width: 5 + (i % 4) * 2.5,
+                height: 5 + (i % 4) * 2.5,
+                animationDelay: `${(i * 0.12) % 1.4}s`,
+                animationDuration: `${1.05 + (i % 3) * 0.22}s`,
+                opacity: reduced ? 0.5 : undefined,
               }}
             />
           ))
         : null}
 
-      {/* Continuous boil bubbles */}
-      {forceBoil && !gas
+      {/* Continuous boil — nucleation from bottom; capped when fluid3d active */}
+      {forceBoil
         ? Array.from({ length: boilCount }).map((_, i) => (
             <span
               key={`boil-${i}`}
-              className="bubble absolute bottom-4 rounded-full bg-white/60"
+              className="bubble lab-boil-bubble absolute bottom-3 rounded-full border border-white/50 bg-white/75"
               style={{
-                left: `${12 + ((i * 13) % 70)}%`,
-                width: 2 + (i % 3),
-                height: 2 + (i % 3),
-                animationDelay: `${(i * 0.18) % 1.2}s`,
-                animationDuration: `${0.9 + (i % 3) * 0.2}s`,
+                left: `${8 + ((i * 11) % 78)}%`,
+                width: 4 + (i % 4) * 2.5,
+                height: 4 + (i % 4) * 2.5,
+                animationDelay: `${(i * 0.09) % 1.1}s`,
+                animationDuration: `${0.7 + (i % 4) * 0.15}s`,
+                // Nucleation bias: lower bubbles larger / earlier
+                bottom: `${10 + (i % 3) * 4}%`,
+                opacity: 0.55 + intensities.boil * 0.4,
               }}
             />
           ))
         : null}
+      {forceBoil ? (
+        <>
+          <div
+            className="lab-boil-roil absolute inset-x-[14%] top-[30%] h-3 rounded-full bg-white/25"
+            style={{ opacity: 0.25 + intensities.boil * 0.55 }}
+          />
+          <div
+            className={`lab-steam lab-boil-steam absolute inset-x-2 top-0 h-14 bg-gradient-to-t from-transparent via-white/35 to-white/55 ${
+              reduced ? "lab-fx-static-visible" : ""
+            }`}
+            style={{ opacity: reduced ? 0.45 : 0.4 + intensities.boil * 0.5 }}
+          />
+        </>
+      ) : null}
 
       {/* Layered immiscible bands */}
       {layerFx?.value ? (
@@ -288,27 +417,93 @@ export function VesselEffects({
         </div>
       ) : null}
 
-      {/* Blast / flash / burst */}
-      {(blast || flash) && (mixing || hazard) ? (
-        <>
-          <div className="lab-blast-shock absolute inset-0 rounded-[1rem] bg-lab-amber/30" />
-          <div className="lab-flash-flare absolute inset-x-2 top-2 h-16 rounded-full bg-gradient-to-b from-amber-200/80 to-transparent" />
-          {Array.from({ length: 10 }).map((_, i) => (
+      {/* Explosion — glass kick + debris + brief whiteout + after-beat; remount on mixAt */}
+      {(blast || flash) && (blastWindow || hazard) ? (
+        <div key={`blast-${dramaKey}`} className="absolute inset-0">
+          <div
+            className="lab-blast-whiteout absolute inset-0 rounded-[1rem] bg-white/80"
+            style={{ opacity: reduced ? 0.15 : undefined }}
+          />
+          <div
+            className="lab-blast-shock absolute -inset-2 rounded-[1.25rem]"
+            style={{
+              background:
+                "radial-gradient(circle at 50% 55%, rgba(253,230,138,0.75) 0%, rgba(249,115,22,0.4) 40%, transparent 72%)",
+              opacity: intensities.blast,
+            }}
+          />
+          <div className="lab-blast-shock lab-blast-shock-2 absolute inset-0 rounded-[1rem] border-2 border-amber-200/80" />
+          <div className="lab-flash-flare absolute inset-x-0 top-0 h-24 rounded-full bg-gradient-to-b from-amber-100 via-orange-300/70 to-transparent" />
+          {Array.from({ length: reduced ? 4 : 12 }).map((_, i) => (
             <span
               key={`ember-${i}`}
-              className="lab-blast-ember absolute h-1.5 w-1.5 rounded-full bg-orange-400"
+              className="lab-blast-ember absolute rounded-full bg-gradient-to-t from-orange-600 to-amber-200"
+              style={
+                {
+                  left: `${6 + i * 7}%`,
+                  top: `${22 + (i % 5) * 12}%`,
+                  width: 3 + (i % 3) * 2,
+                  height: 3 + (i % 3) * 2,
+                  boxShadow: "0 0 8px rgba(255,160,60,0.9)",
+                  animationDelay: `${i * 0.03}s`,
+                  ["--ember-x"]: `${(i % 2 === 0 ? -1 : 1) * (12 + (i % 5) * 8)}px`,
+                } as CSSProperties
+              }
+            />
+          ))}
+          {Array.from({ length: reduced ? 3 : 8 }).map((_, i) => (
+            <span
+              key={`shard-${i}`}
+              className="lab-blast-shard absolute bg-amber-100/90"
+              style={
+                {
+                  left: `${20 + i * 8}%`,
+                  top: `${35 + (i % 3) * 8}%`,
+                  width: 2,
+                  height: 8 + (i % 3) * 3,
+                  animationDelay: `${0.02 + i * 0.04}s`,
+                  ["--shard-rot"]: `${(i - 4) * 28}deg`,
+                } as CSSProperties
+              }
+            />
+          ))}
+          {/* After-beat haze */}
+          {intensities.blast > 0.15 ? (
+            <div
+              className="lab-blast-after absolute inset-1 rounded-[1rem] bg-amber-100/20"
+              style={{ opacity: intensities.blast * 0.45 }}
+            />
+          ) : null}
+        </div>
+      ) : null}
+
+      {result?.effects.some((e) => e.kind === "burst") &&
+      (blastWindow || hazard) ? (
+        <div
+          key={`burst-${dramaKey}`}
+          className="lab-burst-ring absolute -inset-1 rounded-full border-[3px] border-lab-hazard"
+        />
+      ) : null}
+
+      {/* Burning liquid tongues — combustion only, not plain boil */}
+      {burning ? (
+        <div className="absolute inset-x-[18%] bottom-[18%] top-[32%] overflow-hidden">
+          {Array.from({ length: 5 }).map((_, i) => (
+            <span
+              key={`fire-${i}`}
+              className={`lab-liquid-flame absolute bottom-0 rounded-[50%_50%_40%_40%] ${
+                reduced ? "lab-fx-static-visible" : ""
+              }`}
               style={{
-                left: `${10 + i * 8}%`,
-                top: `${30 + (i % 4) * 10}%`,
-                animationDelay: `${i * 0.04}s`,
+                left: `${8 + i * 18}%`,
+                width: 8 + (i % 3) * 3,
+                height: 16 + (i % 4) * 5,
+                animationDelay: `${i * 0.11}s`,
+                opacity: reduced ? 0.7 : 0.55 + intensities.burn * 0.4,
               }}
             />
           ))}
-        </>
-      ) : null}
-
-      {result?.effects.some((e) => e.kind === "burst") && mixing ? (
-        <div className="lab-burst-ring absolute inset-1 rounded-full border-2 border-lab-hazard/80" />
+        </div>
       ) : null}
 
       {glow ? (
@@ -324,26 +519,76 @@ export function VesselEffects({
         <div className="lab-dirty-haze absolute inset-3 rounded-full bg-stone-600/25 blur-sm" />
       ) : null}
 
-      {steam ? (
-        <div className="lab-steam absolute inset-x-4 top-0 h-10 bg-gradient-to-t from-transparent to-white/40" />
+      {steam && !forceBoil ? (
+        <div
+          className={`lab-steam absolute inset-x-3 top-0 h-14 bg-gradient-to-t from-transparent via-white/45 to-white/60 ${
+            reduced ? "lab-fx-static-visible" : ""
+          }`}
+          style={{ opacity: reduced ? 0.4 : undefined }}
+        />
       ) : null}
 
       {melt ? (
-        <div className="lab-melt-drip absolute inset-x-[30%] top-[20%] h-8 w-2 rounded-full bg-amber-200/50" />
+        <div
+          className={`lab-melt-drip absolute inset-x-[30%] top-[20%] h-10 w-2.5 rounded-full bg-amber-200/70 ${
+            meltStatic ? "lab-fx-static-visible" : ""
+          }`}
+          style={{ opacity: meltStatic ? 0.65 : undefined }}
+        />
       ) : null}
 
-      {solidify ? (
-        <div className="lab-solidify-frost absolute inset-x-2 bottom-2 h-6 rounded-sm bg-sky-100/40" />
+      {/* Solidify — growing ice front + frost rim + shards */}
+      {solidify || coolAttached ? (
+        <>
+          <div
+            className={`lab-solidify-frost absolute inset-x-[12%] bottom-[10%] rounded-sm bg-gradient-to-t from-sky-200/80 via-sky-100/55 to-transparent shadow-[inset_0_2px_8px_rgba(255,255,255,0.55)] ${
+              reduced ? "lab-fx-static-visible" : ""
+            }`}
+            style={{
+              height: `${28 + intensities.solidify * 36}%`,
+              opacity: frostOpacity,
+              transformOrigin: "bottom center",
+            }}
+          />
+          <div
+            className={`lab-frost-rim absolute inset-x-[10%] top-[28%] h-2 rounded-full bg-sky-100/70 ${
+              reduced ? "lab-fx-static-visible" : ""
+            }`}
+            style={{ opacity: reduced ? 0.75 : undefined }}
+          />
+          {Array.from({ length: reduced ? 3 : 6 }).map((_, i) => (
+            <span
+              key={`ice-${i}`}
+              className={`lab-ice-shard absolute bg-gradient-to-br from-white to-sky-200/90 ${
+                reduced ? "lab-fx-static-visible" : ""
+              }`}
+              style={{
+                left: `${14 + i * 13}%`,
+                bottom: `${12 + (i % 3) * 5}%`,
+                width: 5 + (i % 3) * 2,
+                height: 7 + (i % 2) * 4,
+                animationDelay: `${i * 0.12}s`,
+                opacity: reduced ? 0.85 : undefined,
+              }}
+            />
+          ))}
+        </>
       ) : null}
 
       {crystal
-        ? Array.from({ length: 7 }).map((_, i) => (
+        ? Array.from({ length: reduced ? 5 : 10 }).map((_, i) => (
             <span
               key={`xtal-${i}`}
-              className="lab-crystal absolute h-2 w-2 rotate-45 bg-sky-200/70"
+              className={`lab-crystal absolute rotate-45 bg-gradient-to-br from-white via-sky-100 to-sky-300/90 shadow-[0_0_6px_rgba(186,230,253,0.85)] ${
+                reduced ? "lab-fx-static-visible" : ""
+              }`}
               style={{
-                left: `${18 + i * 10}%`,
-                bottom: `${10 + (i % 3) * 6}%`,
+                left: `${12 + i * 8}%`,
+                bottom: `${8 + (i % 4) * 7}%`,
+                width: 6 + (i % 3) * 2,
+                height: 6 + (i % 3) * 2,
+                animationDelay: `${i * 0.1}s`,
+                opacity: reduced ? 0.75 : undefined,
               }}
             />
           ))
@@ -378,13 +623,13 @@ export function VesselEffects({
       ) : null}
 
       {/* Settling ppt flakes — linger after mix */}
-      {ppt && (mixing || fxAlive(fx?.mixAt, 2200, now))
-        ? Array.from({ length: 10 }).map((_, i) => (
+      {ppt && mixing
+        ? Array.from({ length: fluid3dActive ? 4 : 8 }).map((_, i) => (
             <span
               key={`flake-${i}`}
               className="lab-flake absolute rounded-sm"
               style={{
-                left: `${14 + i * 8}%`,
+                left: `${14 + i * 9}%`,
                 width: 4 + (i % 2),
                 height: 3,
                 background: pptColor,
@@ -425,24 +670,28 @@ export function VesselEffects({
         />
       ) : null}
 
-      {smoke
+      {smokeCount > 0
         ? Array.from({ length: smokeCount }).map((_, i) => (
             <div
               key={`sm-${i}`}
-              className="lab-smoke absolute rounded-full bg-stone-400/25 blur-md"
+              className="lab-smoke absolute rounded-full bg-stone-500/40 blur-md"
               style={{
-                left: `${12 + i * 14}%`,
-                top: `${2 + (i % 3) * 5}%`,
-                width: 24 + i * 7,
-                height: 14 + i * 4,
-                animationDelay: `${i * 0.28}s`,
+                left: `${8 + i * 10}%`,
+                top: `${0 + (i % 3) * 4}%`,
+                width: 28 + i * 8,
+                height: 16 + i * 5,
+                animationDelay: `${i * 0.2}s`,
               }}
             />
           ))
         : null}
 
       {hazard ? (
-        <div className="absolute inset-0 flex items-end justify-center pb-2 lab-hazard-pulse">
+        <div
+          className={`absolute inset-0 flex items-end justify-center pb-2 ${
+            hazardStatic ? "" : "lab-hazard-pulse"
+          }`}
+        >
           <span className="rounded bg-red-600/90 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-white/95 shadow">
             Hazard
           </span>

@@ -77,6 +77,14 @@ export function adaptReactionResult(
 
   if (result.reactionType === "product-craft" && result.ok) {
     effects.push({ kind: "sparkle", intensity: "low" });
+    // Balm / wax crafts: heat unlocks solid → liquid (melt signature)
+    if (
+      result.explanationKey === "product-balm" ||
+      result.explanationKey?.includes("melt") ||
+      result.explanationKey?.includes("balm")
+    ) {
+      effects.push({ kind: "melt", intensity: "high" });
+    }
   }
 
   const products: Item[] = result.products.map((p) => ({

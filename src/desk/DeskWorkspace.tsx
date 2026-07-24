@@ -8,7 +8,13 @@ import { VesselSlot } from "./VesselSlot";
 import { showToast } from "@/gamification/ToastHost";
 import { PourStream } from "@/animation/PourStream";
 import { resolveGlassShape } from "@/animation/glassware/shapes";
-import { fxAlive, useFxClock } from "@/animation/useFxClock";
+import {
+  computeFxIntensities,
+  deskMotionClass,
+  POUR_WINDOW_MS,
+  pourPoseTiltDeg,
+} from "@/animation/fxIntensity";
+import { useFxClock } from "@/animation/useFxClock";
 import { getChemical } from "@/domains/chemistry/data/chemicals";
 import { useGoalStore } from "@/store/goalStore";
 import {
@@ -48,36 +54,90 @@ export function DeskWorkspace({
   const active = vessels.find((v) => v.instanceId === activeVesselId) ?? vessels[0];
 
   const now = useFxClock(
-    vessels.flatMap((v) => [v.fx.transferAt, v.fx.pourAt]),
-    1400,
+    vessels.flatMap((v) => [
+      v.fx.transferAt,
+      v.fx.pourAt,
+      v.fx.mixAt,
+      v.fx.shakeAt,
+    ]),
+    Math.max(2400, POUR_WINDOW_MS + 400),
   );
 
-  const transferSource = vessels.find(
-    (v) =>
-      fxAlive(v.fx.transferAt, 1100, now) && v.fx.transferRole === "source",
+  const vesselIntensities = vessels.map((v) =>
+    computeFxIntensities({
+      fx: v.fx,
+      effects: [
+        ...(v.lastResult?.effects ?? []),
+        ...(v.livePreview?.effects ?? []),
+      ],
+      now,
+      heatAttached: v.heatAttached,
+      coolAttached: v.coolAttached,
+      boiling: Boolean(
+        v.heatAttached ||
+          v.livePreview?.effects.some((e) => e.kind === "boil") ||
+          v.lastResult?.effects.some((e) => e.kind === "boil"),
+      ),
+    }),
   );
+  const deskMotion = deskMotionClass(vesselIntensities);
+
+  const transferSource = vessels.find((v, i) => {
+    const inten = vesselIntensities[i];
+    return (
+      v.fx.transferRole === "source" &&
+      inten != null &&
+      inten.pourPhase !== "idle"
+    );
+  });
+  const transferSourceIdx = transferSource
+    ? vessels.findIndex((v) => v.instanceId === transferSource.instanceId)
+    : -1;
+  const sourceInten =
+    transferSourceIdx >= 0 ? vesselIntensities[transferSourceIdx] : undefined;
+
   const transferTarget = transferSource?.fx.transferToId
     ? vessels.find((v) => v.instanceId === transferSource.fx.transferToId)
     : undefined;
 
+  const streaming = sourceInten?.pourPhase === "stream";
+
   const streamProps =
-    transferSource && transferTarget && transferSource.fx.transferAt
+    transferSource &&
+    transferTarget &&
+    transferSource.fx.transferAt &&
+    streaming
       ? (() => {
           const fromGeo = resolveGlassShape(transferSource.equipmentId);
           const toGeo = resolveGlassShape(transferTarget.equipmentId);
           const scaleX =
             (VESSEL_CARD.width - VESSEL_CARD.glassInsetX * 2) / 100;
           const scaleY = VESSEL_CARD.glassH / 140;
+          const poseTilt = pourPoseTiltDeg(
+            sourceInten!.pourPhase,
+            sourceInten!.pourElapsed,
+          );
           const lipDesk = (
             v: typeof transferSource,
             geo: typeof fromGeo,
-          ) => ({
-            x: v.position.x + VESSEL_CARD.glassInsetX + geo.lip.x * scaleX,
-            y:
-              v.position.y +
-              VESSEL_CARD.glassTop +
-              geo.lip.y * scaleY,
-          });
+            tiltDeg = 0,
+          ) => {
+            const localX =
+              VESSEL_CARD.glassInsetX + geo.lip.x * scaleX;
+            const localY = VESSEL_CARD.glassTop + geo.lip.y * scaleY;
+            // Match card pour pose origin (72% 85%)
+            const ox = VESSEL_CARD.width * 0.72;
+            const oy = VESSEL_CARD.height * 0.85;
+            const rad = (tiltDeg * Math.PI) / 180;
+            const dx = localX - ox;
+            const dy = localY - oy;
+            const rx = dx * Math.cos(rad) - dy * Math.sin(rad);
+            const ry = dx * Math.sin(rad) + dy * Math.cos(rad);
+            return {
+              x: v.position.x + ox + rx,
+              y: v.position.y + oy + ry,
+            };
+          };
           const mouthDesk = (
             v: typeof transferTarget,
             geo: typeof toGeo,
@@ -89,6 +149,22 @@ export function DeskWorkspace({
               geo.mouth.y * scaleY +
               8,
           });
+          // Use stamped pourFrom (lip at transfer start), then apply pose tilt
+          const from = transferSource.fx.pourFrom
+            ? (() => {
+                const ox =
+                  transferSource.position.x + VESSEL_CARD.width * 0.72;
+                const oy =
+                  transferSource.position.y + VESSEL_CARD.height * 0.85;
+                const rad = (poseTilt * Math.PI) / 180;
+                const dx = transferSource.fx.pourFrom.x - ox;
+                const dy = transferSource.fx.pourFrom.y - oy;
+                return {
+                  x: ox + dx * Math.cos(rad) - dy * Math.sin(rad),
+                  y: oy + dx * Math.sin(rad) + dy * Math.cos(rad),
+                };
+              })()
+            : lipDesk(transferSource, fromGeo, poseTilt);
           const color =
             transferSource.fx.pourColor ??
             transferTarget.fx.pourColor ??
@@ -100,10 +176,14 @@ export function DeskWorkspace({
                 )?.color
               : undefined) ??
             LAB_GLASS_FALLBACK;
+          const layerColors =
+            transferSource.livePreview?.layerColors ??
+            transferTarget.livePreview?.layerColors;
           return {
-            from: lipDesk(transferSource, fromGeo),
+            from,
             to: mouthDesk(transferTarget, toGeo),
             color,
+            layerColors,
             activeKey: transferSource.fx.transferAt,
           };
         })()
@@ -117,7 +197,9 @@ export function DeskWorkspace({
         isOver ? "ring-2 ring-lab-teal ring-offset-2 ring-offset-lab-wash" : ""
       }`}
     >
-      <div className="lab-desk-surface absolute inset-0" />
+      <div
+        className={`lab-desk-surface absolute inset-0 ${deskMotion}`}
+      />
       <div className="pointer-events-none absolute inset-x-0 top-0 h-24 bg-gradient-to-b from-black/15 to-transparent" />
       <div className="pointer-events-none absolute inset-0 lab-desk-sheen" />
 
@@ -127,7 +209,9 @@ export function DeskWorkspace({
             from={streamProps.from}
             to={streamProps.to}
             color={streamProps.color}
+            layerColors={streamProps.layerColors}
             activeKey={streamProps.activeKey}
+            streaming
           />
         </div>
       ) : null}

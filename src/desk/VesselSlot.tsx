@@ -7,7 +7,12 @@ import { EQUIPMENT_BY_ID } from "@/domains/chemistry/data/equipment";
 import { getChemical } from "@/domains/chemistry/data/chemicals";
 import { vesselDropId } from "@/drag/types";
 import { GlassVessel } from "@/animation/glassware/GlassVessel";
-import { fxAlive, useFxClock } from "@/animation/useFxClock";
+import {
+  computeFxIntensities,
+  pourPoseTiltDeg,
+  POUR_WINDOW_MS,
+} from "@/animation/fxIntensity";
+import { useFxClock, usePrefersReducedMotion } from "@/animation/useFxClock";
 import { useDeskStore } from "@/store/deskStore";
 import { showToast } from "@/gamification/ToastHost";
 import { tryMixVessel } from "@/lab/labActions";
@@ -47,8 +52,9 @@ export function VesselSlot({ vessel, deskRef }: Props) {
 
   const now = useFxClock(
     [vessel.fx.shakeAt, vessel.fx.mixAt, vessel.fx.pourAt, vessel.fx.transferAt],
-    1800,
+    Math.max(2200, POUR_WINDOW_MS + 200),
   );
+  const reducedMotion = usePrefersReducedMotion();
 
   const eq = EQUIPMENT_BY_ID[vessel.equipmentId];
   const isActive = activeVesselId === vessel.instanceId;
@@ -107,16 +113,46 @@ export function VesselSlot({ vessel, deskRef }: Props) {
         }
       : undefined);
 
-  const shaking = fxAlive(vessel.fx.shakeAt, 700, now);
-  const mixing = fxAlive(vessel.fx.mixAt, 900, now);
-  const pouring = fxAlive(vessel.fx.pourAt, 900, now);
-  const transferring = fxAlive(vessel.fx.transferAt, 1100, now);
-  const isSource = transferring && vessel.fx.transferRole === "source";
+  const fxEffects = [
+    ...(result?.effects ?? []),
+    ...(preview?.effects ?? []),
+  ];
+  const intensities = computeFxIntensities({
+    fx: vessel.fx,
+    effects: fxEffects,
+    now,
+    heatAttached: vessel.heatAttached,
+    coolAttached: vessel.coolAttached,
+    boiling,
+  });
 
-  const pourIntensity =
-    pouring || (transferring && vessel.fx.transferRole === "target") ? 1 : 0;
+  const shaking =
+    Boolean(vessel.fx.shakeAt) &&
+    now > 0 &&
+    now - (vessel.fx.shakeAt ?? 0) < 700;
+  const mixing = intensities.mix > 0.35;
+  const isSource =
+    vessel.fx.transferRole === "source" && intensities.pourPhase !== "idle";
+  const isTarget =
+    vessel.fx.transferRole === "target" && intensities.pourPhase !== "idle";
 
-  const tiltDeg = isSource ? -28 : shaking ? Math.sin(now / 40) * 8 : 0;
+  const pourIntensity = Math.max(
+    intensities.pour,
+    intensities.splash,
+    vessel.fx.pourAt && intensities.pourPhase !== "idle" ? 0.8 : 0,
+  );
+
+  // Card owns pour pose (phase machine); glass tip stays small in GlassVessel.
+  const pourCardTilt = isSource
+    ? reducedMotion
+      ? -28
+      : pourPoseTiltDeg(intensities.pourPhase, intensities.pourElapsed)
+    : 0;
+  const tiltDeg = shaking && !isSource ? Math.sin(now / 40) * 8 : 0;
+  const blastKick =
+    intensities.blast > 0.4 && !isSource
+      ? Math.sin(now / 28) * 5 * intensities.blast
+      : 0;
 
   function onMovePointerDown(e: React.PointerEvent) {
     if ((e.target as HTMLElement).closest("button, [data-no-drag]")) return;
@@ -197,6 +233,14 @@ export function VesselSlot({ vessel, deskRef }: Props) {
       style={{
         left: vessel.position.x,
         top: vessel.position.y,
+        transform:
+          pourCardTilt || blastKick
+            ? `rotate(${pourCardTilt + blastKick}deg)`
+            : undefined,
+        transformOrigin: "72% 85%",
+        transition: isSource
+          ? "none"
+          : "transform 0.35s ease-out, left 0.2s, top 0.2s, box-shadow 0.2s, border-color 0.2s, background-color 0.2s",
       }}
       onPointerDown={onMovePointerDown}
       onPointerMove={onMovePointerMove}
@@ -228,9 +272,11 @@ export function VesselSlot({ vessel, deskRef }: Props) {
       className={`group absolute z-10 w-[11.5rem] select-none rounded-2xl border p-2.5 touch-none ${
         dragging
           ? "z-30 cursor-grabbing scale-[1.03] shadow-2xl"
-          : "cursor-grab transition-[left,top,box-shadow,transform,border-color,background-color] duration-200"
-      } ${shaking ? "lab-vessel-shake" : ""} ${mixing ? "lab-vessel-pop" : ""} ${
-        isSource ? "lab-vessel-pour-tilt" : ""
+          : "cursor-grab transition-[left,top,box-shadow,border-color,background-color] duration-200"
+      } ${shaking || intensities.blast > 0.5 ? "lab-vessel-shake" : ""} ${
+        mixing ? "lab-vessel-pop" : ""
+      } ${isSource ? "lab-vessel-pour-source" : ""} ${
+        isTarget && intensities.splash > 0.3 ? "lab-vessel-pour-receive" : ""
       } ${
         hazard
           ? "border-lab-hazard bg-lab-hazard/10 shadow-[0_0_28px_rgba(180,35,24,0.35)]"
@@ -280,24 +326,26 @@ export function VesselSlot({ vessel, deskRef }: Props) {
 
       {/* Bunsen stand under glass — physical heat, not button paint */}
       {vessel.heatAttached ? (
-        <div className="lab-burner pointer-events-none absolute -bottom-1.5 left-1/2 z-0 h-6 w-[4.5rem] -translate-x-1/2 rounded-b-lg bg-gradient-to-b from-[#2a1a12] to-[#1a100c] shadow-[0_4px_10px_rgba(0,0,0,0.35)]">
-          <div className="absolute inset-x-2 top-0 h-px bg-lab-amber/30" />
-          <div className="absolute -top-4 left-1/2 flex -translate-x-1/2 items-end gap-[3px]">
-            <span className="lab-flame inline-block h-4 w-[7px] rounded-[50%_50%_45%_45%] bg-gradient-to-t from-lab-amber via-[#ffb347] to-[#fff3c4]" />
-            <span className="lab-flame lab-flame-delay inline-block h-5 w-[9px] rounded-[50%_50%_45%_45%] bg-gradient-to-t from-[#c4783a] via-[#ff9f43] to-[#fff8e1]" />
-            <span className="lab-flame inline-block h-3.5 w-[7px] rounded-[50%_50%_45%_45%] bg-gradient-to-t from-lab-amber via-[#ffb347] to-[#fff3c4]" />
+        <div className="lab-burner pointer-events-none absolute -bottom-1 left-1/2 z-0 h-7 w-[5rem] -translate-x-1/2 rounded-b-lg bg-gradient-to-b from-[#2a1a12] to-[#1a100c] shadow-[0_4px_12px_rgba(0,0,0,0.4)]">
+          <div className="absolute inset-x-2 top-0 h-px bg-lab-amber/40" />
+          <div className="absolute -top-7 left-1/2 flex -translate-x-1/2 items-end gap-[3px]">
+            <span className="lab-flame inline-block h-6 w-[9px] rounded-[50%_50%_45%_45%] bg-gradient-to-t from-lab-amber via-[#ffb347] to-[#fff3c4]" />
+            <span className="lab-flame lab-flame-delay inline-block h-8 w-[11px] rounded-[50%_50%_45%_45%] bg-gradient-to-t from-[#c4783a] via-[#ff9f43] to-[#fff8e1]" />
+            <span className="lab-flame inline-block h-5 w-[8px] rounded-[50%_50%_45%_45%] bg-gradient-to-t from-lab-amber via-[#ffb347] to-[#fff3c4]" />
+            <span className="lab-flame lab-flame-delay inline-block h-6 w-[8px] rounded-[50%_50%_45%_45%] bg-gradient-to-t from-[#c4783a] via-[#ffb347] to-[#fff8e1]" />
           </div>
         </div>
       ) : null}
 
       {/* Ice bath under glass */}
       {vessel.coolAttached ? (
-        <div className="lab-ice-bath pointer-events-none absolute -bottom-1.5 left-1/2 z-0 h-6 w-[4.5rem] -translate-x-1/2 rounded-b-lg bg-gradient-to-b from-[#0c4a6e] to-[#082f49] shadow-[0_4px_10px_rgba(8,47,73,0.4)]">
-          <div className="absolute inset-x-2 top-0 h-px bg-[#7dd3fc]/35" />
-          <div className="absolute -top-2.5 left-1/2 flex -translate-x-1/2 items-end gap-[3px]">
-            <span className="lab-ice-cube inline-block h-2.5 w-2.5 rotate-12 rounded-[2px] bg-gradient-to-br from-white/90 to-[#7dd3fc]/80" />
-            <span className="lab-ice-cube lab-ice-delay inline-block h-3 w-3 -rotate-6 rounded-[2px] bg-gradient-to-br from-white to-[#bae6fd]/85" />
-            <span className="lab-ice-cube inline-block h-2 w-2.5 rotate-6 rounded-[2px] bg-gradient-to-br from-[#e0f2fe] to-[#7dd3fc]/70" />
+        <div className="lab-ice-bath pointer-events-none absolute -bottom-1 left-1/2 z-0 h-7 w-[5rem] -translate-x-1/2 rounded-b-lg bg-gradient-to-b from-[#0c4a6e] to-[#082f49] shadow-[0_4px_12px_rgba(8,47,73,0.45)]">
+          <div className="absolute inset-x-2 top-0 h-px bg-[#7dd3fc]/45" />
+          <div className="absolute -top-3 left-1/2 flex -translate-x-1/2 items-end gap-[3px]">
+            <span className="lab-ice-cube inline-block h-3 w-3 rotate-12 rounded-[2px] bg-gradient-to-br from-white/95 to-[#7dd3fc]/85" />
+            <span className="lab-ice-cube lab-ice-delay inline-block h-3.5 w-3.5 -rotate-6 rounded-[2px] bg-gradient-to-br from-white to-[#bae6fd]/9" />
+            <span className="lab-ice-cube inline-block h-2.5 w-3 rotate-6 rounded-[2px] bg-gradient-to-br from-[#e0f2fe] to-[#7dd3fc]/8" />
+            <span className="lab-ice-cube lab-ice-delay inline-block h-3 w-2.5 -rotate-12 rounded-[2px] bg-gradient-to-br from-white/90 to-[#7dd3fc]/75" />
           </div>
         </div>
       ) : null}
@@ -310,9 +358,12 @@ export function VesselSlot({ vessel, deskRef }: Props) {
           motion={{
             pourIntensity,
             stirLevel: vessel.stirLevel,
-            shaking,
+            shaking: shaking || intensities.blast > 0.35,
             boiling,
             transferringOut: Boolean(isSource),
+            boilIntensity: intensities.boil,
+            solidify: intensities.solidify,
+            melt: intensities.melt,
           }}
           result={fxResult}
           fx={vessel.fx}

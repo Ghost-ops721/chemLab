@@ -5,7 +5,7 @@
 
 import type { FluidState } from "./types";
 
-const MAX_PARTICLES = 48;
+const MAX_PARTICLES = 64;
 const IDLE_FPS = 12;
 const ACTIVE_FPS = 60;
 
@@ -195,9 +195,9 @@ export async function createFluidRenderer(
   particleGeo.setAttribute("position", new THREE.BufferAttribute(positions, 3));
   const particleMat = new THREE.PointsMaterial({
     color: 0xffffff,
-    size: 0.035,
+    size: 0.055,
     transparent: true,
-    opacity: 0.55,
+    opacity: 0.7,
     depthWrite: false,
     sizeAttenuation: true,
   });
@@ -270,7 +270,7 @@ export async function createFluidRenderer(
 
     const showParticles = s.boil || s.bubble || s.foam > 0.2;
     particles.visible = showParticles && fill01 > 0.04;
-    particleMat.opacity = 0.35 + s.foam * 0.35 + (s.boil ? 0.2 : 0);
+    particleMat.opacity = 0.45 + s.foam * 0.4 + (s.boil ? 0.4 : 0);
   };
 
   const tick = (nowMs: number) => {
@@ -298,23 +298,32 @@ export async function createFluidRenderer(
     uniforms.uTime.value = t;
 
     const fill01 = uniforms.uFill.value as number;
+    // Solidify freezes waves; melt unlocks amp again
+    const freeze = Math.max(0, state.solidify - state.melt * 0.85);
     const waveBase =
       0.012 +
-      impulse * 0.08 +
-      state.temperature * 0.025 +
-      (state.boil ? 0.03 : 0);
-    uniforms.uWaveAmp.value = waveBase * (1 - state.viscosity * 0.55);
+      impulse * 0.12 +
+      state.temperature * 0.03 +
+      (state.boil ? 0.055 : 0) +
+      state.melt * 0.02;
+    uniforms.uWaveAmp.value =
+      waveBase * (1 - state.viscosity * 0.55) * (1 - freeze * 0.95);
+    uniforms.uViscosity.value = Math.min(
+      1,
+      state.viscosity + freeze * 0.35 - state.melt * 0.2,
+    );
 
     if (particles.visible) {
       const count = Math.min(
         particleCount,
-        state.boil || state.bubble ? 36 : 16,
+        // Prefer shared particles over DOM — keep energetic but capped
+        state.boil || state.bubble ? (freeze > 0.5 ? 8 : 40) : 16,
       );
       const attr = particleGeo.getAttribute("position") as InstanceType<
         typeof THREE.BufferAttribute
       >;
       const arr = attr.array as Float32Array;
-      const speed = state.boil ? 0.55 : 0.28;
+      const speed = state.boil ? 0.85 : 0.35;
       for (let i = 0; i < count; i++) {
         let phase = (particlePhase[i]! + speed * (minDelta / 1000) * (0.6 + (i % 5) * 0.1)) % 1;
         particlePhase[i] = phase;

@@ -12,12 +12,15 @@ import { assertLabActionAllowed, useAuthStore } from "@/store/authStore";
 import {
   capacityMlForEquipment,
   defaultPourMl,
+  fillPctFromContents,
   getVesselContents,
   pourIntoContents,
   setContentAmount,
   syncVesselContents,
   transferContents,
 } from "@/desk/vesselContents";
+import { resolveGlassShape } from "@/animation/glassware/shapes";
+import { VESSEL_CARD } from "@/desk/vesselLayout";
 import { useInventoryStockStore, defaultStockMl } from "@/store/inventoryStockStore";
 import { showToast } from "@/gamification/ToastHost";
 
@@ -327,14 +330,31 @@ export const useDeskStore = create<DeskState>()(
         const result = transferContents(fromContents, toContents, cap);
         if (!result) return false;
 
-        const pourColor =
-          getChemical(
-            result.to[result.to.length - 1]?.chemicalId ??
-              fromContents[fromContents.length - 1]!.chemicalId,
-          )?.color;
+        const leavingId =
+          fromContents[fromContents.length - 1]?.chemicalId ??
+          result.to[result.to.length - 1]?.chemicalId;
+        const pourColor = leavingId
+          ? getChemical(leavingId)?.color
+          : undefined;
         const now = Date.now();
+        const sourceFillPct = fillPctFromContents(
+          fromContents,
+          from.equipmentId,
+        );
+        // Stamp desk-local lip origin so PourStream / dead pourFrom path stay live
+        const geo = resolveGlassShape(from.equipmentId);
+        const scaleX =
+          (VESSEL_CARD.width - VESSEL_CARD.glassInsetX * 2) / 100;
+        const scaleY = VESSEL_CARD.glassH / 140;
+        const pourFrom = {
+          x:
+            from.position.x +
+            VESSEL_CARD.glassInsetX +
+            geo.lip.x * scaleX,
+          y: from.position.y + VESSEL_CARD.glassTop + geo.lip.y * scaleY,
+        };
 
-        labSound.pour();
+        // Pour audio fires on stream phase start (VesselEffects), not here
         set((s) => ({
           vessels: s.vessels.map((v) => {
             if (v.instanceId === fromId) {
@@ -349,6 +369,8 @@ export const useDeskStore = create<DeskState>()(
                   transferToId: toId,
                   transferRole: "source",
                   pourColor,
+                  sourceFillPct,
+                  pourFrom,
                 }),
               });
             }
@@ -365,6 +387,7 @@ export const useDeskStore = create<DeskState>()(
                   transferFromId: fromId,
                   transferToId: toId,
                   transferRole: "target",
+                  pourFrom,
                 }),
               });
             }

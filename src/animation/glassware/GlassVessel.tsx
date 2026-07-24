@@ -8,7 +8,8 @@ import {
 } from "../LiquidSurface";
 import { VesselEffects } from "../VesselEffects";
 import { VesselPourStream } from "../PourStream";
-import { fxAlive, useFxClock, usePrefersReducedMotion } from "../useFxClock";
+import { computeFxIntensities } from "../fxIntensity";
+import { useFxClock, usePrefersReducedMotion } from "../useFxClock";
 import {
   FluidVesselCanvas,
   livePreviewToFluidState,
@@ -30,6 +31,7 @@ interface Props {
   coolAttached?: boolean;
   className?: string;
   pouringCue?: boolean;
+  /** Small glass tip only — card owns the pour pose. */
   tiltDeg?: number;
   /** Force SVG LiquidSurface instead of WebGL */
   force2d?: boolean;
@@ -59,31 +61,58 @@ export function GlassVessel({
   const clipId = `well-${uid}`;
   const glassGrad = `glass-${uid}`;
   const shineGrad = `shine-${uid}`;
-  const now = useFxClock([fx?.pourAt, fx?.transferAt], 1200);
+  const now = useFxClock(
+    [fx?.pourAt, fx?.transferAt, fx?.mixAt, fx?.heatFlashAt, fx?.coolFlashAt],
+    2200,
+  );
   const prefersReduced = usePrefersReducedMotion();
   const [webglFailed, setWebglFailed] = useState(false);
   const onFluidUnavailable = useRef(() => setWebglFailed(true)).current;
 
+  const effects = [
+    ...(result?.effects ?? []),
+    ...(livePreview?.effects ?? []),
+  ];
+  const intensities = computeFxIntensities({
+    fx,
+    effects,
+    now,
+    heatAttached: Boolean(heatAttached),
+    coolAttached: Boolean(coolAttached),
+    boiling: motion.boiling,
+  });
+
+  const isTransferTarget =
+    fx?.transferRole === "target" && intensities.pourPhase !== "idle";
+  const isTransferSource =
+    fx?.transferRole === "source" && intensities.pourPhase !== "idle";
+
+  // Stream only during stream phase (pose machine)
+  const streaming = intensities.pourPhase === "stream";
   const showPourStream =
-    (fxAlive(fx?.pourAt, 900, now) ||
-      (fxAlive(fx?.transferAt, 1100, now) &&
-        fx?.transferRole === "target")) &&
+    streaming &&
+    (isTransferTarget || Boolean(fx?.pourAt && !fx?.transferRole)) &&
     (fx?.pourColor || fillColor !== "transparent");
 
+  // Source drain: animate display fill from stamped sourceFillPct
+  const displayFillPct = isTransferSource
+    ? (fx?.sourceFillPct ?? Math.max(fillPct, 48)) * intensities.sourceFillFactor
+    : fillPct;
+
   const useFluid3d =
-    !force2d && !prefersReduced && !webglFailed && fillPct > 0.5;
+    !force2d && !prefersReduced && !webglFailed && displayFillPct > 0.5;
 
   const preview: LiveVesselPreview =
     livePreview != null
       ? {
           ...livePreview,
           fillColor: livePreview.fillColor ?? fillColor,
-          fillPct: livePreview.fillPct ?? fillPct,
+          fillPct: livePreview.fillPct ?? displayFillPct,
           layerColors: layerColors ?? livePreview.layerColors,
         }
       : {
           fillColor,
-          fillPct,
+          fillPct: displayFillPct,
           layerColors,
           ethanolPct: 0,
           oilLoadPct: 0,
@@ -99,9 +128,24 @@ export function GlassVessel({
     stirLevel,
     lastResult: result,
     fillColorOverride: fillColor,
-    fillPctOverride: fillPct,
+    fillPctOverride: displayFillPct,
     boiling: motion.boiling,
+    intensities,
+    now,
   });
+
+  const liquidMotion: LiquidMotion = {
+    ...motion,
+    pourIntensity: Math.max(
+      motion.pourIntensity,
+      intensities.pour,
+      intensities.splash,
+    ),
+    transferringOut: Boolean(isTransferSource),
+    boilIntensity: intensities.boil,
+    solidify: intensities.solidify,
+    melt: intensities.melt,
+  };
 
   const wb = geo.wellBounds;
   const wellStyle = {
@@ -112,10 +156,17 @@ export function GlassVessel({
     borderRadius: wellRadius(equipmentId),
   } as const;
 
+  // Glass tip only — keep small so card pour pose isn't doubled
+  const tipDeg = isTransferSource
+    ? Math.min(Math.abs(tiltDeg || 8), 10) * -1
+    : tiltDeg;
+
   const tiltStyle = {
-    transform: tiltDeg ? `rotate(${tiltDeg}deg)` : undefined,
-    transformOrigin: "50% 75%",
-    transition: tiltDeg ? "transform 0.35s ease-out" : undefined,
+    transform: tipDeg ? `rotate(${tipDeg}deg)` : undefined,
+    transformOrigin: "70% 82%",
+    transition: tipDeg
+      ? "transform 0.45s cubic-bezier(0.22, 0.8, 0.28, 1)"
+      : "transform 0.35s ease-out",
   } as const;
 
   return (
@@ -181,9 +232,9 @@ export function GlassVessel({
           {!useFluid3d ? (
             <LiquidSurface
               geometry={geo}
-              fillPct={fillPct}
+              fillPct={displayFillPct}
               fillColor={fillColor}
-              motion={motion}
+              motion={liquidMotion}
               clipId={clipId}
               reducedMotion={prefersReduced}
             />
@@ -244,14 +295,16 @@ export function GlassVessel({
               mouthY={geo.mouth.y}
               color={fx?.pourColor ?? fillColor}
               activeKey={fx?.pourAt ?? fx?.transferAt ?? 0}
-              fillPct={fillPct}
+              fillPct={displayFillPct}
+              streaming={streaming}
+              layerColors={layerColors}
             />
           ) : null}
         </svg>
       </div>
 
       {/* CSS FX overlay — beside / on top of 3D liquid */}
-      <div className="pointer-events-none absolute inset-[8%_12%_10%_12%] z-[3]">
+      <div className="pointer-events-none absolute inset-[6%_8%_8%_8%] z-[3] overflow-visible">
         <VesselEffects
           result={result}
           fx={fx}
@@ -261,6 +314,7 @@ export function GlassVessel({
           fillColor={fillColor === "transparent" ? undefined : fillColor}
           boiling={motion.boiling}
           equipmentId={equipmentId}
+          fluid3dActive={useFluid3d}
         />
       </div>
 

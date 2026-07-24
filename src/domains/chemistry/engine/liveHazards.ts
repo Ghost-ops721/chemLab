@@ -128,6 +128,22 @@ export function assessLiveHazards(input: {
     });
   }
 
+  // Heat unlocks wax / soft organics → melt (reverse of solidify crust)
+  const hasMeltable = chems.some(
+    (c) =>
+      c?.subcategory === "wax" ||
+      c?.id === "beeswax" ||
+      (c?.state === "solid" &&
+        (c.category === "organic" || c.tags.includes("perfume"))),
+  );
+  if (heatAttached && hasMeltable && !coolAttached) {
+    out.push({
+      level: "info",
+      message: "Heat on solids — wax / organics soften and melt into the mix.",
+      effect: "melt",
+    });
+  }
+
   const oilsAndWater =
     hasWater &&
     chems.some(

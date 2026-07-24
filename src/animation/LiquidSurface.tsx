@@ -10,6 +10,10 @@ export interface LiquidMotion {
   shaking: boolean;
   boiling: boolean;
   transferringOut: boolean;
+  /** Shared 0–1 intensities (optional — falls back to booleans). */
+  boilIntensity?: number;
+  solidify?: number;
+  melt?: number;
 }
 
 interface Props {
@@ -197,9 +201,13 @@ export function LiquidSurface({
 
       const pour = m.pourIntensity;
       const stir = m.stirLevel;
-      const boil = m.boiling ? 1 : 0;
+      const boil = m.boilIntensity ?? (m.boiling ? 1 : 0);
       const shake = m.shaking ? 1 : 0;
       const out = m.transferringOut ? 1 : 0;
+      const solid = m.solidify ?? 0;
+      const meltAmt = m.melt ?? 0;
+      // Solidify freezes waves; melt unlocks
+      const freeze = Math.max(0, solid - meltAmt * 0.85);
 
       const energy =
         pour +
@@ -207,10 +215,12 @@ export function LiquidSurface({
         boil +
         shake +
         out +
+        meltAmt +
         Math.abs(target - currentPct) +
-        (morphT < 1 ? 1 : 0);
+        (morphT < 1 ? 1 : 0) +
+        (freeze > 0.4 ? 0 : 0.01);
       // Idle: ~8fps gentle wave instead of full 60fps
-      if (energy < 0.05) {
+      if (energy < 0.05 && freeze < 0.3) {
         const idleFrame = Math.floor(t * 8);
         if (idleFrame === lastIdleFrame) {
           raf = requestAnimationFrame(tick);
@@ -220,28 +230,38 @@ export function LiquidSurface({
       }
 
       const amp =
-        1.2 + pour * 4.5 + stir * 1.4 + boil * 2.2 + shake * 3.5 + out * 2;
-      const freq = 1.6 + pour * 2 + stir * 0.8 + boil * 1.5 + shake * 2.5;
+        (1.2 + pour * 4.5 + stir * 1.4 + boil * 3.4 + shake * 3.5 + out * 3) *
+        (1 - freeze * 0.92) *
+        (1 + meltAmt * 0.25);
+      const freq =
+        (1.6 + pour * 2 + stir * 0.8 + boil * 2.2 + shake * 2.5) *
+        (1 - freeze * 0.7);
       const tilt =
-        shake * Math.sin(t * 18) * 6 -
-        out * 8 +
-        (stir > 0 ? Math.sin(t * 3) * stir * 1.5 : 0);
+        (shake * Math.sin(t * 18) * 6 -
+          out * 14 +
+          (stir > 0 ? Math.sin(t * 3) * stir * 1.5 : 0)) *
+        (1 - freeze * 0.9);
 
-      const bubbles: Bubble[] = m.boiling
-        ? [0, 1, 2, 3, 4].map((i) => {
-            const phase = (t + i * 0.4) % 1.6;
-            return {
-              x: wb.x + wb.width * (0.2 + ((i * 0.17) % 0.6)),
-              y:
-                wb.y +
-                wb.height -
-                (wb.height * (currentPct / 100)) * (phase / 1.6) -
-                4,
-              r: 1.2 + (i % 3) * 0.5,
-              opacity: 0.7 - phase * 0.35,
-            };
-          })
-        : [];
+      const bubbleN =
+        boil > 0.2 ? Math.min(14, Math.round(6 + boil * 8)) : 0;
+      const bubbles: Bubble[] =
+        bubbleN > 0
+          ? Array.from({ length: bubbleN }, (_, i) => {
+              // Nucleation from bottom; coalesce toward surface on intensity peaks
+              const phase = (t * (1.1 + boil * 0.5) + i * 0.28) % 1.35;
+              const coalesce = boil > 0.75 && i % 3 === 0 ? 1.45 : 1;
+              return {
+                x: wb.x + wb.width * (0.12 + ((i * 0.13) % 0.76)),
+                y:
+                  wb.y +
+                  wb.height -
+                  (wb.height * (currentPct / 100)) * (phase / 1.35) -
+                  3,
+                r: (1.8 + (i % 4) * 0.85) * coalesce,
+                opacity: (0.95 - phase * 0.45) * (0.55 + boil * 0.45),
+              };
+            })
+          : [];
 
       setFrame({
         displayPct: currentPct,
@@ -348,7 +368,9 @@ export function LiquidSurface({
             cx={b.x}
             cy={b.y}
             r={b.r}
-            fill="rgba(255,255,255,0.55)"
+            fill="rgba(255,255,255,0.78)"
+            stroke="rgba(255,255,255,0.45)"
+            strokeWidth={0.4}
             opacity={b.opacity}
           />
         ))}

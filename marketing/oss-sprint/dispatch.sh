@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Dispatch today's Chem Lab OSS sprint task to ntfy.
+# Dispatch today's Alyra Labs OSS sprint task to ntfy.
 # Usage:
 #   ./dispatch.sh a|b
 #   ./dispatch.sh --force a|b

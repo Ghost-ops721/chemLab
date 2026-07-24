@@ -4,7 +4,7 @@
 set -euo pipefail
 
 TOPIC_URL="${NTFY_URL:-https://ntfy.sh/chemistry}"
-TITLE="${1:-Chem Lab}"
+TITLE="${1:-Alyra Labs}"
 PRIORITY="${3:-default}"
 TAGS="${4:-test_tube}"
 

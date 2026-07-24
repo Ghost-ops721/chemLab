@@ -1,4 +1,4 @@
-# Chem Lab — 4-week OSS marketing sprint
+# Alyra Labs — 4-week OSS marketing sprint
 
 20 min/day via [ntfy.sh/chemistry](https://ntfy.sh/chemistry). Two 10-min pings.
 
@@ -9,6 +9,9 @@
 | Weekends | 00:30 + 00:45 IST |
 | Skill | `.cursor/skills/chemlab-oss-marketing/` |
 | Tasks | `tasks.json` (56 entries) |
+| Product | **Alyra Labs** · https://alyra-labs.vercel.app |
+| Repo | https://github.com/Ghost-ops721/alyra-labs |
+| Maintainer | Neil Carnac |
 
 ## Phone
 
@@ -33,3 +36,7 @@ Mac clock timezone should be **Asia/Kolkata**.
 ```
 
 When a ping arrives, tell Cursor: **do today's ntfy**
+
+## Paste copy
+
+Under `copy/` — Show HN, Reddit, LinkedIn, teacher DM, Discord, Dev.to outline, awesome-list submissions, article outlines, good-first-issues.

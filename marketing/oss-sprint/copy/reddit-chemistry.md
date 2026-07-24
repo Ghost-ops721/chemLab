@@ -4,11 +4,13 @@
 
 **Body:**
 
-I built an open-source browser lab where you drag glassware, pour chemicals, and the desk shows the actual reaction (e.g. neutralization → salt + water) plus a short plain-language explanation.
+I built Alyra Labs, an open-source browser lab where you drag glassware, pour chemicals, and the desk shows the actual reaction (e.g. neutralization → salt + water) plus a short plain-language explanation.
 
 Not a quiz app — meant for demos, curiosity, and teaching. MIT license.
 
 Try it: https://alyra-labs.vercel.app/lab  
-Source: https://github.com/Ghost-ops721/chemLab
+Source: https://github.com/Ghost-ops721/alyra-labs
 
-Curious what reactions you'd want added next.
+Curious what reactions you'd want added next — good first issues are labeled if you want to contribute.
+
+— Neil Carnac

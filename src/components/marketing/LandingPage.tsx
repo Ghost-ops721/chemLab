@@ -176,6 +176,16 @@ export function LandingPage() {
       <footer className="bg-lab-ink px-5 py-8 text-center text-[11px] text-lab-foam/40">
         Alyra Labs — compose scent.{" "}
         <a
+          href="https://github.com/Ghost-ops721/alyra-labs"
+          className="text-lab-foam/55 underline-offset-2 hover:text-lab-foam hover:underline"
+          rel="noopener noreferrer"
+          target="_blank"
+        >
+          Open Source
+        </a>
+        {" · "}
+        Maintained by Neil Carnac.{" "}
+        <a
           href="https://www.alyra.in/"
           target="_blank"
           rel="noreferrer"
